@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MS Group — Internal CRM</title>
+<style>
+:root{
+  --green:#176b4b;--green2:#22865f;--green-light:#eaf5ef;
+  --bg:#f5f7f6;--card:#fff;--text:#17231e;--muted:#74817b;
+  --border:#e4e9e6;--danger:#c94b4b;--warning:#b98218;--shadow:0 8px 30px rgba(20,45,35,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#edf7f1,#f7faf8)}
+.login-card{width:420px;background:#fff;border:1px solid var(--border);border-radius:22px;padding:34px;box-shadow:0 20px 70px rgba(20,45,35,.1)}
+.logo{font-weight:800;font-size:22px;letter-spacing:-.5px}.logo span{color:var(--green)}
+.login h1{font-size:28px;margin:28px 0 8px}.login p{color:var(--muted);margin:0 0 25px}
+.field{margin-bottom:16px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
+input,select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(34,134,95,.1)}
+.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:700}.btn-primary{background:var(--green);color:white}.btn-primary:hover{background:#11583e}.btn-light{background:#f1f4f2;color:#33423b}.btn-danger{background:#fff0f0;color:var(--danger)}
+.demo{margin-top:18px;padding:13px;background:#f6f8f7;border-radius:12px;font-size:12px;color:#68756f;line-height:1.6}
+.app{display:none;min-height:100vh}.sidebar{position:fixed;left:0;top:0;bottom:0;width:245px;background:#fff;border-right:1px solid var(--border);padding:24px 16px;z-index:5}
+.brand{padding:0 10px 28px}.brand small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.nav-title{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#9aa59f;padding:16px 10px 7px;font-weight:800}
+.nav a{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;color:#607068;text-decoration:none;font-size:14px;font-weight:650;margin:2px 0}
+.nav a:hover,.nav a.active{background:var(--green-light);color:var(--green)}
+.userbox{position:absolute;bottom:18px;left:16px;right:16px;border-top:1px solid var(--border);padding:15px 8px 0}
+.userrow{display:flex;gap:10px;align-items:center}.avatar{width:34px;height:34px;border-radius:50%;background:var(--green-light);color:var(--green);display:grid;place-items:center;font-weight:800;font-size:12px}
+.userrow strong{display:block;font-size:12px}.userrow span{font-size:11px;color:var(--muted)}
+.main{margin-left:245px;padding:28px 32px}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:25px}.title h1{font-size:25px;margin:0 0 5px;letter-spacing:-.5px}.title p{margin:0;color:var(--muted);font-size:13px}
+.actions{display:flex;gap:9px}
+.page{display:none}.page.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.stat{background:#fff;border:1px solid var(--border);border-radius:15px;padding:19px;box-shadow:var(--shadow)}.stat .label{font-size:12px;color:var(--muted);font-weight:650}.stat .value{font-size:28px;font-weight:800;margin:7px 0 4px}.stat .sub{font-size:11px;color:var(--green2)}
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}.card{background:#fff;border:1px solid var(--border);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}.card-head{padding:17px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}.card-head h3{margin:0;font-size:14px}.card-body{padding:18px}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse}.table th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#8b9791;text-align:left;padding:11px 13px;background:#fafbfa;white-space:nowrap}.table td{padding:13px;border-top:1px solid #edf0ee;font-size:12px;white-space:nowrap}.table tr:hover td{background:#fbfdfc}
+.badge{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800}.green{background:#eaf6ef;color:#187049}.yellow{background:#fff6df;color:#a36e0d}.red{background:#fff0f0;color:#b23e3e}.gray{background:#f0f3f1;color:#69766f}.blue{background:#edf3ff;color:#3d67a8}
+.filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:15px}.filters input,.filters select{width:auto;min-width:160px}
+.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}.toolbar h2{margin:0;font-size:18px}.count{font-size:12px;color:var(--muted)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(20,30,26,.45);z-index:20;align-items:center;justify-content:center;padding:20px}.modal-bg.show{display:flex}.modal{background:#fff;width:min(760px,100%);max-height:90vh;overflow:auto;border-radius:18px;padding:23px;box-shadow:0 30px 100px rgba(0,0,0,.2)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-head h2{margin:0;font-size:19px}.close{border:0;background:#f0f3f1;width:34px;height:34px;border-radius:50%}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-grid .full{grid-column:1/-1}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.empty{padding:35px;text-align:center;color:var(--muted);font-size:13px}
+.notice{padding:12px 14px;border-radius:10px;background:#fff8e6;color:#805e16;font-size:12px;margin-bottom:15px}
+.mobile-menu{display:none}
+@media(max-width:1000px){.sidebar{width:210px}.main{margin-left:210px;padding:22px}.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+@media(max-width:720px){.sidebar{transform:translateX(-100%);transition:.2s;width:250px}.sidebar.open{transform:translateX(0)}.main{margin-left:0;padding:18px}.mobile-menu{display:inline-flex}.topbar{align-items:flex-start}.actions .hide-mobile{display:none}.stats{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}}
+@media(max-width:480px){.stats{grid-template-columns:1fr}.title h1{font-size:21px}}
+</style>
+</head>
+<body>
+
+<div id="login" class="login">
+  <div class="login-card">
+    <div class="logo">MS <span>GROUP</span></div>
+    <h1>Internal CRM</h1>
+    <p>Manage importer relationships, leads and follow-ups in one place.</p>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input id="loginEmail" type="email" required placeholder="you@msgroup-egy.com"></div>
+      <div class="field"><label>Password</label><input id="loginPassword" type="password" required placeholder="••••••••"></div>
+      <button class="btn btn-primary" style="width:100%">Sign in</button>
+    </form>
+    <div class="demo">
+      <strong>Demo access</strong><br>
+      Admin: admin@msgroup-egy.com / msgroup123<br>
+      Sales: ahmed@msgroup-egy.com / msgroup123
+    </div>
+  </div>
+</div>
+
+<div id="app" class="app">
+  <aside id="sidebar" class="sidebar">
+    <div class="brand"><div class="logo">MS <span>GROUP</span></div><small>Internal CRM System</small></div>
+    <nav class="nav">
+      <div class="nav-title">Workspace</div>
+      <a href="#" data-page="dashboard" class="active">◈ <span>Dashboard</span></a>
+      <a href="#" data-page="customers">◎ <span>Customers</span></a>
+      <a href="#" data-page="leads">◇ <span>Leads</span></a>
+      <a href="#" data-page="followups">◷ <span>Follow-ups</span></a>
+      <div id="adminNav">
+        <div class="nav-title">Administration</div>
+        <a href="#" data-page="users">♙ <span>User Management</span></a>
+        <a href="#" data-page="activity">≡ <span>Activity Log</span></a>
+      </div>
+    </nav>
+    <div class="userbox"><div class="userrow"><div id="avatar" class="avatar">AD</div><div><strong id="currentUserName">Admin</strong><span id="currentUserRole">Administrator</span></div></div></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-light mobile-menu" onclick="toggleSidebar()">☰</button>
+        <div class="title"><h1 id="pageTitle">Dashboard</h1><p id="pageSub">Overview of your customer pipeline and activity.</p></div>
+      </div>
+      <div class="actions"><button class="btn btn-light hide-mobile" onclick="logout()">Sign out</button><button class="btn btn-primary" onclick="openCustomerModal()">+ Add Customer</button></div>
+    </div>
+
+    <section id="dashboard" class="page active">
+      <div class="stats">
+        <div class="stat"><div class="label">Visible Customers</div><div class="value" id="statCustomers">0</div><div class="sub">Based on your access</div></div>
+        <div class="stat"><div class="label">Active Leads</div><div class="value" id="statLeads">0</div><div class="sub">Open opportunities</div></div>
+        <div class="stat"><div class="label">High Priority</div><div class="value" id="statHigh">0</div><div class="sub">Needs attention</div></div>
+        <div class="stat"><div class="label">Follow-ups</div><div class="value" id="statFollow">0</div><div class="sub">Upcoming tasks</div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="card-head"><h3>Recent Customers</h3><button class="btn btn-light" onclick="showPage('customers')">View all</button></div><div id="recentCustomers" class="table-wrap"></div></div>
+        <div class="card"><div class="card-head"><h3>Upcoming Follow-ups</h3><button class="btn btn-light" onclick="showPage('followups')">View all</button></div><div id="upcoming" class="card-body"></div></div>
+      </div>
+    </section>
+
+    <section id="customers" class="page">
+      <div class="toolbar"><div><h2>Customers</h2><div class="count" id="customerCount"></div></div><button class="btn btn-primary" onclick="openCustomerModal()">+ Add Customer</button></div>
+      <div class="filters"><input id="customerSearch" placeholder="Search company, contact, country..." oninput="renderCustomers()"><select id="customerType" onchange="renderCustomers()"><option value="">All company types</option><option>Importer</option><option>Distributor</option><option>Wholesaler</option><option>Retailer</option><option>Food Service</option></select><select id="customerCategory" onchange="renderCustomers()"><option value="">All categories</option><option>Fresh</option><option>Frozen</option><option>Jam</option></select><select id="customerOwner" onchange="renderCustomers()"></select></div>
+      <div class="card"><div id="customersTable" class="table-wrap"></div></div>
+    </section>
+
+    <section id="leads" class="page">
+      <div class="toolbar"><div><h2>Leads</h2><div class="count" id="leadCount"></div></div><button class="btn btn-primary" onclick="openLeadModal()">+ Add Lead</button></div>
+      <div class="card"><div id="leadsTable" class="table-wrap"></div></div>
+    </section>
+
+    <section id="followups" class="page">
+      <div class="toolbar"><div><h2>Follow-ups</h2><div class="count">Upcoming activities assigned to you</div></div></div>
+      <div class="card"><div id="followupsTable" class="table-wrap"></div></div>
+    </section>
+
+    <section id="users" class="page">
+      <div class="toolbar"><div><h2>User Management</h2><div class="count">Admin-only access</div></div></div>
+      <div class="notice">In this demo version, permissions are enforced in the browser only. For real company data, connect this interface to a secure backend such as Supabase with Row Level Security.</div>
+      <div class="card"><div id="usersTable" class="table-wrap"></div></div>
+    </section>
+
+    <section id="activity" class="page">
+      <div class="toolbar"><div><h2>Activity Log</h2><div class="count">Recent CRM actions</div></div></div>
+      <div class="card"><div id="activityTable" class="table-wrap"></div></div>
+    </section>
+  </main>
+</div>
+
+<div id="modalBg" class="modal-bg"><div class="modal" id="modal"></div></div>
+
+<script>
+const seedUsers=[
+{id:'u1',name:'Admin',email:'admin@msgroup-egy.com',role:'ADMIN'},
+{id:'u2',name:'Ahmed Hassan',email:'ahmed@msgroup-egy.com',role:'SALES'},
+{id:'u3',name:'Mariam Ali',email:'mariam@msgroup-egy.com',role:'SALES'},
+{id:'u4',name:'Omar Samir',email:'omar@msgroup-egy.com',role:'SALES'}
+];
+const seedCustomers=[
+{id:1,company:'Premier Fresh Imports',country:'UK',city:'London',type:'Importer',contact:'James Carter',job:'Procurement Manager',email:'james@premier-fruits.co.uk',phone:'',linkedin:'',products:'Mangoes, Avocado',category:'Fresh',supplier:'Peru',volume:'20–30 MT/month',packaging:'4kg cartons',market:'UK Retail',status:'Interested',owner:'u2',last:'2026-10-05',next:'2026-10-09',priority:'High'},
+{id:2,company:'Gulf Harvest Trading',country:'UAE',city:'Dubai',type:'Distributor',contact:'Khalid Al Noor',job:'Import Manager',email:'khalid@gulfharvest.ae',phone:'',linkedin:'',products:'Dragon Fruit, Passion Fruit',category:'Fresh',supplier:'Vietnam',volume:'2 containers/month',packaging:'Punnets + cartons',market:'UAE',status:'Quotation Sent',owner:'u3',last:'2026-10-05',next:'2026-10-08',priority:'High'},
+{id:3,company:'Nordic Frozen Foods',country:'Sweden',city:'Stockholm',type:'Wholesaler',contact:'Anna Berg',job:'Purchasing',email:'anna@nordicfrozen.se',phone:'',linkedin:'',products:'Frozen Mangoes, Frozen Strawberries',category:'Frozen',supplier:'Poland',volume:'10 MT/month',packaging:'10kg bags',market:'Nordics Food Service',status:'Active Customer',owner:'u2',last:'2026-10-04',next:'2026-10-15',priority:'Medium'},
+{id:4,company:'Riyadh Produce Co.',country:'Saudi Arabia',city:'Riyadh',type:'Importer',contact:'Faisal Al Harbi',job:'Purchasing Manager',email:'faisal@riyadhproduce.sa',phone:'',linkedin:'',products:'Valencia Orange, Pomegranate',category:'Fresh',supplier:'Egypt',volume:'1–2 containers/week',packaging:'15kg cartons',market:'Saudi Retail',status:'Contacted',owner:'u4',last:'2026-10-04',next:'2026-10-10',priority:'High'},
+{id:5,company:'Atlas Food Service',country:'Morocco',city:'Casablanca',type:'Food Service',contact:'Nadia Karim',job:'Buyer',email:'nadia@atlasfood.ma',phone:'',linkedin:'',products:'Frozen Vegetables, Frozen Okra',category:'Frozen',supplier:'Turkey',volume:'5 MT/month',packaging:'1kg bags',market:'Hotels & Restaurants',status:'New Lead',owner:'u3',last:'2026-10-03',next:'2026-10-12',priority:'Medium'},
+{id:6,company:'Green Basket Distribution',country:'Kenya',city:'Nairobi',type:'Distributor',contact:'Peter Mwangi',job:'Import Manager',email:'peter@greenbasket.ke',phone:'',linkedin:'',products:'Mangoes, Guava',category:'Fresh',supplier:'Tanzania',volume:'1 container/week',packaging:'4kg cartons',market:'Kenya',status:'Negotiating',owner:'u4',last:'2026-10-06',next:'2026-10-07',priority:'High'},
+{id:7,company:'Prime Foods Trading',country:'Kuwait',city:'Kuwait City',type:'Wholesaler',contact:'Sara Al Sabah',job:'Procurement',email:'sara@primefoods.kw',phone:'',linkedin:'',products:'Jams, Strawberries',category:'Jam',supplier:'Egypt',volume:'500 cases/month',packaging:'Retail jars',market:'Kuwait',status:'Sample Requested',owner:'u3',last:'2026-10-02',next:'2026-10-11',priority:'Medium'},
+{id:8,company:'West Africa Produce Hub',country:'Ghana',city:'Accra',type:'Importer',contact:'Kojo Mensah',job:'Managing Director',email:'kojo@waphub.gh',phone:'',linkedin:'',products:'Pineapple, Mangoes',category:'Fresh',supplier:'Ghana',volume:'2 containers/month',packaging:'Standard export cartons',market:'West Africa',status:'New Lead',owner:'u2',last:'2026-10-01',next:'2026-10-14',priority:'Low'}
+];
+const seedLeads=[
+{id:101,company:'East Africa Fresh Link',country:'Uganda',contact:'David Okello',email:'david@eafresh.ug',products:'Avocado',owner:'u4',status:'New Lead',next:'2026-10-13'},
+{id:102,company:'Dubai Food Channel',country:'UAE',contact:'Layla Noor',email:'layla@dfc.ae',products:'Frozen Vegetables',owner:'u3',status:'Contacted',next:'2026-10-09'},
+{id:103,company:'Benelux Fruit Partners',country:'Netherlands',contact:'Tom de Vries',email:'tom@bfp.nl',products:'Blueberry',owner:'u2',status:'Interested',next:'2026-10-16'}
+];
+let users=load('users',seedUsers), customers=load('customers',seedCustomers), leads=load('leads',seedLeads);
+let activity=load('activity',[]);
+let currentUser=null;
+
+function load(k,f){try{let x=localStorage.getItem('mscrm_'+k);return x?JSON.parse(x):JSON.parse(JSON.stringify(f))}catch(e){return JSON.parse(JSON.stringify(f))}}
+function save(k,v){localStorage.setItem('mscrm_'+k,JSON.stringify(v))}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function ownerName(id){return (users.find(u=>u.id===id)||{}).name||'Unassigned'}
+function badge(s){let c=['Active Customer','Interested','Quotation Sent','Negotiating','Contacted'].includes(s)?'green':['New Lead','Sample Requested'].includes(s)?'yellow':s==='Lost'?'red':'gray';return `<span class="badge ${c}">${esc(s)}</span>`}
+function priority(s){return `<span class="badge ${s==='High'?'red':s==='Medium'?'yellow':'gray'}">${esc(s)}</span>`}
+function visibleCustomers(){return currentUser?.role==='ADMIN'?customers:customers.filter(c=>c.owner===currentUser.id)}
+function visibleLeads(){return currentUser?.role==='ADMIN'?leads:leads.filter(l=>l.owner===currentUser.id)}
+function log(action,detail){activity.unshift({id:Date.now(),date:new Date().toLocaleString(),user:currentUser?.name||'System',action,detail});save('activity',activity)}
+function initials(n){return n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}
+
+document.getElementById('loginForm').onsubmit=e=>{e.preventDefault();let email=loginEmail.value.trim().toLowerCase(),pass=loginPassword.value;let u=users.find(x=>x.email.toLowerCase()===email);if(u&&pass==='msgroup123'){currentUser=u;sessionStorage.setItem('mscrm_user',u.id);startApp()}else alert('Invalid demo credentials.')};
+function startApp(){document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';currentUser=users.find(u=>u.id===currentUser.id)||currentUser;currentUserName.textContent=currentUser.name;currentUserRole.textContent=currentUser.role==='ADMIN'?'Administrator':'Sales User';avatar.textContent=initials(currentUser.name);adminNav.style.display=currentUser.role==='ADMIN'?'block':'none';showPage('dashboard')}
+function logout(){sessionStorage.removeItem('mscrm_user');location.reload()}
+function toggleSidebar(){sidebar.classList.toggle('open')}
+
+const pageInfo={dashboard:['Dashboard','Overview of your customer pipeline and activity.'],customers:['Customers','Manage importer, distributor and buyer relationships.'],leads:['Leads','Track new opportunities before conversion.'],followups:['Follow-ups','Stay on top of your next customer actions.'],users:['User Management','Manage access and sales ownership.'],activity:['Activity Log','Review recent CRM actions.']};
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.page===id));pageTitle.textContent=pageInfo[id][0];pageSub.textContent=pageInfo[id][1];sidebar.classList.remove('open');if(id==='dashboard')renderDashboard();if(id==='customers')renderCustomers();if(id==='leads')renderLeads();if(id==='followups')renderFollowups();if(id==='users')renderUsers();if(id==='activity')renderActivity()}
+document.querySelectorAll('.nav a').forEach(a=>a.onclick=e=>{e.preventDefault();showPage(a.dataset.page)});
+
+function renderDashboard(){
+ let cs=visibleCustomers(),ls=visibleLeads(),high=cs.filter(c=>c.priority==='High').length,fu=[...cs].filter(c=>c.next).sort((a,b)=>a.next.localeCompare(b.next)).slice(0,5);
+ statCustomers.textContent=cs.length;statLeads.textContent=ls.length;statHigh.textContent=high;statFollow.textContent=fu.length;
+ recentCustomers.innerHTML=cs.slice().sort((a,b)=>b.last.localeCompare(a.last)).slice(0,5).length?`<table class="table"><thead><tr><th>Company</th><th>Category</th><th>Status</th><th>Owner</th></tr></thead><tbody>${cs.slice().sort((a,b)=>b.last.localeCompare(a.last)).slice(0,5).map(c=>`<tr><td><strong>${esc(c.company)}</strong><br><span style="color:#8a958f">${esc(c.contact)}</span></td><td>${esc(c.category)}</td><td>${badge(c.status)}</td><td>${esc(ownerName(c.owner))}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">No customers yet.</div>';
+ upcoming.innerHTML=fu.length?fu.map(c=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #edf0ee"><div><strong style="font-size:12px">${esc(c.company)}</strong><div style="font-size:11px;color:#89958f">${esc(c.contact)} · ${esc(c.next)}</div></div>${priority(c.priority)}</div>`).join(''):'<div class="empty">No upcoming follow-ups.</div>';
+}
+function renderOwnerFilter(){customerOwner.innerHTML=`<option value="">All owners</option>`+(currentUser.role==='ADMIN'?users.filter(u=>u.role==='SALES').map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join(''):'')}
+function renderCustomers(){
+ renderOwnerFilter();let cs=visibleCustomers(),q=(customerSearch.value||'').toLowerCase(),type=customerType.value,cat=customerCategory.value,own=customerOwner.value;
+ cs=cs.filter(c=>!q||Object.values(c).join(' ').toLowerCase().includes(q)).filter(c=>!type||c.type===type).filter(c=>!cat||c.category===cat).filter(c=>!own||c.owner===own);
+ customerCount.textContent=`${cs.length} customer${cs.length===1?'':'s'} visible`;customersTable.innerHTML=cs.length?`<table class="table"><thead><tr><th>Company</th><th>Location</th><th>Type</th><th>Contact</th><th>Products</th><th>Category</th><th>Status</th><th>Priority</th><th>Owner</th><th></th></tr></thead><tbody>${cs.map(c=>`<tr><td><strong>${esc(c.company)}</strong><br><span style="color:#8a958f">${esc(c.email)}</span></td><td>${esc(c.city)}, ${esc(c.country)}</td><td>${esc(c.type)}</td><td>${esc(c.contact)}<br><span style="color:#8a958f">${esc(c.job)}</span></td><td>${esc(c.products)}</td><td>${esc(c.category)}</td><td>${badge(c.status)}</td><td>${priority(c.priority)}</td><td>${esc(ownerName(c.owner))}</td><td><button class="btn btn-light" onclick="editCustomer(${c.id})">Edit</button></td></tr>`).join('')}</tbody></table>`:'<div class="empty">No customers match your filters.</div>';
+}
+function renderLeads(){let ls=visibleLeads();leadCount.textContent=`${ls.length} lead${ls.length===1?'':'s'} visible`;leadsTable.innerHTML=ls.length?`<table class="table"><thead><tr><th>Company</th><th>Country</th><th>Contact</th><th>Email</th><th>Products</th><th>Status</th><th>Next Follow-up</th><th>Owner</th><th></th></tr></thead><tbody>${ls.map(l=>`<tr><td><strong>${esc(l.company)}</strong></td><td>${esc(l.country)}</td><td>${esc(l.contact)}</td><td>${esc(l.email)}</td><td>${esc(l.products)}</td><td>${badge(l.status)}</td><td>${esc(l.next)}</td><td>${esc(ownerName(l.owner))}</td><td><button class="btn btn-light" onclick="convertLead(${l.id})">Convert</button></td></tr>`).join('')}</tbody></table>`:'<div class="empty">No leads yet.</div>'}
+function renderFollowups(){let rows=visibleCustomers().filter(c=>c.next).sort((a,b)=>a.next.localeCompare(b.next));followupsTable.innerHTML=rows.length?`<table class="table"><thead><tr><th>Date</th><th>Company</th><th>Contact</th><th>Products</th><th>Status</th><th>Priority</th><th>Owner</th></tr></thead><tbody>${rows.map(c=>`<tr><td><strong>${esc(c.next)}</strong></td><td>${esc(c.company)}</td><td>${esc(c.contact)}</td><td>${esc(c.products)}</td><td>${badge(c.status)}</td><td>${priority(c.priority)}</td><td>${esc(ownerName(c.owner))}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">No follow-ups scheduled.</div>'}
+function renderUsers(){usersTable.innerHTML=`<table class="table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Customers</th></tr></thead><tbody>${users.map(u=>`<tr><td><strong>${esc(u.name)}</strong></td><td>${esc(u.email)}</td><td>${u.role==='ADMIN'?'<span class="badge green">ADMIN</span>':'<span class="badge blue">SALES</span>'}</td><td>${customers.filter(c=>c.owner===u.id).length}</td></tr>`).join('')}</tbody></table>`}
+function renderActivity(){activityTable.innerHTML=activity.length?`<table class="table"><thead><tr><th>Date</th><th>User</th><th>Action</th><th>Details</th></tr></thead><tbody>${activity.slice(0,100).map(a=>`<tr><td>${esc(a.date)}</td><td>${esc(a.user)}</td><td>${esc(a.action)}</td><td>${esc(a.detail)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">No activity recorded yet.</div>'}
+
+function openCustomerModal(existing=null){
+ let c=existing||{company:'',country:'',city:'',type:'Importer',contact:'',job:'',email:'',phone:'',linkedin:'',products:'',category:'Fresh',supplier:'',volume:'',packaging:'',market:'',status:'New Lead',owner:currentUser.role==='ADMIN'?'u2':currentUser.id,last:new Date().toISOString().slice(0,10),next:'',priority:'Medium'};
+ modal.innerHTML=`<div class="modal-head"><h2>${existing?'Edit Customer':'Add Customer'}</h2><button class="close" onclick="closeModal()">×</button></div>
+ <form id="customerForm"><div class="form-grid">
+ ${field('company','Company Name',c.company)}${field('country','Country',c.country)}${field('city','City',c.city)}${selectField('type','Company Type',['Importer','Distributor','Wholesaler','Retailer','Food Service'],c.type)}
+ ${field('contact','Contact Person',c.contact)}${field('job','Job Title',c.job)}${field('email','Email',c.email,'email')}${field('phone','Phone / WhatsApp',c.phone)}
+ ${field('linkedin','LinkedIn',c.linkedin)}${field('products','Products Interested In',c.products)}${selectField('category','Product Category',['Fresh','Frozen','Jam','Fresh / Frozen','Fresh / Jam'],c.category)}${field('supplier','Current Supplier / Origin',c.supplier)}
+ ${field('volume','Estimated Volume',c.volume)}${field('packaging','Packaging Requirements',c.packaging)}${field('market','Target Market',c.market)}${selectField('status','Status',['New Lead','Contacted','Interested','Quotation Sent','Sample Requested','Negotiating','Active Customer','Lost'],c.status)}
+ ${selectField('priority','Priority',['High','Medium','Low'],c.priority)}${selectField('owner','Owner',users.filter(u=>u.role==='SALES').map(u=>u.id),c.owner,true)}${field('last','Last Contact',c.last,'date')}${field('next','Next Follow-up',c.next,'date')}
+ </div><div class="modal-actions"><button type="button" class="btn btn-light" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save Customer</button></div></form>`;
+ modalBg.classList.add('show');
+ customerForm.onsubmit=e=>{e.preventDefault();let data=Object.fromEntries(new FormData(customerForm));if(currentUser.role!=='ADMIN')data.owner=currentUser.id;if(existing){Object.assign(existing,data);log('Updated customer',data.company)}else{data.id=Date.now();customers.push(data);log('Added customer',data.company)}save('customers',customers);closeModal();renderCustomers();renderDashboard()}
+}
+function field(id,label,val,type='text'){return `<div class="${id==='linkedin'?'':' '}"><label style="display:block;font-size:11px;font-weight:700;margin-bottom:5px">${label}</label><input name="${id}" type="${type}" value="${esc(val)}"></div>`}
+function selectField(id,label,opts,val,isIds=false){let list=isIds?opts.map(x=>({v:x,t:ownerName(x)})):opts.map(x=>({v:x,t:x}));return `<div><label style="display:block;font-size:11px;font-weight:700;margin-bottom:5px">${label}</label><select name="${id}">${list.map(x=>`<option value="${esc(x.v)}" ${x.v===val?'selected':''}>${esc(x.t)}</option>`).join('')}</select></div>`}
+function editCustomer(id){let c=customers.find(x=>x.id===id);if(c)openCustomerModal(c)}
+function closeModal(){modalBg.classList.remove('show')}
+function openLeadModal(){modal.innerHTML=`<div class="modal-head"><h2>Add Lead</h2><button class="close" onclick="closeModal()">×</button></div><form id="leadForm"><div class="form-grid">${field('company','Company Name','')}${field('country','Country','')}${field('contact','Contact Person','')}${field('email','Email','','email')}${field('products','Products Interested In','')}${field('next','Next Follow-up','','date')}</div><div class="modal-actions"><button type="button" class="btn btn-light" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save Lead</button></div></form>`;modalBg.classList.add('show');leadForm.onsubmit=e=>{e.preventDefault();let d=Object.fromEntries(new FormData(leadForm));d.id=Date.now();d.owner=currentUser.id;d.status='New Lead';leads.push(d);save('leads',leads);log('Added lead',d.company);closeModal();renderLeads();renderDashboard()}}
+function convertLead(id){let l=leads.find(x=>x.id===id);if(!l)return;if(!confirm(`Convert ${l.company} to a customer?`))return;customers.push({id:Date.now(),company:l.company,country:l.country,city:'',type:'Importer',contact:l.contact,job:'',email:l.email,phone:'',linkedin:'',products:l.products,category:'Fresh',supplier:'',volume:'',packaging:'',market:'',status:'New Lead',owner:l.owner,last:new Date().toISOString().slice(0,10),next:l.next,priority:'Medium'});leads=leads.filter(x=>x.id!==id);save('customers',customers);save('leads',leads);log('Converted lead',l.company);renderLeads();renderDashboard()}
+modalBg.onclick=e=>{if(e.target===modalBg)closeModal()};
+let sid=sessionStorage.getItem('mscrm_user');if(sid){let u=users.find(x=>x.id===sid);if(u){currentUser=u;startApp()}}
+</script>
+</body>
+</html>
