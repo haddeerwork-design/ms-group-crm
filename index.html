@@ -47,7 +47,27 @@ input:focus,select:focus,textarea:focus{border-color:var(--green2);box-shadow:0 
 @media(max-width:1000px){.sidebar{width:210px}.main{margin-left:210px;padding:22px}.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
 @media(max-width:720px){.sidebar{transform:translateX(-100%);transition:.2s;width:250px}.sidebar.open{transform:translateX(0)}.main{margin-left:0;padding:18px}.mobile-menu{display:inline-flex}.topbar{align-items:flex-start}.actions .hide-mobile{display:none}.stats{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}}
 @media(max-width:480px){.stats{grid-template-columns:1fr}.title h1{font-size:21px}}
-.calc-results{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.result-box{padding:16px;border:1px solid var(--line);border-radius:12px;background:#fafcfb}.result-box span{display:block;color:#77817b;font-size:11px;text-transform:uppercase;font-weight:700}.result-box strong{display:block;margin-top:7px;font-size:20px;color:#173d2c}.result-main{background:#eef7f1}.breakdown{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:7px 24px;font-size:13px}.breakdown div{display:flex;justify-content:space-between}.term-help{margin-top:12px;padding:10px;background:#f3f8f5;border-radius:10px;color:#315244;font-size:12px}@media(max-width:850px){.calc-results,.breakdown{grid-template-columns:1fr}}</style>
+.calc-results{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.result-box{padding:16px;border:1px solid var(--line);border-radius:12px;background:#fafcfb}.result-box span{display:block;color:#77817b;font-size:11px;text-transform:uppercase;font-weight:700}.result-box strong{display:block;margin-top:7px;font-size:20px;color:#173d2c}.result-main{background:#eef7f1}.breakdown{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:7px 24px;font-size:13px}.breakdown div{display:flex;justify-content:space-between}.term-help{margin-top:12px;padding:10px;background:#f3f8f5;border-radius:10px;color:#315244;font-size:12px}@media(max-width:850px){.calc-results,.breakdown{grid-template-columns:1fr}}.planner-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr);gap:18px;align-items:start}.planner-side{position:sticky;top:16px}
+.step-head{display:flex;gap:12px;align-items:flex-start;padding:16px 18px;border-bottom:1px solid var(--border)}.step-head h3{margin:0 0 3px;font-size:15px}.step-head p{margin:0;font-size:12px;color:var(--muted)}
+.step-no{width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;flex:none}.step-body{padding:16px 18px}
+.cont-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cont-card{text-align:left;border:1.5px solid var(--border);background:#fff;border-radius:12px;padding:12px;cursor:pointer;transition:.15s;font-family:inherit}.cont-card:hover{border-color:var(--green2)}.cont-card.active{border-color:var(--green);background:var(--green-light);box-shadow:0 0 0 3px rgba(34,134,95,.12)}
+.cont-card b{display:block;font-size:13px}.cont-card span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-top:14px}
+.pl-row{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;background:#fcfdfc}.pl-top{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.pl-top label,.cap-grid label,.pl-det label{display:block;font-size:11px;font-weight:700;margin-bottom:5px}
+.qty-wrap{display:flex;gap:6px}.qty-wrap input{width:90px}.qty-wrap select{width:104px}
+.pl-line{font-size:12px;color:var(--muted);margin-top:8px}.pl-warn{font-size:12px;color:var(--danger);font-weight:700;margin-top:6px}
+.pl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}.pchip{background:#eef3f0;border-radius:999px;padding:5px 10px;font-size:12px}.pchip b{font-size:13px}
+.pl-det{margin-top:8px;font-size:12px}.pl-det summary{cursor:pointer;color:var(--green);font-weight:700}.pl-det .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.icon-btn{border:0;background:#f1f4f2;border-radius:9px;width:38px;height:42px;font-size:18px;cursor:pointer}.icon-btn:hover{background:#ffe9e9;color:var(--danger)}
+.meter{height:10px;background:#edf1ef;border-radius:999px;overflow:hidden}.meter>i{display:block;height:100%;background:var(--green2);border-radius:999px;transition:width .25s}.meter.warn>i{background:#e0a800}.meter.over>i{background:var(--danger)}
+.stack{display:flex;height:14px;border-radius:999px;overflow:hidden;background:#edf1ef}.stack i{display:block;height:100%}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.sum-box{background:#f7faf8;border:1px solid var(--border);border-radius:10px;padding:10px 12px}.sum-box span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#7a8680;font-weight:800}.sum-box b{font-size:17px}
+.pl-alert{font-size:12px;border-radius:10px;padding:9px 11px;margin-top:8px}.pl-alert.bad{background:#fff0f0;color:#9c2f2f}.pl-alert.warn{background:#fff8e6;color:#805e16}.pl-alert.ok{background:#eaf6ef;color:#187049}
+.cell-in{width:84px;padding:7px 8px}.cell-sel{width:78px;padding:7px 6px}.price-cell{display:flex;gap:6px}.sub-muted{font-size:11px;color:var(--muted);margin-top:2px}.btn-sm{padding:7px 11px;font-size:12px}
+@media(max-width:1000px){.planner-grid{grid-template-columns:1fr}.planner-side{position:static}}
+</style>
 </head>
 <body>
 
@@ -77,6 +97,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--green2);box-shadow:0 
       <a href="#" data-page="suppliers">♧ <span>Suppliers</span></a>
       <a href="#" data-page="shippingCompanies">▤ <span>Shipping Companies</span></a>
       <a href="#" data-page="shipping">▣ <span>Shipping Rates</span></a>
+      <a href="#" data-page="products">▦ <span>Products</span></a>
+      <a href="#" data-page="planner">▥ <span>Container Planner</span></a>
       <a href="#" data-page="calculator">⌘ <span>Product Pricing</span></a>
       <a href="#" data-page="documents">▤ <span>Quotes & Invoices</span></a>
       <a href="#" data-page="followups">◷ <span>Follow-ups</span></a>
@@ -194,7 +216,26 @@ input:focus,select:focus,textarea:focus{border-color:var(--green2);box-shadow:0 
       <div class="card"><div id="shippingCompaniesTable" class="table-wrap"></div></div>
     </section>
 
-    <section id="calculator" class="page">
+    <section id="products" class="page">
+      <div class="toolbar"><div><h2>Products</h2><div class="count"><span id="productsCount"></span> <span id="productsSaved" style="color:var(--green);font-weight:700"></span></div></div><div style="display:flex;gap:8px"><button class="btn btn-primary" id="addProductBtn" onclick="openProductEditor()">+ Add Product</button></div></div>
+      <div class="notice" id="productsNotice" style="margin-bottom:18px"></div>
+      <div class="filters"><input id="productSearch" placeholder="Search products..." oninput="renderProducts()"><select id="productCat" onchange="renderProducts()"><option value="">All categories</option></select><label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:650"><input type="checkbox" id="productIncomplete" style="width:auto;min-width:0" onchange="renderProducts()"> Needs setup only</label></div>
+      <div class="card"><div id="productsTable" class="table-wrap"></div></div>
+    </section>
+
+    <section id="planner" class="page">
+      <div class="toolbar"><div><h2>Container Planner</h2><div class="count">Plan a single-product or mixed container by pallets, cartons or tons</div></div><button class="btn btn-light" onclick="resetPlan()">Start over</button></div>
+      <div class="planner-grid">
+        <div>
+          <div class="card" style="margin-bottom:18px"><div class="step-head"><span class="step-no">1</span><div><h3>Choose a container</h3><p>Capacity fills in automatically. You can adjust it below.</p></div></div><div class="step-body"><div id="plContainers" class="cont-cards"></div><div id="plCapacity" class="cap-grid"></div></div></div>
+          <div class="card"><div class="step-head"><span class="step-no">2</span><div><h3>Add products</h3><p>Pick a product and enter how much — in pallets, cartons or tons. Prices come from your catalog and can be changed here.</p></div></div><div class="step-body"><div id="plRows"></div><button type="button" class="btn btn-light" onclick="plAdd()">+ Add another product</button></div></div>
+        </div>
+        <aside class="planner-side"><div class="card" id="plSummary"></div></aside>
+      </div>
+    </section>
+
+    
+<section id="calculator" class="page">
       <div class="toolbar">
         <div><h2>Product Pricing Calculator</h2><div class="count">Choose a product, enter your cost and shipment details, then get carton, kg and ton prices instantly.</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" onclick="openProductManager()">⚙ Manage Products</button><button class="btn btn-light" onclick="resetCalculator()">Reset</button><button class="btn btn-primary" onclick="addCalcToQuote()">Use in Quotation</button></div>
@@ -400,8 +441,8 @@ function startApp(){document.getElementById('login').style.display='none';docume
 async function logout(){cloudReady=false;await sb.auth.signOut();authUserId=null;currentUser=null;try{Object.keys(localStorage).filter(k=>k.startsWith('mscrm_')).forEach(k=>localStorage.removeItem(k))}catch(_){}location.reload()}
 function toggleSidebar(){sidebar.classList.toggle('open')}
 
-const pageInfo={suppliers:['Suppliers','Manage supplier contacts, products and terms.'],shippingCompanies:['Shipping Companies','Manage freight forwarders, carriers and logistics partners.'],dashboard:['Dashboard','Overview of your customer pipeline and activity.'],market:['Market Intelligence','Find target markets and potential importers by product.'],shipping:['Shipping Rates','Compare freight rates, ports and shipping routes from Egypt.'],calculator:['Product Pricing','Calculate price per carton, kg and ton with Incoterms.'],documents:['Quotes & Invoices','Create quotations and invoices linked to your customers and products.'],customers:['Customers','Manage importer, distributor and buyer relationships.'],leads:['Leads','Track new opportunities before conversion.'],followups:['Follow-ups','Stay on top of your next customer actions.'],users:['User Management','Manage access and sales ownership.'],activity:['Activity Log','Review recent CRM actions.']};
-function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.page===id));pageTitle.textContent=pageInfo[id][0];pageSub.textContent=pageInfo[id][1];sidebar.classList.remove('open');if(id==='dashboard')renderDashboard();if(id==='customers')renderCustomers();if(id==='leads')renderLeads();if(id==='shipping')renderShipping();if(id==='suppliers')renderSuppliers();if(id==='shippingCompanies')renderShippingCompanies();if(id==='calculator')renderCalculator();if(id==='documents')renderDocuments();if(id==='followups')renderFollowups();if(id==='users')renderUsers();if(id==='activity')renderActivity()}
+const pageInfo={products:['Products','Your product catalog: specifications, packing and fixed prices.'],planner:['Container Planner','Plan single or mixed containers by pallets, cartons or tons.'],suppliers:['Suppliers','Manage supplier contacts, products and terms.'],shippingCompanies:['Shipping Companies','Manage freight forwarders, carriers and logistics partners.'],dashboard:['Dashboard','Overview of your customer pipeline and activity.'],market:['Market Intelligence','Find target markets and potential importers by product.'],shipping:['Shipping Rates','Compare freight rates, ports and shipping routes from Egypt.'],calculator:['Product Pricing','Calculate price per carton, kg and ton with Incoterms.'],documents:['Quotes & Invoices','Create quotations and invoices linked to your customers and products.'],customers:['Customers','Manage importer, distributor and buyer relationships.'],leads:['Leads','Track new opportunities before conversion.'],followups:['Follow-ups','Stay on top of your next customer actions.'],users:['User Management','Manage access and sales ownership.'],activity:['Activity Log','Review recent CRM actions.']};
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.page===id));pageTitle.textContent=pageInfo[id][0];pageSub.textContent=pageInfo[id][1];sidebar.classList.remove('open');if(id==='dashboard')renderDashboard();if(id==='customers')renderCustomers();if(id==='leads')renderLeads();if(id==='shipping')renderShipping();if(id==='suppliers')renderSuppliers();if(id==='shippingCompanies')renderShippingCompanies();if(id==='calculator')renderCalculator();if(id==='products')renderProducts();if(id==='planner')renderPlanner();if(id==='documents')renderDocuments();if(id==='followups')renderFollowups();if(id==='users')renderUsers();if(id==='activity')renderActivity()}
 document.querySelectorAll('.nav a').forEach(a=>a.onclick=e=>{e.preventDefault();showPage(a.dataset.page)});
 
 function renderDashboard(){
@@ -604,27 +645,27 @@ td{border:1px solid #c9cfcc;padding:4.2mm 3mm;font-size:9.5pt;font-weight:700;te
  const w=window.open('','_blank');if(!w){alert('Please allow pop-ups for this site to preview the quotation.');return}
  w.document.write(html);w.document.close();
 }
-function openQuoteModal(){
+function openQuoteModal(prefill){
  const list=visibleCustomers();
  if(!list.length){alert('Add a customer first.');return}
  const today=new Date().toISOString().slice(0,10);
  const lbl='display:block;font-size:11px;font-weight:700;margin-bottom:5px';
- const rowHtml=()=>`<div class="doc-row" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:flex-end;padding-bottom:10px;border-bottom:1px solid #eef1ef">
-  <div style="flex:3 1 200px"><label style="${lbl}">Product description</label><input name="product" list="docProducts" placeholder="Start typing a product…" style="width:100%"></div>
-  <div style="flex:1 1 100px"><label style="${lbl}">Packing</label><input name="pack" placeholder="e.g. 4*2500g" style="width:100%"></div>
-  <div style="flex:1 1 110px"><label style="${lbl}">Product type</label><input name="ptype" placeholder="e.g. Grade A 10*10" style="width:100%"></div>
-  <div style="flex:1 1 90px"><label style="${lbl}">Price / Ton</label><input name="unit" type="number" min="0" step="any" placeholder="0" style="width:100%"></div>
+ const rowHtml=(v={})=>`<div class="doc-row" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:flex-end;padding-bottom:10px;border-bottom:1px solid #eef1ef">
+  <div style="flex:3 1 200px"><label style="${lbl}">Product description</label><input name="product" list="docProducts" value="${esc(v.name||'')}" placeholder="Start typing a product…" style="width:100%"></div>
+  <div style="flex:1 1 100px"><label style="${lbl}">Packing</label><input name="pack" value="${esc(v.packaging||'')}" placeholder="e.g. 4*2500g" style="width:100%"></div>
+  <div style="flex:1 1 110px"><label style="${lbl}">Product type</label><input name="ptype" value="${esc(v.type||'')}" placeholder="e.g. Grade A 10*10" style="width:100%"></div>
+  <div style="flex:1 1 90px"><label style="${lbl}">Price / Ton</label><input name="unit" type="number" min="0" step="any" value="${v.unit??''}" placeholder="0" style="width:100%"></div>
   <button type="button" class="close" title="Remove line" data-remove="1">×</button></div>`;
  modal.innerHTML=`<div class="modal-head"><h2>New Quotation</h2><button class="close" onclick="closeModal()">×</button></div>
  <form id="docForm">
   <div class="form-grid">
    <div><label style="${lbl}">Customer</label><select name="customerId">${list.map(c=>`<option value="${esc(c.id)}">${esc(c.company)}${c.country?' — '+esc(c.country):''}</option>`).join('')}</select></div>
-   <div><label style="${lbl}">Currency</label><select name="currency">${['USD','EUR','GBP','EGP','SAR','AED'].map(c=>`<option>${c}</option>`).join('')}</select></div>
+   <div><label style="${lbl}">Currency</label><select name="currency">${['USD','EUR','GBP','EGP','SAR','AED'].map(c=>`<option ${prefill&&prefill.currency===c?'selected':''}>${c}</option>`).join('')}</select></div>
    <div><label style="${lbl}">Delivery terms</label><select name="deliveryTerms">${['CIF','CFR','FOB','EXW','FCA','DAP','DDP'].map(t=>`<option>${t}</option>`).join('')}</select></div>
   </div>
   <datalist id="docProducts">${products.map(p=>`<option value="${esc(p.name)}"></option>`).join('')}</datalist>
   <div style="margin:16px 0 8px;font-size:12px;font-weight:700">Products</div>
-  <div id="docRows">${rowHtml()}</div>
+  <div id="docRows">${(prefill&&prefill.rows&&prefill.rows.length?prefill.rows:[{}]).map(x=>rowHtml(x)).join('')}</div>
   <button type="button" class="btn btn-light" id="addDocRow">+ Add product</button>
   <details style="margin-top:14px"><summary style="cursor:pointer;font-size:12px;font-weight:700">More options (date, validity, production time, extra policy points)</summary>
    <div class="form-grid" style="margin-top:10px">
@@ -725,9 +766,229 @@ let products=JSON.parse(localStorage.getItem('mscrm_products')||'null')||DEFAULT
 function saveProducts(){save('products',products)}
 function productOptions(){let groups={};products.forEach(p=>(groups[p.category]??=[]).push(p));return Object.keys(groups).sort().map(cat=>`<optgroup label="${esc(cat)}">${groups[cat].sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</optgroup>`).join('')}
 function refreshProductSelect(selected=''){if(!window.calcProduct)return;calcProduct.innerHTML='<option value="">Select a product...</option>'+productOptions();if(selected)calcProduct.value=selected}
-function loadCalcProduct(){let p=products.find(x=>x.id===calcProduct.value);if(!p){calcCategory.value='';calcSelectedName.textContent='—';calcSelectedPack.textContent='Choose a product to start.';calcProductHint.textContent='Select a product to load its saved pack size, cost and packaging settings.';calculatePrice();return}calcCategory.value=p.category;calcCost.value=p.cost!==''?p.cost:0;calcCostCur.value=p.costCur||'EGP';calcKgCarton.value=p.kg!==''?p.kg:1;calcPack.value=p.pack!==''?p.pack:0;calcPackCur.value=p.packCur||'EGP';calcSelectedName.textContent=p.name;calcSelectedPack.textContent=(p.kg?`${p.kg} kg/carton`:'Pack size not set')+(p.pack?` · Packaging ${p.pack} ${p.packCur||'EGP'}/carton`:' · Packaging cost not set');calcProductHint.textContent=`${p.category} · Product setup is saved locally. You can edit the values below without changing the product database.`;calculatePrice()}
+function loadCalcProduct(){let p=products.find(x=>x.id===calcProduct.value);if(!p){calcCategory.value='';calcSelectedName.textContent='—';calcSelectedPack.textContent='Choose a product to start.';calcProductHint.textContent='Select a product to load its saved pack size, cost and packaging settings.';calculatePrice();return}calcCategory.value=p.category;calcCost.value=p.cost!==''?p.cost:0;calcCostCur.value=p.costCur||'EGP';calcKgCarton.value=p.kg!==''?p.kg:1;calcPack.value=p.pack!==''?p.pack:0;calcPackCur.value=p.packCur||'EGP';calcSelectedName.textContent=p.name;calcSelectedPack.textContent=(p.kg?`${p.kg} kg/carton`:'Pack size not set')+(p.pack?` · Packaging ${p.pack} ${p.packCur||'EGP'}/carton`:' · Packaging cost not set')+(p.packing?` · ${p.packing}`:'')+(p.spec?` · ${p.spec}`:'')+(num(p.cpp)?` · ${p.cpp} cartons/pallet`+(num(p.kg)?` (${nf(num(p.kg)*num(p.cpp))} kg/pallet)`:''):'');calcProductHint.textContent=`${p.category} · Product setup is saved locally. You can edit the values below without changing the product database.`;calculatePrice()}
 function openProductManager(){let rows=products.slice().sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));modal.innerHTML=`<div class="modal-head"><h2>Product Database</h2><button class="close" onclick="closeModal()">×</button></div><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px"><div style="font-size:12px;color:var(--muted)">${rows.length} products available. Add your own products and save their default cost and packaging.</div><button class="btn btn-primary" onclick="openAddProductModal()">+ Add Product</button></div><div class="table-wrap" style="max-height:55vh;overflow:auto"><table class="table"><thead><tr><th>Product</th><th>Category</th><th>Kg / Carton</th><th>Cost</th><th>Packaging</th></tr></thead><tbody>${rows.map(p=>`<tr><td><strong>${esc(p.name)}</strong></td><td>${esc(p.category)}</td><td>${p.kg||'—'}</td><td>${p.cost!==''?esc(p.cost+' '+(p.costCur||'EGP')):'—'}</td><td>${p.pack!==''?esc(p.pack+' '+(p.packCur||'EGP')):'—'}</td></tr>`).join('')}</tbody></table></div><div class="modal-actions"><button class="btn btn-light" onclick="closeModal()">Close</button></div>`;modalBg.classList.add('show')}
 function openAddProductModal(){modal.innerHTML=`<div class="modal-head"><h2>Add Product</h2><button class="close" onclick="openProductManager()">×</button></div><form id="productForm"><div class="form-grid">${field('pname','Product Name','')}${selectField('pcat','Category',['Tropical','Citrus','Fresh Fruits','Frozen Fruits','Frozen Vegetables','Prime Roots Jams','Other'],'Fresh Fruits')}${field('pkg','Kg / Carton','', 'number')}${field('pcost','Default Product Cost','', 'number')}${selectField('pcostCur','Cost Currency',['EGP','USD','EUR','GBP','SAR','AED'],'EGP')}${field('ppack','Packaging / Carton','', 'number')}${selectField('ppackCur','Packaging Currency',['EGP','USD','EUR','GBP','SAR','AED'],'EGP')}</div><div class="notice" style="margin-top:14px">These are default product settings. You can always change them in the calculator for a specific quotation.</div><div class="modal-actions"><button type="button" class="btn btn-light" onclick="openProductManager()">Cancel</button><button class="btn btn-primary">Save Product</button></div></form>`;modalBg.classList.add('show');productForm.onsubmit=e=>{e.preventDefault();let d=Object.fromEntries(new FormData(productForm)),name=d.pname.trim();if(!name){alert('Enter a product name.');return}if(products.some(p=>p.name.toLowerCase()===name.toLowerCase())){alert('This product already exists in the Product Database.');return}let p={id:'p'+Date.now(),category:d.pcat,name,kg:d.pkg||'',cost:d.pcost||'',costCur:d.pcostCur||'EGP',pack:d.ppack||'',packCur:d.ppackCur||'EGP'};products.push(p);saveProducts();closeModal();refreshProductSelect(p.id);loadCalcProduct();alert(`${name} was added to the Product Database.`)}}
+
+/* ===== Product catalog & container planner ===== */
+function num(v){const n=parseFloat(v);return isFinite(n)&&n>0?n:0}
+function nf(v,d=0){return Number(v||0).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d})}
+function isAdmin(){return !!currentUser&&currentUser.role==='ADMIN'}
+const CURS=['USD','EUR','GBP','EGP','SAR','AED'];
+function fxRateTo(c){return c==='USD'?1:Number(document.getElementById('fx'+c)?.value||0)}
+function convertCur(v,from,to){v=Number(v)||0;if(from===to)return v;const rf=fxRateTo(from),rt=fxRateTo(to);return rf&&rt?v/rf*rt:0}
+function prodTemp(p){return /^Frozen/.test(p.category)?'Frozen':(p.category==='Prime Roots Jams'?'Ambient':'Fresh')}
+function prodMissing(p){const m=[];if(!num(p.kg))m.push('kg/carton');if(!num(p.cpp))m.push('cartons/pallet');if(!num(p.price))m.push('price');return m}
+function prodBadge(p){const m=prodMissing(p);return m.length?`<span class="badge yellow" title="Missing: ${esc(m.join(', '))}">Needs setup</span>`:'<span class="badge green">Ready</span>'}
+
+/* ---------- Products page ---------- */
+function renderProducts(){
+ const el=document.getElementById('productsTable');if(!el)return;
+ const q=(productSearch.value||'').toLowerCase(),catSel=productCat.value,inc=productIncomplete.checked,admin=isAdmin();
+ const cats=[...new Set(products.map(p=>p.category))].sort();
+ productCat.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option ${c===catSel?'selected':''}>${esc(c)}</option>`).join('');
+ addProductBtn.style.display=admin?'':'none';
+ const rows=products.filter(p=>(!q||`${p.name} ${p.category} ${p.spec||''} ${p.packing||''}`.toLowerCase().includes(q))&&(!catSel||p.category===catSel)&&(!inc||prodMissing(p).length)).sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+ renderProductsHeader();
+ if(!rows.length){el.innerHTML='<div class="empty">'+(products.length?'No products match your filters.':'No products yet.')+'</div>';return}
+ el.innerHTML=`<table class="table"><thead><tr><th>Product</th><th>Packing &amp; type</th><th>Kg / carton</th><th>Cartons / pallet</th><th>Kg / pallet</th><th>Price / ton</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(p=>{const id=esc(p.id);return `<tr>
+ <td><strong>${esc(p.name)}</strong><div class="sub-muted">${esc(p.category)} · ${prodTemp(p)}</div></td>
+ <td>${esc(p.packing||'—')}<div class="sub-muted">${esc(p.spec||'')}</div></td>
+ <td>${admin?`<input class="cell-in" type="number" min="0" step="any" value="${esc(p.kg)}" onchange="setProdField('${id}','kg',this.value)">`:(p.kg||'—')}</td>
+ <td>${admin?`<input class="cell-in" type="number" min="0" step="1" value="${esc(p.cpp||'')}" onchange="setProdField('${id}','cpp',this.value)">`:(p.cpp||'—')}</td>
+ <td id="kgp-${id}">${num(p.kg)&&num(p.cpp)?nf(num(p.kg)*num(p.cpp))+' kg':'—'}</td>
+ <td>${admin?`<div class="price-cell"><input class="cell-in" type="number" min="0" step="any" value="${esc(p.price||'')}" onchange="setProdField('${id}','price',this.value)"><select class="cell-sel" onchange="setProdField('${id}','priceCur',this.value)">${CURS.map(c=>`<option ${c===(p.priceCur||'USD')?'selected':''}>${c}</option>`).join('')}</select></div>`:(num(p.price)?esc(nf(p.price,2)+' '+(p.priceCur||'USD')):'—')}</td>
+ <td id="st-${id}">${prodBadge(p)}</td>
+ <td>${admin?`<button class="btn btn-light btn-sm" onclick="openProductEditor('${id}')">Edit</button>`:''}</td></tr>`}).join('')}</tbody></table>`;
+}
+function renderProductsHeader(){
+ const ready=products.filter(p=>!prodMissing(p).length).length;
+ productsCount.textContent=`${products.length} products · ${ready} ready to use in the Container Planner`;
+ productsNotice.style.display=ready<products.length||!isAdmin()?'':'none';
+ productsNotice.innerHTML=isAdmin()?'<strong>Tip:</strong> fill in <em>kg / carton</em>, <em>cartons / pallet</em> and <em>price / ton</em> for each product. Type straight into the table — every change saves automatically. Use <em>Edit</em> for packing, type and cost details.':'Product specifications and prices are managed by Admin. You can still use them in the Container Planner and change prices for a specific plan.';
+}
+let _prodSaveT=null;
+function setProdField(id,f,v){
+ const p=products.find(x=>x.id===id);if(!p)return;
+ if(['kg','cpp','price','grossKg'].includes(f))v=v===''?'':String(Math.max(0,parseFloat(v)||0));
+ p[f]=v;
+ productsSaved.textContent='Saving…';clearTimeout(_prodSaveT);_prodSaveT=setTimeout(()=>{saveProducts();productsSaved.textContent='Saved ✓';setTimeout(()=>{if(productsSaved.textContent==='Saved ✓')productsSaved.textContent=''},2500)},500);
+ const k=document.getElementById('kgp-'+id);if(k)k.textContent=num(p.kg)&&num(p.cpp)?nf(num(p.kg)*num(p.cpp))+' kg':'—';
+ const s=document.getElementById('st-'+id);if(s)s.innerHTML=prodBadge(p);
+ renderProductsHeader();
+}
+function openProductEditor(id,fromCalc){
+ if(!isAdmin()){alert('Only Admin can edit products.');return}
+ const p=id?products.find(x=>x.id===id):null,v=p||{category:'Frozen Vegetables',name:'',spec:'',packing:'',kg:'',grossKg:'',cpp:'',price:'',priceCur:'USD',cost:'',costCur:'EGP',pack:'',packCur:'EGP'};
+ const cats=['Tropical','Citrus','Fresh Fruits','Frozen Fruits','Frozen Vegetables','Prime Roots Jams','Other'];
+ const h='font-size:12px;font-weight:800;margin:18px 0 8px;color:var(--green)';
+ modal.innerHTML=`<div class="modal-head"><h2>${p?'Edit Product':'Add Product'}</h2><button class="close" onclick="closeModal()">×</button></div>
+ <form id="productForm">
+  <div style="${h};margin-top:0">1 · Product</div>
+  <div class="form-grid">${field('pname','Product name',v.name)}${selectField('pcat','Category',cats.includes(v.category)?cats:cats.concat(v.category),v.category)}${field('pspec','Type / grade (e.g. Grade A 10*10)',v.spec||'')}${field('ppacking','Packing (e.g. 4*2500g)',v.packing||'')}</div>
+  <div style="${h}">2 · Carton &amp; pallet</div>
+  <div class="form-grid">${field('pkg','Net kg per carton',v.kg,'number')}${field('pgross','Gross kg per carton (optional)',v.grossKg||'','number')}${field('pcpp','Cartons per pallet',v.cpp||'','number')}</div>
+  <div style="${h}">3 · Selling price</div>
+  <div class="form-grid">${field('pprice','Price per ton (net)',v.price||'','number')}${selectField('ppriceCur','Currency',CURS,v.priceCur||'USD')}</div>
+  <div id="pePreview" class="notice" style="margin-top:12px;background:#eef6f1;color:#175c40"></div>
+  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:700">Cost settings (used by the Product Pricing calculator)</summary>
+   <div class="form-grid" style="margin-top:10px">${field('pcost','Default product cost',v.cost,'number')}${selectField('pcostCur','Cost currency',CURS,v.costCur||'EGP')}${field('ppack','Packaging cost / carton',v.pack,'number')}${selectField('ppackCur','Packaging currency',CURS,v.packCur||'EGP')}</div></details>
+  <div class="modal-actions">${p?'<button type="button" class="btn btn-danger" id="peDelete" style="margin-right:auto">Delete</button>':''}<button type="button" class="btn btn-light" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save Product</button></div>
+ </form>`;
+ modalBg.classList.add('show');
+ const prev=()=>{const kg=num(productForm.pkg.value),cpp=num(productForm.pcpp.value),pr=num(productForm.pprice.value),cur=productForm.ppriceCur.value,t=[];
+  if(kg&&cpp)t.push(`Net weight per pallet: <b>${nf(kg*cpp)} kg</b>`);
+  if(pr){t.push(`Per kg: <b>${nf(pr/1000,3)} ${cur}</b>`);if(kg)t.push(`Per carton: <b>${nf(pr*kg/1000,2)} ${cur}</b>`);if(kg&&cpp)t.push(`Per pallet: <b>${nf(pr*kg*cpp/1000,2)} ${cur}</b>`)}
+  pePreview.innerHTML=t.length?t.join(' &nbsp;·&nbsp; '):'Enter weight, cartons per pallet and price to see per-carton and per-pallet values.'};
+ productForm.addEventListener('input',prev);prev();
+ if(p)peDelete.onclick=()=>{if(!confirm(`Delete "${p.name}" from the catalog? This cannot be undone.`))return;products=products.filter(x=>x.id!==p.id);plan.rows=plan.rows.filter(r=>r.pid!==p.id);saveProducts();savePlan();closeModal();renderProducts();refreshProductSelect(window.calcProduct?calcProduct.value:'')};
+ productForm.onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(productForm)),name=d.pname.trim();
+  if(!name){alert('Enter a product name.');return}
+  if(products.some(x=>x.id!==(p&&p.id)&&x.name.toLowerCase()===name.toLowerCase())){alert('A product with this name already exists.');return}
+  const nn=x=>x===''?'':String(Math.max(0,parseFloat(x)||0));
+  const rec={category:d.pcat,name,spec:d.pspec.trim(),packing:d.ppacking.trim(),kg:nn(d.pkg),grossKg:nn(d.pgross),cpp:nn(d.pcpp),price:nn(d.pprice),priceCur:d.ppriceCur,cost:nn(d.pcost),costCur:d.pcostCur,pack:nn(d.ppack),packCur:d.ppackCur};
+  let target;if(p){Object.assign(p,rec);target=p}else{target=Object.assign({id:'p'+Date.now()},rec);products.push(target)}
+  saveProducts();closeModal();renderProducts();
+  if(window.calcProduct){refreshProductSelect(fromCalc?target.id:calcProduct.value);if(fromCalc)loadCalcProduct()}
+  log(p?'Updated product':'Added product',name)};
+}
+function openAddProductModal(){openProductEditor(null,true)}
+function openProductManager(){closeModal();showPage('products')}
+
+/* ---------- Container planner ---------- */
+const CONTAINERS=[
+ {k:'20RF',name:"20' Reefer",sub:'Fresh & frozen',reefer:true,std:10,euro:10,payload:27400},
+ {k:'40RF',name:"40' High Cube Reefer",sub:'Fresh & frozen',reefer:true,std:20,euro:23,payload:28000},
+ {k:'20DC',name:"20' Dry",sub:'Jams & ambient',reefer:false,std:10,euro:11,payload:27800},
+ {k:'40DC',name:"40' Dry",sub:'Jams & ambient',reefer:false,std:20,euro:24,payload:26700},
+ {k:'40HC',name:"40' High Cube Dry",sub:'Jams & ambient',reefer:false,std:20,euro:24,payload:26500},
+ {k:'CUS',name:'Custom',sub:'Enter your own capacity',reefer:null,std:20,euro:20,payload:26000}];
+const PL_COLORS=['#1f8a5b','#3b82c4','#e0a800','#c0562f','#7c5cc4','#2aa3a3','#b04a8f','#6b7d3a'];
+let plan=(()=>{try{const x=JSON.parse(localStorage.getItem('mscrm_plan')||'null');if(x&&x.rows)return x}catch(_){}return{cont:'40RF',ptype:'std',pallets:20,payload:28000,palletKg:25,currency:'USD',rows:[]}})();
+function savePlan(){try{localStorage.setItem('mscrm_plan',JSON.stringify(plan))}catch(_){}}
+function contDef(){return CONTAINERS.find(c=>c.k===plan.cont)||CONTAINERS[1]}
+function catalogPrice(p,cur){return num(p.price)?Math.round(convertCur(p.price,p.priceCur||'USD',cur)*100)/100:''}
+function newRow(){return{pid:'',q:1,u:'pallets',price:'',ov:false,kg:'',cpp:'',gr:''}}
+function calcRow(r){
+ const p=products.find(x=>x.id===r.pid);if(!p)return null;
+ const kg=num(r.kg)||num(p.kg),cpp=num(r.cpp)||num(p.cpp),gr=num(r.gr)||num(p.grossKg)||kg,q=num(r.q),missing=[];
+ if(!kg)missing.push('kg per carton');if(!cpp)missing.push('cartons per pallet');
+ let cartons=0;
+ if(r.u==='pallets')cartons=q*cpp;else if(r.u==='cartons')cartons=Math.round(q);else cartons=kg?Math.ceil(q*1000/kg-1e-9):0;
+ const pallets=cpp?cartons/cpp:(r.u==='pallets'?q:0),slots=Math.ceil(pallets-1e-9),net=cartons*kg,gross=cartons*gr,price=num(r.price);
+ return{p,kg,cpp,gr,cartons,pallets,slots,net,gross,price,value:net/1000*price,missing};
+}
+function planTotals(){
+ const t={slots:0,cartons:0,net:0,gross:0,value:0,temps:new Set(),missing:false,parts:[],priced:0};
+ plan.rows.forEach((r,i)=>{const c=calcRow(r);if(!c)return;t.slots+=c.slots;t.cartons+=c.cartons;t.net+=c.net;t.gross+=c.gross;t.value+=c.value;if(c.missing.length)t.missing=true;t.temps.add(prodTemp(c.p));if(c.price)t.priced++;t.parts.push({name:c.p.name,slots:c.slots,i})});
+ t.palletKg=t.slots*num(plan.palletKg);t.totalGross=t.gross+t.palletKg;t.capacity=num(plan.pallets);t.payload=num(plan.payload);
+ return t;
+}
+function plRowHtml(r,i){
+ const lbl='';const prods=productOptions().replace(`value="${esc(r.pid)}"`,`value="${esc(r.pid)}" selected`);
+ return `<div class="pl-row" data-i="${i}">
+  <div class="pl-top">
+   <div style="flex:2 1 210px"><label>Product</label><select onchange="plRow(${i},'pid',this.value)"><option value="">Choose a product…</option>${prods}</select></div>
+   <div><label>Quantity</label><div class="qty-wrap"><input type="number" min="0" step="1" value="${esc(r.q)}" oninput="plRow(${i},'q',this.value)"><select onchange="plRow(${i},'u',this.value)"><option value="pallets" ${r.u==='pallets'?'selected':''}>Pallets</option><option value="cartons" ${r.u==='cartons'?'selected':''}>Cartons</option><option value="tons" ${r.u==='tons'?'selected':''}>Tons</option></select></div></div>
+   <div style="flex:0 1 130px"><label>Price / ton (${esc(plan.currency)})</label><input type="number" min="0" step="any" value="${esc(r.price)}" oninput="plRow(${i},'price',this.value)"></div>
+   <button type="button" class="icon-btn" title="Remove product" onclick="plRemove(${i})">×</button>
+  </div>
+  <div class="pl-line" id="pll-${i}"></div><div class="pl-warn" id="plw-${i}"></div>
+  <div class="pl-chips" id="plc-${i}"></div>
+  <details class="pl-det" id="pld-${i}"><summary>Pack details for this plan (optional changes)</summary><div class="grid3">
+   <div><label>Kg / carton (net)</label><input type="number" min="0" step="any" placeholder="from catalog" value="${esc(r.kg)}" oninput="plRow(${i},'kg',this.value)"></div>
+   <div><label>Cartons / pallet</label><input type="number" min="0" step="1" placeholder="from catalog" value="${esc(r.cpp)}" oninput="plRow(${i},'cpp',this.value)"></div>
+   <div><label>Gross kg / carton</label><input type="number" min="0" step="any" placeholder="from catalog" value="${esc(r.gr)}" oninput="plRow(${i},'gr',this.value)"></div></div></details>
+ </div>`;
+}
+function renderPlanner(){
+ if(!document.getElementById('plContainers'))return;
+ plan.rows.forEach(r=>{if(r.pid&&!products.find(p=>p.id===r.pid))r.pid=''});
+ if(!plan.rows.length)plan.rows.push(newRow());
+ plContainers.innerHTML=CONTAINERS.map(c=>`<button type="button" class="cont-card ${c.k===plan.cont?'active':''}" onclick="plPick('${c.k}')"><b>${esc(c.name)}</b><span>${esc(c.sub)}</span><span>${c.k==='CUS'?'Your capacity':(plan.ptype==='euro'?c.euro:c.std)+' pallets · '+nf(c.payload/1000,1)+' t'}</span></button>`).join('');
+ plCapacity.innerHTML=`<div><label>Pallet type</label><select onchange="plSet('ptype',this.value)"><option value="std" ${plan.ptype==='std'?'selected':''}>Standard 1.2 × 1.0 m</option><option value="euro" ${plan.ptype==='euro'?'selected':''}>Euro 1.2 × 0.8 m</option></select></div>
+ <div><label>Pallet positions</label><input type="number" min="1" step="1" value="${esc(plan.pallets)}" oninput="plSet('pallets',this.value)"></div>
+ <div><label>Max payload (kg)</label><input type="number" min="1" step="100" value="${esc(plan.payload)}" oninput="plSet('payload',this.value)"></div>
+ <div><label>Empty pallet weight (kg)</label><input type="number" min="0" step="1" value="${esc(plan.palletKg)}" oninput="plSet('palletKg',this.value)"></div>
+ <div><label>Currency</label><select onchange="plSet('currency',this.value)">${CURS.map(c=>`<option ${c===plan.currency?'selected':''}>${c}</option>`).join('')}</select></div>`;
+ renderPlannerRows();
+}
+function renderPlannerRows(){
+ plRows.innerHTML=plan.rows.map(plRowHtml).join('');
+ updatePlanner();
+}
+function plPick(k){const c=CONTAINERS.find(x=>x.k===k);plan.cont=k;plan.pallets=plan.ptype==='euro'?c.euro:c.std;plan.payload=c.payload;savePlan();renderPlanner()}
+function plSet(f,v){
+ if(f==='ptype'){plan.ptype=v;const c=contDef();plan.pallets=v==='euro'?c.euro:c.std;savePlan();renderPlanner();return}
+ if(f==='currency'){const old=plan.currency;plan.currency=v;plan.rows.forEach(r=>{const p=products.find(x=>x.id===r.pid);if(!p)return;if(!r.ov)r.price=catalogPrice(p,v);else if(r.price!=='')r.price=Math.round(convertCur(r.price,old,v)*100)/100});savePlan();renderPlannerRows();return}
+ plan[f]=v===''?'':Number(v);savePlan();updatePlanner();
+}
+function plRow(i,f,v){
+ const r=plan.rows[i];if(!r)return;
+ if(f==='pid'){r.pid=v;r.ov=false;r.kg=r.cpp=r.gr='';const p=products.find(x=>x.id===v);r.price=p?catalogPrice(p,plan.currency):'';savePlan();renderPlannerRows();return}
+ if(f==='u'){const c=calcRow(r);let q=num(r.q);if(c&&c.cartons){if(v==='pallets'&&c.cpp)q=Math.round(c.cartons/c.cpp*10)/10;else if(v==='cartons')q=c.cartons;else if(v==='tons'&&c.kg)q=Math.round(c.cartons*c.kg/10)/100}r.u=v;r.q=q||1;savePlan();renderPlannerRows();return}
+ if(f==='price'){r.ov=true;r.price=v}else r[f]=v;
+ savePlan();updatePlanner();
+}
+function plAdd(){plan.rows.push(newRow());savePlan();renderPlannerRows();const s=plRows.querySelectorAll('.pl-row:last-child select')[0];if(s)s.focus()}
+function plRemove(i){plan.rows.splice(i,1);savePlan();renderPlanner()}
+function resetPlan(){if(plan.rows.some(r=>r.pid)&&!confirm('Clear this plan and start over?'))return;plan.rows=[newRow()];savePlan();renderPlanner()}
+function plFill(i){
+ const r=plan.rows[i],c=calcRow(r),t=planTotals();if(!c)return;
+ const free=t.capacity-t.slots;if(free<=0){alert('The container has no free pallet positions.');return}
+ if(!c.cpp){alert('Set cartons per pallet for this product first.');return}
+ const extraC=free*c.cpp;
+ if(r.u==='pallets')r.q=Math.round((num(r.q)+free)*10)/10;else if(r.u==='cartons')r.q=c.cartons+extraC;else r.q=Math.round((c.cartons+extraC)*c.kg/10)/100;
+ savePlan();renderPlannerRows();
+}
+function updatePlanner(){
+ const t=planTotals();
+ plan.rows.forEach((r,i)=>{
+  const c=calcRow(r),line=document.getElementById('pll-'+i),warn=document.getElementById('plw-'+i),chips=document.getElementById('plc-'+i),det=document.getElementById('pld-'+i);
+  if(!line)return;
+  if(!c){line.textContent='Choose a product to see its packing, weight and pallet details.';warn.textContent='';chips.innerHTML='';return}
+  const p=c.p;
+  line.textContent=[p.packing,p.spec,c.kg?nf(c.kg,2)+' kg/carton':'',c.cpp?c.cpp+' cartons/pallet':'',c.kg&&c.cpp?nf(c.kg*c.cpp)+' kg net/pallet':'',prodTemp(p)].filter(Boolean).join(' · ');
+  warn.textContent=c.missing.length?'Missing '+c.missing.join(' and ')+' — enter it under “Pack details” below'+(isAdmin()?' or in the Products page.':'.'):'';
+  if(c.missing.length&&det)det.open=true;
+  if(!c.price&&!c.missing.length)warn.textContent='No price set — enter a price / ton or set one in Products.';
+  chips.innerHTML=`<span class="pchip"><b>${nf(c.pallets,c.pallets%1?1:0)}</b> pallets</span><span class="pchip"><b>${nf(c.cartons)}</b> cartons</span><span class="pchip"><b>${nf(c.net)}</b> kg net · <b>${nf(c.net/1000,2)}</b> t</span><span class="pchip"><b>${nf(c.gross)}</b> kg gross</span><span class="pchip"><b>${nf(c.value,2)}</b> ${esc(plan.currency)}</span><button type="button" class="btn btn-light btn-sm" onclick="plFill(${i})">Fill remaining space</button>`;
+ });
+ const cd=contDef(),free=t.capacity-t.slots,pPct=t.capacity?t.slots/t.capacity*100:0,wPct=t.payload?t.totalGross/t.payload*100:0,cls=x=>x>100?'over':x>=90?'warn':'';
+ const alerts=[];
+ if(t.capacity&&t.slots>t.capacity)alerts.push(['bad',`Over capacity by ${t.slots-t.capacity} pallet position${t.slots-t.capacity>1?'s':''}.`]);
+ if(t.payload&&t.totalGross>t.payload)alerts.push(['bad',`Over the weight limit by ${nf(t.totalGross-t.payload)} kg.`]);
+ if(cd.reefer===false&&(t.temps.has('Frozen')||t.temps.has('Fresh')))alerts.push(['warn','Fresh or frozen products need a reefer (refrigerated) container.']);
+ if(t.temps.size>1)alerts.push(['warn',`This load mixes ${[...t.temps].join(' + ')} products. They need different temperature settings, so confirm with your shipping line that it can be loaded together.`]);
+ if(t.missing)alerts.push(['warn','Some products are missing weight or pallet data, so totals are incomplete.']);
+ if(!alerts.length&&t.slots)alerts.push(['ok',`Fits: ${free} pallet position${free===1?'':'s'} and ${nf(Math.max(0,t.payload-t.totalGross))} kg of payload still free.`]);
+ const stack=t.parts.filter(x=>x.slots).map(x=>`<i title="${esc(x.name)}: ${x.slots} pallets" style="width:${t.capacity?Math.min(100,x.slots/t.capacity*100):0}%;background:${PL_COLORS[x.i%PL_COLORS.length]}"></i>`).join('');
+ const legend=t.parts.filter(x=>x.slots).map(x=>`<span style="display:inline-flex;align-items:center;gap:5px;margin:6px 12px 0 0;font-size:12px"><i style="width:10px;height:10px;border-radius:3px;background:${PL_COLORS[x.i%PL_COLORS.length]}"></i>${esc(x.name)} · ${x.slots}</span>`).join('');
+ plSummary.innerHTML=`<div class="card-head"><h3>${esc(cd.name)}</h3><span class="count">${plan.ptype==='euro'?'Euro':'Standard'} pallets</span></div><div class="step-body">
+  <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px"><span>Pallet positions</span><span>${t.slots} / ${t.capacity||'—'}</span></div>
+  <div class="stack">${stack}</div><div>${legend}</div>
+  <div class="meter ${cls(pPct)}" style="margin-top:10px"><i style="width:${Math.min(100,pPct)}%"></i></div>
+  <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin:14px 0 6px"><span>Gross weight (incl. pallets)</span><span>${nf(t.totalGross)} / ${nf(t.payload)} kg</span></div>
+  <div class="meter ${cls(wPct)}"><i style="width:${Math.min(100,wPct)}%"></i></div>
+  <div class="sum-grid"><div class="sum-box"><span>Cartons</span><b>${nf(t.cartons)}</b></div><div class="sum-box"><span>Pallets</span><b>${t.slots}</b></div>
+  <div class="sum-box"><span>Net weight</span><b>${nf(t.net)} kg</b><div class="sub-muted">${nf(t.net/1000,2)} tons</div></div><div class="sum-box"><span>Gross weight</span><b>${nf(t.totalGross)} kg</b><div class="sub-muted">${nf(t.totalGross/1000,2)} tons</div></div>
+  <div class="sum-box" style="grid-column:1/-1"><span>Total goods value</span><b>${esc(plan.currency)} ${nf(t.value,2)}</b><div class="sub-muted">${t.net?'Average '+nf(t.value/(t.net/1000),2)+' '+esc(plan.currency)+' per ton':'Add products to see the value'}</div></div></div>
+  ${alerts.map(a=>`<div class="pl-alert ${a[0]}">${esc(a[1])}</div>`).join('')}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px"><button class="btn btn-primary" onclick="plToQuote()">Create quotation</button><button class="btn btn-light" onclick="plCopy()">Copy summary</button></div>
+  <div class="sub-muted" style="margin-top:12px">Capacities and payloads are typical values — they vary by shipping line and container. Confirm with your forwarder before booking.</div></div>`;
+}
+function plToQuote(){
+ const rows=[];plan.rows.forEach(r=>{const c=calcRow(r);if(c&&c.price)rows.push({name:c.p.name,packaging:c.p.packing||'',type:c.p.spec||'',unit:c.price})});
+ if(!rows.length){alert('Add at least one product with a price per ton first.');return}
+ openQuoteModal({rows,currency:plan.currency});
+}
+function plCopy(){
+ const t=planTotals(),cd=contDef(),L=[`Container plan: ${cd.name} (${plan.ptype==='euro'?'Euro':'Standard'} pallets)`];
+ plan.rows.forEach(r=>{const c=calcRow(r);if(c)L.push(`- ${c.p.name}${c.p.packing?' ('+c.p.packing+')':''}: ${nf(c.pallets,c.pallets%1?1:0)} pallets, ${nf(c.cartons)} cartons, ${nf(c.net)} kg net (${nf(c.net/1000,2)} t)${c.price?', '+nf(c.value,2)+' '+plan.currency:''}`)});
+ L.push(`Total: ${t.slots}/${t.capacity} pallets, ${nf(t.cartons)} cartons, ${nf(t.net)} kg net (${nf(t.net/1000,2)} t), ${nf(t.totalGross)} kg gross, ${nf(t.value,2)} ${plan.currency}`);
+ const txt=L.join('\n');
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>alert('Summary copied.'),()=>prompt('Copy the summary:',txt));else prompt('Copy the summary:',txt);
+}
 
 const TERM_HELP={EXW:'Product + packaging. Buyer handles export, freight and insurance.',FCA:'Product + packaging + origin/export charges.',FOB:'Product + packaging + origin/export + port charges. Freight and insurance excluded.',CFR:'FOB + international freight. Insurance excluded.',CNF:'CNF is commonly used to mean CFR; use CFR in formal contracts.',CIF:'CFR + cargo insurance to the named destination port.',CPT:'Product + origin/export + carriage to destination.',CIP:'CPT + insurance.',DAP:'Origin + port + freight + destination transport. Buyer normally handles import duty/tax.',DPU:'DAP plus unloading at destination. Buyer normally handles import duty/tax.',DDP:'Origin + port + freight + destination + import duty/tax, subject to local rules.'};
 const FX_CODES=['EGP','EUR','GBP','SAR','AED'];
