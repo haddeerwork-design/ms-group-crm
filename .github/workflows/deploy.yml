@@ -1,0 +1,66 @@
+# Builds the new React app and publishes it to GitHub Pages TOGETHER with the
+# current CRM:
+#   https://haddeerwork-design.github.io/ms-group-crm/       -> current CRM (index.html, unchanged)
+#   https://haddeerwork-design.github.io/ms-group-crm/app/   -> new platform
+# If the build fails, nothing is published and the live site stays as it was.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install
+        working-directory: app
+        run: npm ci
+
+      - name: Build new platform
+        working-directory: app
+        run: npm run build
+
+      - name: Assemble site (current CRM at root, new platform at /app)
+        run: |
+          mkdir _site
+          shopt -s dotglob
+          for f in *; do
+            case "$f" in .git|.github|app|supabase|_site) ;; *) cp -r "$f" _site/ ;; esac
+          done
+          mkdir -p _site/app
+          cp -r app/dist/. _site/app/
+          test -f _site/index.html || (echo "Current CRM index.html is missing!" && exit 1)
+          test -f _site/app/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
