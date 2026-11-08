@@ -18,6 +18,7 @@ export const ROLE_LABEL: Record<AppRole, string> = {
  *  guard; this only decides what to show. */
 export const MODULE_ACCESS = {
   dashboard: ROLES,
+  products: ROLES,
   team: ['super_admin', 'sales_manager'],
   settings: ROLES, // everyone can read; only super_admin can edit (enforced by RLS)
 } satisfies Record<string, readonly AppRole[]>
@@ -26,3 +27,6 @@ export type ModuleKey = keyof typeof MODULE_ACCESS
 export function canAccess(roles: AppRole[], m: ModuleKey) {
   return roles.some((r) => (MODULE_ACCESS[m] as readonly AppRole[]).includes(r))
 }
+
+/** Roles allowed to add / edit products (must match app_can_manage_catalog() in SQL). */
+export const CATALOG_MANAGERS: AppRole[] = ['super_admin', 'sales_manager']
