@@ -1,8 +1,8 @@
 -- LOCAL TESTING ONLY. Never run this on the real Supabase project.
 -- Mimics the parts of Supabase the migrations rely on, plus the legacy
 -- schema as reconstructed in the handover.
-create role anon nologin;
-create role authenticated nologin;
+do $$ begin create role anon nologin; exception when duplicate_object then null; end $$;
+do $$ begin create role authenticated nologin; exception when duplicate_object then null; end $$;
 create schema auth;
 create table auth.users (id uuid primary key, email text);
 create function auth.uid() returns uuid language sql stable as $$
