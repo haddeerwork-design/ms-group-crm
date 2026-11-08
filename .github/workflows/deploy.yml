@@ -37,6 +37,10 @@ jobs:
         working-directory: app
         run: npm ci
 
+      - name: Unit tests (pricing formulas)
+        working-directory: app
+        run: npm test
+
       - name: Build new platform
         working-directory: app
         run: npm run build

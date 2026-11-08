@@ -10,6 +10,7 @@ import { Dashboard } from '@/pages/Dashboard'
 import { Settings } from '@/pages/Settings'
 import { Team } from '@/pages/Team'
 import { Products } from '@/pages/Products'
+import { Pricing } from '@/pages/Pricing'
 
 function Guard({ module, children }: { module: ModuleKey; children: JSX.Element }) {
   const { roles } = useAuth()
@@ -31,6 +32,7 @@ function Root() {
       <Route element={<AppShell />}>
         <Route index element={<Dashboard />} />
         <Route path="products" element={<Guard module="products"><Products /></Guard>} />
+        <Route path="pricing" element={<Guard module="pricing"><Pricing /></Guard>} />
         <Route path="team" element={<Guard module="team"><Team /></Guard>} />
         <Route path="settings" element={<Guard module="settings"><Settings /></Guard>} />
         <Route path="*" element={<Navigate to="/" replace />} />
