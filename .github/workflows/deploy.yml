@@ -2,12 +2,14 @@
 # current CRM:
 #   https://haddeerwork-design.github.io/ms-group-crm/       -> current CRM (index.html, unchanged)
 #   https://haddeerwork-design.github.io/ms-group-crm/app/   -> new platform
-# If the build fails, nothing is published and the live site stays as it was.
+# Pull requests only BUILD (to check nothing is broken). Publishing happens
+# only from main. If the build fails, nothing is published.
 name: Deploy site
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -16,18 +18,18 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
 
@@ -44,18 +46,20 @@ jobs:
           mkdir _site
           shopt -s dotglob
           for f in *; do
-            case "$f" in .git|.github|app|supabase|_site) ;; *) cp -r "$f" _site/ ;; esac
+            case "$f" in .git|.github|app|supabase|_site|README-PLATFORM.md) ;; *) cp -r "$f" _site/ ;; esac
           done
           mkdir -p _site/app
           cp -r app/dist/. _site/app/
           test -f _site/index.html || (echo "Current CRM index.html is missing!" && exit 1)
           test -f _site/app/index.html
+          ls -la _site _site/app
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:
