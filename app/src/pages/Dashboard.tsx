@@ -18,6 +18,7 @@ const PLAN = [
   { version: '0004_containers', label: 'Container planner' },
   { version: '0005_quotations', label: 'Quotations & PDF' },
   { version: '0006_crm', label: 'CRM: importers, contacts, timeline' },
+  { version: '0007_sales', label: 'Sales pipeline, tasks & notifications' },
 ]
 
 export function Dashboard() {

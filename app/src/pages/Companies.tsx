@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, FileUp, Plus, Search } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { CRM_WRITERS } from '@/lib/roles'
@@ -27,6 +27,8 @@ export function Companies() {
   const [addOpen, setAddOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
 
+  const [params, setParams] = useSearchParams()
+  useEffect(() => { if (params.get('new')) { setAddOpen(true); setParams({}, { replace: true }) } }, [params, setParams])
   const load = useCallback(() => Promise.all([fetchCompanies(), fetchTeam()]).then(([c, t]) => { setRows(c); setTeam(t) }).catch((e) => setError(e.message)), [])
   useEffect(() => { load() }, [load])
 
