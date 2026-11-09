@@ -263,6 +263,7 @@ export function QuotationEditor() {
             <Button variant="outline" onClick={() => setStatus('expired')} disabled={!!busy}>Expired</Button>
           </>}
           {canWrite && !editableStatus && <Button variant="outline" onClick={() => setStatus('revised')} disabled={!!busy}><Pencil />Revise</Button>}
+          {canWrite && status === 'accepted' && quote && <Button onClick={() => nav(`/proformas/new?quotation=${quote.id}`)}><FileText />Create proforma</Button>}
         </div>
       </div>
 

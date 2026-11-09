@@ -13,3 +13,11 @@ insert into public.crm_records (record_type, record_key, data, owner_legacy_id) 
  ('leads','l1','{"id":3,"company":"Saudi Foods Co.","country":"Saudi Arabia","contact":"Omar","email":"omar@saudifoods.sa","products":"Okra","next":"2026-12-01","status":"New Lead"}','u2'),
  ('leads','l2','{"id":4,"company":"  ","country":"X"}','u2'),
  ('customers','c3','{"id":5,"company":"No Owner Ltd","country":"UK"}', 'u9');
+
+-- fake suppliers / shipping data as the current CRM saves them (used by 0008 tests)
+insert into public.crm_records (record_type, record_key, data) values
+ ('suppliers','sp1','{"id":1,"name":"Delta Farms","category":"Fresh","country":"Egypt","city":"Beheira","products":"Mango","contact":"Karim","email":"k@delta.eg","payment":"30 days"}'),
+ ('suppliers','sp2','{"id":2,"name":"","category":"Other"}'),
+ ('shippingCompanies','sc1','{"id":1,"name":"Nile Logistics","type":"Freight Forwarder","services":"Reefer Logistics","country":"Egypt","city":"Alexandria"}'),
+ ('shippingRates','1','{"id":1,"fromCountry":"Egypt","fromPort":"Alexandria","toCountry":"UAE","toPort":"Jebel Ali","container":"40HC","mode":"Sea","rate":"","currency":"USD","transit":"10-14 days"}'),
+ ('shippingRates','r9','{"id":9,"fromCountry":"Egypt","fromPort":"Damietta","toCountry":"Saudi Arabia","toPort":"Jeddah","container":"Reefer 40HC","mode":"Sea","rate":2350,"currency":"USD","transit":"7 days","carrier":"Nile Logistics","validUntil":"2026-12-31"}');

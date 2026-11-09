@@ -25,6 +25,9 @@ export const MODULE_ACCESS = {
   crm: ['super_admin', 'sales_manager', 'sales_officer', 'finance_officer'],
   pipeline: ['super_admin', 'sales_manager', 'sales_officer', 'finance_officer'],
   tasks: ROLES,
+  suppliers: ROLES,
+  logistics: ROLES,
+  proformas: ['super_admin', 'sales_manager', 'sales_officer', 'finance_officer'],
   team: ['super_admin', 'sales_manager'],
   settings: ROLES, // everyone can read; only super_admin can edit (enforced by RLS)
 } satisfies Record<string, readonly AppRole[]>
