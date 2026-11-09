@@ -19,6 +19,7 @@ export const ROLE_LABEL: Record<AppRole, string> = {
 export const MODULE_ACCESS = {
   dashboard: ROLES,
   products: ROLES,
+  pricing: ROLES,
   team: ['super_admin', 'sales_manager'],
   settings: ROLES, // everyone can read; only super_admin can edit (enforced by RLS)
 } satisfies Record<string, readonly AppRole[]>
@@ -30,3 +31,8 @@ export function canAccess(roles: AppRole[], m: ModuleKey) {
 
 /** Roles allowed to add / edit products (must match app_can_manage_catalog() in SQL). */
 export const CATALOG_MANAGERS: AppRole[] = ['super_admin', 'sales_manager']
+
+/** Must match the SQL helpers in 0003_pricing. */
+export const PRICE_MANAGERS: AppRole[] = ['super_admin', 'sales_manager']
+export const COST_VIEWERS: AppRole[] = ['super_admin', 'sales_manager', 'finance_officer']
+export const FX_EDITORS: AppRole[] = ['super_admin', 'sales_manager', 'finance_officer']

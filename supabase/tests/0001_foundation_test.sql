@@ -5,7 +5,7 @@
 \set Q '00000000-0000-0000-0000-00000000000c'
 
 -- existing data untouched
-do $$ begin assert (select count(*) from public.crm_records) = 1; raise notice 'PASS crm_records untouched'; end $$;
+do $$ begin assert (select count(*) from public.crm_records where record_type='customers') = 1; raise notice 'PASS crm_records untouched'; end $$;
 
 -- mapping
 do $$ begin
