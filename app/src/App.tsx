@@ -24,6 +24,10 @@ import { Logistics } from '@/pages/Logistics'
 import { Proformas } from '@/pages/Proformas'
 import { ProformaEditor } from '@/pages/ProformaEditor'
 import { ProformaPrint } from '@/pages/ProformaPrint'
+import { Orders } from '@/pages/Orders'
+import { OrderCreate } from '@/pages/OrderCreate'
+import { OrderDetail } from '@/pages/OrderDetail'
+import { Payments } from '@/pages/Payments'
 
 function Guard({ module, children }: { module: ModuleKey; children: JSX.Element }) {
   const { roles } = useAuth()
@@ -55,6 +59,10 @@ function Root() {
         <Route path="planner" element={<Guard module="planner"><Planner /></Guard>} />
         <Route path="quotations" element={<Guard module="quotations"><Quotations /></Guard>} />
         <Route path="quotations/:id" element={<Guard module="quotations"><QuotationEditor /></Guard>} />
+        <Route path="orders" element={<Guard module="orders"><Orders /></Guard>} />
+        <Route path="orders/new" element={<Guard module="orders"><OrderCreate /></Guard>} />
+        <Route path="orders/:id" element={<Guard module="orders"><OrderDetail /></Guard>} />
+        <Route path="payments" element={<Guard module="payments"><Payments /></Guard>} />
         <Route path="suppliers" element={<Guard module="suppliers"><Suppliers /></Guard>} />
         <Route path="logistics" element={<Guard module="logistics"><Logistics /></Guard>} />
         <Route path="proformas" element={<Guard module="proformas"><Proformas /></Guard>} />

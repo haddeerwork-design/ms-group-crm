@@ -166,6 +166,7 @@ export function ProformaEditor() {
           {canEdit && <Button variant="outline" onClick={save} disabled={!!busy}>{busy === 'save' ? <Loader2 className="animate-spin" /> : <Save />}Save</Button>}
           <Button variant="outline" onClick={() => printIt()} disabled={!!busy}><Printer />Preview / PDF</Button>
           {canWrite && editable && <Button onClick={() => setStatus('issued')} disabled={!!busy}><Stamp />Issue</Button>}
+          {canWrite && status === 'issued' && pi && <Button onClick={() => nav(`/orders/new?proforma=${pi.id}`)}><Stamp />Create order</Button>}
           {canWrite && status === 'issued' && <><Button variant="outline" onClick={() => setStatus('revised')}><Pencil />Revise</Button><Button variant="outline" onClick={() => setStatus('cancelled')}><Ban />Cancel</Button></>}
         </div>
       </div>

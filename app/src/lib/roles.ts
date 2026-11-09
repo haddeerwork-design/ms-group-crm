@@ -28,6 +28,8 @@ export const MODULE_ACCESS = {
   suppliers: ROLES,
   logistics: ROLES,
   proformas: ['super_admin', 'sales_manager', 'sales_officer', 'finance_officer'],
+  orders: ['super_admin', 'sales_manager', 'sales_officer', 'finance_officer', 'logistics_officer'],
+  payments: ['super_admin', 'sales_manager', 'finance_officer', 'sales_officer'],
   team: ['super_admin', 'sales_manager'],
   settings: ROLES, // everyone can read; only super_admin can edit (enforced by RLS)
 } satisfies Record<string, readonly AppRole[]>
@@ -57,3 +59,6 @@ export const QUOTE_EDIT_ALL: AppRole[] = ['super_admin', 'sales_manager']
 /** Must match 0006_crm. */
 export const CRM_WRITERS: AppRole[] = ['super_admin', 'sales_manager', 'sales_officer']
 export const CRM_ASSIGNERS: AppRole[] = ['super_admin', 'sales_manager']
+
+/** Must match 0009_operations. */
+export const PAYMENT_EDITORS: AppRole[] = ['super_admin', 'sales_manager', 'finance_officer']

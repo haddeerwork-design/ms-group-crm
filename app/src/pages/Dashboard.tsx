@@ -20,6 +20,7 @@ const PLAN = [
   { version: '0006_crm', label: 'CRM: importers, contacts, timeline' },
   { version: '0007_sales', label: 'Sales pipeline, tasks & notifications' },
   { version: '0008_logistics', label: 'Suppliers, shipping rates & proforma invoices' },
+  { version: '0009_operations', label: 'Orders, shipments, documents & payments' },
 ]
 
 export function Dashboard() {
