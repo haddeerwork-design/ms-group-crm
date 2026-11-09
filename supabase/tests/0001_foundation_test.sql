@@ -76,7 +76,7 @@ update public.company_settings set phone='+20 000';
 do $$ begin
   assert (select phone from public.company_settings) = '+20 000';
   assert (select updated_by from public.company_settings) = '00000000-0000-0000-0000-00000000000a';
-  assert (select count(*) from public.audit_logs where table_name='company_settings') = 1;
+  assert exists (select 1 from public.audit_logs where table_name='company_settings' and actor='00000000-0000-0000-0000-00000000000a' and new_data->>'phone'='+20 000');
   assert (select count(*) from public.user_roles) = 3;
   raise notice 'PASS admin edits settings, audited';
 end $$;

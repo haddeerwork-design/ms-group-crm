@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Copy, Loader2, Maximize2, Plus, Save, Search, Settings2, Trash2, Truck } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertTriangle, Copy, FileText, Loader2, Maximize2, Plus, Save, Search, Settings2, Trash2, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -33,6 +34,7 @@ const newMeta = (): Meta => ({ id: null, name: '', container_type_id: '', contai
 
 export function Planner() {
   const { hasRole, session } = useAuth()
+  const navigate = useNavigate()
   const canPlan = hasRole(...PLANNERS)
   const editAll = hasRole(...PLAN_EDIT_ALL)
   const canManageTypes = hasRole(...CONTAINER_MANAGERS)
@@ -346,9 +348,11 @@ export function Planner() {
               <div className="flex flex-wrap gap-2 border-t border-border pt-4">
                 {canEdit && <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="animate-spin" /> : <Save />}{meta.id ? 'Save changes' : 'Save plan'}</Button>}
                 <Button variant="outline" onClick={copySummary} disabled={!lineRows.length}><Copy />Copy summary</Button>
+                {canPlan && meta.id && (
+                  <Button variant="outline" onClick={() => dirty ? toast.error('Save the plan first.') : navigate(`/quotations/new?plan=${meta.id}`)}><FileText />Create quotation</Button>
+                )}
                 {canEdit && meta.id && <Button variant="ghost" className="ml-auto text-destructive" onClick={remove}><Trash2 />Delete plan</Button>}
               </div>
-              <p className="text-xs text-muted-foreground">Creating a quotation from a plan comes with the Quotations step.</p>
             </CardContent>
           </Card>
         </div>

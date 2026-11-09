@@ -7,7 +7,8 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { PageHeader } from '@/components/layout/AppShell'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,7 +58,8 @@ export function Settings() {
 
   return (
     <>
-      <PageHeader title="Company Settings" summary="Shown on quotations and invoices. Only the Super Admin can change these." />
+      <PageHeader title="Company Settings" summary="Only the Super Admin can change these." />
+      <p className="mb-4 text-sm text-muted-foreground">Quotations print on the El Brancy letterhead image, which already contains its own WhatsApp, email and address. The company name and slogan below are printed in the text.</p>
       <Card>
         <CardContent className="pt-5">
           {state === 'loading' ? <Loading /> : state !== 'ready' ? <ErrorState message={state} /> : (
@@ -79,6 +81,54 @@ export function Settings() {
           )}
         </CardContent>
       </Card>
+      <QuotationDefaults canEdit={canEdit} />
     </>
+  )
+}
+
+function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
+  const [v, setV] = useState<{ policy: string; days: string; production: string } | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  async function load() {
+    const { data, error } = await supabase.from('company_settings').select('quotation_policy, quotation_validity_days, quotation_production_time').eq('id', 1).single()
+    if (error) return setErr(error.message.includes('quotation_policy') ? 'Run migration 0005 to enable quotation defaults.' : error.message)
+    setV({ policy: (data.quotation_policy ?? []).join('\n'), days: data.quotation_validity_days == null ? '' : String(data.quotation_validity_days), production: data.quotation_production_time ?? '' })
+  }
+  useEffect(() => { load() }, [])
+  async function save() {
+    if (!v) return
+    const days = v.days.trim() === '' ? null : Number(v.days)
+    if (days != null && !(Number.isInteger(days) && days >= 1 && days <= 365)) return toast.error('Validity must be 1–365 days')
+    setSaving(true)
+    const { data, error } = await supabase.from('company_settings').update({
+      quotation_policy: v.policy.split('\n').map((x) => x.trim()).filter(Boolean), quotation_validity_days: days,
+      quotation_production_time: v.production.trim() || null,
+    }).eq('id', 1).select('id')
+    setSaving(false)
+    if (error) return toast.error(error.message)
+    if (!data?.length) return toast.error('Your role cannot change settings.')
+    toast.success('Quotation defaults saved'); load()
+  }
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle>Quotation defaults</CardTitle>
+        <CardDescription>Used for new quotations. In the policy you can write {'{validity_days}'}, {'{incoterm}'} and {'{production_time}'}; they are filled in for each quotation.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {err ? <ErrorState message={err} /> : !v ? <Loading /> : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="qpolicy">Policy lines (one per line)</Label>
+              <Textarea id="qpolicy" className="min-h-[130px]" disabled={!canEdit} value={v.policy} onChange={(e) => setV({ ...v, policy: e.target.value })} />
+            </div>
+            <div className="space-y-2"><Label htmlFor="qdays">Valid for (days)</Label><Input id="qdays" inputMode="numeric" disabled={!canEdit} value={v.days} onChange={(e) => setV({ ...v, days: e.target.value })} /></div>
+            <div className="space-y-2"><Label htmlFor="qprod">Production time</Label><Input id="qprod" disabled={!canEdit} value={v.production} onChange={(e) => setV({ ...v, production: e.target.value })} /></div>
+            {canEdit && <div className="sm:col-span-2"><Button onClick={save} disabled={saving}>{saving && <Loader2 className="animate-spin" />}Save quotation defaults</Button></div>}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
