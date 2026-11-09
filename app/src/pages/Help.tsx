@@ -51,7 +51,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
     'نسخة للقراءة بس من الـ CRM القديم: الـ quotations والـ invoices القديمة وسجل النشاط. محدش يقدر يعدّلها أو يمسحها.',
   ] },
   { title: 'للـ Super Admin', items: [
-    'موظف جديد: من Team & Roles دوس Add employee، اكتب الاسم والإيميل واختار الـ role. هيطلعلك باسورد مؤقت ابعته للموظف، وهو هيغيّره أول ما يدخل. لو حد نسي الباسورد دوس Reset جنب اسمه.',
+    'موظف جديد: من Team & Roles دوس Add employee، اكتب الاسم والإيميل واختار الـ role. هيطلعلك باسورد مؤقت ابعته للموظف، وهو هيغيّره أول ما يدخل. لو حد نسي الباسورد أو ساب الشغل، دوس Manage جنب اسمه: Reset password، أو Deactivate (مش هيقدر يدخل وشغله بيفضل محفوظ باسمه)، أو Delete للحسابات التجريبية بس.',
     'في Company Settings تحت فيه System check: Run security check بيتأكد إن مفيش حاجة مكشوفة، وRefresh old-CRM archive بياخد آخر نسخة من الـ CRM القديم.',
     'أوعى تحط الـ service_role key في أي حتة في الـ app أو تبعته لحد.',
   ] },
