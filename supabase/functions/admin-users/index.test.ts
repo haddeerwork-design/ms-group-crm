@@ -11,7 +11,9 @@ function fake(log: string[]) {
       admin: {
         createUser: (o: { email: string; password: string }) => { log.push('create ' + o.email + ' ' + o.password.length); return Promise.resolve(o.email === 'taken@x.com' ? { error: { message: 'A user with this email address has already been registered' } } : { data: { user: { id: 'cccccccc-cccc-cccc-cccc-cccccccccccc' } } }) },
         getUserById: () => Promise.resolve({ data: { user: { user_metadata: { full_name: 'X' } } } }),
-        updateUserById: (_id: string, o: { user_metadata: Record<string, unknown> }) => { log.push('update ' + JSON.stringify(o.user_metadata)); return Promise.resolve({}) },
+        updateUserById: (_id: string, o: { user_metadata?: Record<string, unknown>; ban_duration?: string }) => { log.push('update ' + JSON.stringify(o.user_metadata ?? { ban: o.ban_duration })); return Promise.resolve({}) },
+        deleteUser: (id: string) => { log.push('delete ' + id); return Promise.resolve(id === 'dddddddd-dddd-dddd-dddd-dddddddddddd' ? { error: { message: 'Database error deleting user' } } : {}) },
+        listUsers: () => Promise.resolve({ data: { users: [{ id: SALES, banned_until: '2999-01-01T00:00:00Z' }, { id: SUPER, banned_until: null }] } }),
       },
     },
     from: (t: string) => {
@@ -21,6 +23,7 @@ function fake(log: string[]) {
         maybeSingle: () => Promise.resolve({ data: t === 'user_roles' && q.user_id === SUPER ? { role: 'super_admin' } : null }),
         upsert: (r: unknown) => { log.push('upsert ' + t + ' ' + JSON.stringify(r)); return Promise.resolve({}) },
         insert: (r: unknown) => { log.push('insert ' + t + ' ' + JSON.stringify(r)); return Promise.resolve({}) },
+        delete: () => { log.push('delete-rows ' + t); return { eq: (_k: string, v: string) => { log.push('  where ' + v); return Promise.resolve({}) } } },
       }
       return chain
     },
@@ -63,4 +66,27 @@ Deno.test('reset password forces change', async () => {
   assertEquals(r.status, 200)
   assert(log[0].includes('"must_change_password":true') && log[0].includes('"full_name":"X"'))
   assertEquals((await call('super', { action: 'reset_password', user_id: SUPER })).status, 400)
+})
+
+Deno.test('deactivate removes roles then blocks login; reactivate unblocks', async () => {
+  const log: string[] = []
+  assertEquals((await call('super', { action: 'set_active', user_id: SALES, active: false }, log)).status, 200)
+  assertEquals(log, ['delete-rows user_roles', '  where ' + SALES, 'update {"ban":"876000h"}'])
+  const log2: string[] = []
+  assertEquals((await call('super', { action: 'set_active', user_id: SALES, active: true }, log2)).status, 200)
+  assertEquals(log2, ['update {"ban":"none"}'])
+  assertEquals((await call('super', { action: 'set_active', user_id: SUPER, active: false })).status, 400)
+  assertEquals((await call('sales', { action: 'set_active', user_id: SUPER, active: false })).status, 403)
+})
+Deno.test('delete: works, refuses self, explains when history exists', async () => {
+  assertEquals((await call('super', { action: 'delete_user', user_id: SALES })).status, 200)
+  assertEquals((await call('super', { action: 'delete_user', user_id: SUPER })).status, 400)
+  const r = await call('super', { action: 'delete_user', user_id: 'dddddddd-dddd-dddd-dddd-dddddddddddd' })
+  assertEquals(r.status, 409)
+  assert((await r.json()).error.includes('Deactivate'))
+  assertEquals((await call('sales', { action: 'delete_user', user_id: SALES })).status, 403)
+})
+Deno.test('status lists deactivated logins', async () => {
+  const b = await (await call('super', { action: 'status' })).json()
+  assertEquals(b.deactivated[SALES], true); assertEquals(b.deactivated[SUPER], false)
 })

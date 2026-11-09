@@ -91,6 +91,48 @@ export async function handle(req: Request, env: Env, mk: MakeClient = createClie
     return json(200, { user_id: id, password })
   }
 
+  if (body.action === 'status') {
+    // Which logins are deactivated (banned). Only ids and a flag go back.
+    const out: Record<string, boolean> = {}
+    for (let page = 1; page <= 20; page++) {
+      const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+      if (error) return json(400, { error: error.message })
+      for (const u of data.users) out[u.id] = !!u.banned_until && new Date(u.banned_until).getTime() > Date.now()
+      if (data.users.length < 1000) break
+    }
+    return json(200, { deactivated: out })
+  }
+
+  // Everything below changes another person's access.
+  const target = String(body.user_id ?? '')
+  if (!/^[0-9a-f-]{36}$/i.test(target)) return json(400, { error: 'Bad user.' })
+  if (target === caller) return json(400, { error: 'You cannot do this to your own account.' })
+
+  if (body.action === 'set_active') {
+    const active = body.active === true
+    if (!active) {
+      // Remove roles first, so even an open session sees nothing; then block logging in.
+      const r = await admin.from('user_roles').delete().eq('user_id', target)
+      if (r.error) return json(400, { error: /super admin/i.test(r.error.message) ? 'This is the last Super Admin. Give the role to someone else first.' : r.error.message })
+    }
+    const { error } = await admin.auth.admin.updateUserById(target, { ban_duration: active ? 'none' : '876000h' })
+    if (error) return json(400, { error: error.message })
+    return json(200, { user_id: target, active })
+  }
+
+  if (body.action === 'delete_user') {
+    const { error } = await admin.auth.admin.deleteUser(target)
+    if (error) {
+      // Quotations, tasks, plans, proformas and orders keep their author: the database refuses the delete.
+      if (/foreign key|violates|referenced|Database error/i.test(error.message)) {
+        return json(409, { error: 'This employee has work saved under their name (quotations, tasks, orders…), so the account cannot be deleted. Use Deactivate instead: they can no longer log in and their history stays.' })
+      }
+      if (/super admin/i.test(error.message)) return json(400, { error: 'This is the last Super Admin. Give the role to someone else first.' })
+      return json(400, { error: error.message })
+    }
+    return json(200, { user_id: target, deleted: true })
+  }
+
   return json(400, { error: 'Unknown action.' })
 }
 

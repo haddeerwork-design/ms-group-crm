@@ -104,3 +104,62 @@ export function ResetPasswordDialog({ person, onOpenChange }: { person: { id: st
     </Dialog>
   )
 }
+
+type Person = { id: string; email: string | null; full_name: string | null }
+
+/** Deactivate / activate / delete one employee. All checks are repeated on the server. */
+export function AccessDialog({ person, deactivated, onOpenChange, onChanged, onReset }: {
+  person: Person | null; deactivated: boolean; onOpenChange: (o: boolean) => void; onChanged: () => void; onReset: (p: Person) => void
+}) {
+  const [busy, setBusy] = useState<'active' | 'delete' | null>(null)
+  const [confirm, setConfirm] = useState('')
+  const name = person?.full_name || person?.email || ''
+  function close() { onOpenChange(false); setTimeout(() => setConfirm(''), 200) }
+  async function setActive(active: boolean) {
+    setBusy('active')
+    try { await adminUsers({ action: 'set_active', user_id: person!.id, active }); toast.success(active ? `${name} can log in again. Give them their roles.` : `${name} is deactivated.`); onChanged(); close() }
+    catch (err) { toast.error((err as Error).message) } finally { setBusy(null) }
+  }
+  async function remove() {
+    setBusy('delete')
+    try { await adminUsers({ action: 'delete_user', user_id: person!.id }); toast.success(`${name} deleted.`); onChanged(); close() }
+    catch (err) { toast.error((err as Error).message, { duration: 10000 }) } finally { setBusy(null) }
+  }
+  return (
+    <Dialog open={!!person} onOpenChange={(o) => !o && close()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Manage access — {name}</DialogTitle><DialogDescription>{person?.email}</DialogDescription></DialogHeader>
+        <DialogBody className="space-y-5 text-sm">
+          <section className="space-y-2">
+            <h3 className="font-medium">Password</h3>
+            <p className="text-muted-foreground">Give a new temporary password if they forgot theirs.</p>
+            <Button variant="outline" onClick={() => { const p = person!; close(); onReset(p) }}>Reset password…</Button>
+          </section>
+          <section className="space-y-2 border-t border-border pt-4">
+            <h3 className="font-medium">{deactivated ? 'Deactivated' : 'Deactivate'}</h3>
+            {deactivated ? (
+              <>
+                <p className="text-muted-foreground">They cannot log in. Activating lets them log in again; then tick their roles in the table.</p>
+                <Button variant="outline" onClick={() => setActive(true)} disabled={!!busy}>{busy === 'active' && <Loader2 className="animate-spin" />}Activate</Button>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">Recommended when someone leaves. They can no longer log in and lose all roles, but everything they did (quotations, tasks, orders, notes) stays with their name. Can be undone.</p>
+                <Button variant="outline" onClick={() => setActive(false)} disabled={!!busy}>{busy === 'active' && <Loader2 className="animate-spin" />}Deactivate</Button>
+              </>
+            )}
+          </section>
+          <section className="space-y-2 border-t border-border pt-4">
+            <h3 className="font-medium text-destructive">Delete permanently</h3>
+            <p className="text-muted-foreground">Only for accounts made by mistake or for testing. If they already have quotations, tasks or orders, the system will refuse and ask you to deactivate instead. Cannot be undone.</p>
+            <Label htmlFor="del">Type <b>DELETE</b> to confirm</Label>
+            <div className="flex gap-2">
+              <Input id="del" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="max-w-[160px]" />
+              <Button variant="destructive" onClick={remove} disabled={confirm.trim().toUpperCase() !== 'DELETE' || !!busy}>{busy === 'delete' && <Loader2 className="animate-spin" />}Delete account</Button>
+            </div>
+          </section>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
+  )
+}
