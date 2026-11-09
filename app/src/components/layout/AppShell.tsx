@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { NotificationBell } from './NotificationBell'
 import { GlobalSearch } from './GlobalSearch'
+import { ChangePasswordButton } from './ChangePassword'
 import { QuickAdd } from './QuickAdd'
 
 const NAV: { to: string; label: string; icon: typeof Users; module: ModuleKey }[] = [
@@ -91,6 +92,7 @@ export function AppShell() {
           <div className="ml-auto flex items-center gap-2">
             <QuickAdd />
             <NotificationBell />
+            <ChangePasswordButton />
             <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle dark mode">
               {theme === 'dark' ? <Sun /> : <Moon />}
             </Button>
