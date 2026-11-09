@@ -19,6 +19,7 @@ const PLAN = [
   { version: '0005_quotations', label: 'Quotations & PDF' },
   { version: '0006_crm', label: 'CRM: importers, contacts, timeline' },
   { version: '0007_sales', label: 'Sales pipeline, tasks & notifications' },
+  { version: '0008_logistics', label: 'Suppliers, shipping rates & proforma invoices' },
 ]
 
 export function Dashboard() {
@@ -47,7 +48,7 @@ export function Dashboard() {
         <Card className="md:col-span-2">
           <CardHeader><CardDescription>Still in use</CardDescription><CardTitle>Current CRM</CardTitle></CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">Invoices, shipping rates and market research are still managed there. Customers, products, pricing, the container planner and quotations now live here.</p>
+            <p className="text-sm text-muted-foreground">Market research and the calendar are still there. Old quotations and invoices stay there for reference.</p>
             <Button variant="outline" asChild><a href={LEGACY_CRM_URL}><ExternalLink />Open current CRM</a></Button>
           </CardContent>
         </Card>

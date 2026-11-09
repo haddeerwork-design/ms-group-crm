@@ -19,6 +19,11 @@ import { Companies } from '@/pages/Companies'
 import { CompanyDetail } from '@/pages/CompanyDetail'
 import { Pipeline } from '@/pages/Pipeline'
 import { Tasks } from '@/pages/Tasks'
+import { Suppliers } from '@/pages/Suppliers'
+import { Logistics } from '@/pages/Logistics'
+import { Proformas } from '@/pages/Proformas'
+import { ProformaEditor } from '@/pages/ProformaEditor'
+import { ProformaPrint } from '@/pages/ProformaPrint'
 
 function Guard({ module, children }: { module: ModuleKey; children: JSX.Element }) {
   const { roles } = useAuth()
@@ -37,6 +42,7 @@ function Root() {
   )
   return (
     <Routes>
+      <Route path="proformas/:id/print" element={<Guard module="proformas"><ProformaPrint /></Guard>} />
       <Route path="quotations/:id/print" element={<Guard module="quotations"><QuotationPrint /></Guard>} />
       <Route element={<AppShell />}>
         <Route index element={<Dashboard />} />
@@ -49,6 +55,10 @@ function Root() {
         <Route path="planner" element={<Guard module="planner"><Planner /></Guard>} />
         <Route path="quotations" element={<Guard module="quotations"><Quotations /></Guard>} />
         <Route path="quotations/:id" element={<Guard module="quotations"><QuotationEditor /></Guard>} />
+        <Route path="suppliers" element={<Guard module="suppliers"><Suppliers /></Guard>} />
+        <Route path="logistics" element={<Guard module="logistics"><Logistics /></Guard>} />
+        <Route path="proformas" element={<Guard module="proformas"><Proformas /></Guard>} />
+        <Route path="proformas/:id" element={<Guard module="proformas"><ProformaEditor /></Guard>} />
         <Route path="team" element={<Guard module="team"><Team /></Guard>} />
         <Route path="settings" element={<Guard module="settings"><Settings /></Guard>} />
         <Route path="*" element={<Navigate to="/" replace />} />

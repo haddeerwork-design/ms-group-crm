@@ -87,13 +87,13 @@ export function Settings() {
 }
 
 function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
-  const [v, setV] = useState<{ policy: string; days: string; production: string } | null>(null)
+  const [v, setV] = useState<{ policy: string; days: string; production: string; bank: string } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   async function load() {
-    const { data, error } = await supabase.from('company_settings').select('quotation_policy, quotation_validity_days, quotation_production_time').eq('id', 1).single()
-    if (error) return setErr(error.message.includes('quotation_policy') ? 'Run migration 0005 to enable quotation defaults.' : error.message)
-    setV({ policy: (data.quotation_policy ?? []).join('\n'), days: data.quotation_validity_days == null ? '' : String(data.quotation_validity_days), production: data.quotation_production_time ?? '' })
+    const { data, error } = await supabase.from('company_settings').select('quotation_policy, quotation_validity_days, quotation_production_time, bank_details').eq('id', 1).single()
+    if (error) return setErr(error.message.includes('column') ? 'Run the latest migration to enable these settings.' : error.message)
+    setV({ policy: (data.quotation_policy ?? []).join('\n'), days: data.quotation_validity_days == null ? '' : String(data.quotation_validity_days), production: data.quotation_production_time ?? '', bank: data.bank_details ?? '' })
   }
   useEffect(() => { load() }, [])
   async function save() {
@@ -103,7 +103,7 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
     setSaving(true)
     const { data, error } = await supabase.from('company_settings').update({
       quotation_policy: v.policy.split('\n').map((x) => x.trim()).filter(Boolean), quotation_validity_days: days,
-      quotation_production_time: v.production.trim() || null,
+      quotation_production_time: v.production.trim() || null, bank_details: v.bank.trim() || null,
     }).eq('id', 1).select('id')
     setSaving(false)
     if (error) return toast.error(error.message)
@@ -113,7 +113,7 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
   return (
     <Card className="mt-4">
       <CardHeader>
-        <CardTitle>Quotation defaults</CardTitle>
+        <CardTitle>Quotation & proforma defaults</CardTitle>
         <CardDescription>Used for new quotations. In the policy you can write {'{validity_days}'}, {'{incoterm}'} and {'{production_time}'}; they are filled in for each quotation.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -125,7 +125,8 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
             </div>
             <div className="space-y-2"><Label htmlFor="qdays">Valid for (days)</Label><Input id="qdays" inputMode="numeric" disabled={!canEdit} value={v.days} onChange={(e) => setV({ ...v, days: e.target.value })} /></div>
             <div className="space-y-2"><Label htmlFor="qprod">Production time</Label><Input id="qprod" disabled={!canEdit} value={v.production} onChange={(e) => setV({ ...v, production: e.target.value })} /></div>
-            {canEdit && <div className="sm:col-span-2"><Button onClick={save} disabled={saving}>{saving && <Loader2 className="animate-spin" />}Save quotation defaults</Button></div>}
+            <div className="space-y-2 sm:col-span-2"><Label htmlFor="qbank">Bank details for proforma invoices</Label><Textarea id="qbank" disabled={!canEdit} value={v.bank} placeholder="Bank name, account name, IBAN, SWIFT…" onChange={(e) => setV({ ...v, bank: e.target.value })} /></div>
+            {canEdit && <div className="sm:col-span-2"><Button onClick={save} disabled={saving}>{saving && <Loader2 className="animate-spin" />}Save document defaults</Button></div>}
           </div>
         )}
       </CardContent>
