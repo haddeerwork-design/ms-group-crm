@@ -20,6 +20,7 @@ export const MODULE_ACCESS = {
   dashboard: ROLES,
   products: ROLES,
   pricing: ROLES,
+  planner: ['super_admin', 'sales_manager', 'sales_officer', 'logistics_officer'],
   team: ['super_admin', 'sales_manager'],
   settings: ROLES, // everyone can read; only super_admin can edit (enforced by RLS)
 } satisfies Record<string, readonly AppRole[]>
@@ -36,3 +37,8 @@ export const CATALOG_MANAGERS: AppRole[] = ['super_admin', 'sales_manager']
 export const PRICE_MANAGERS: AppRole[] = ['super_admin', 'sales_manager']
 export const COST_VIEWERS: AppRole[] = ['super_admin', 'sales_manager', 'finance_officer']
 export const FX_EDITORS: AppRole[] = ['super_admin', 'sales_manager', 'finance_officer']
+
+/** Must match 0004_containers. */
+export const CONTAINER_MANAGERS: AppRole[] = ['super_admin', 'sales_manager', 'logistics_officer']
+export const PLANNERS: AppRole[] = ['super_admin', 'sales_manager', 'sales_officer']
+export const PLAN_EDIT_ALL: AppRole[] = ['super_admin', 'sales_manager']
