@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { BadgeDollarSign, Building2, CheckSquare, Factory, Receipt, Ship, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
+import { BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { canAccess, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
 import { applyTheme, getTheme } from '@/lib/theme'
@@ -20,6 +20,8 @@ const NAV: { to: string; label: string; icon: typeof Users; module: ModuleKey }[
   { to: '/planner', label: 'Container Planner', icon: Truck, module: 'planner' },
   { to: '/quotations', label: 'Quotations', icon: FileText, module: 'quotations' },
   { to: '/proformas', label: 'Proforma Invoices', icon: Receipt, module: 'proformas' },
+  { to: '/orders', label: 'Orders & Shipments', icon: Boxes, module: 'orders' },
+  { to: '/payments', label: 'Payments', icon: Wallet, module: 'payments' },
   { to: '/logistics', label: 'Shipping & Logistics', icon: Ship, module: 'logistics' },
   { to: '/suppliers', label: 'Suppliers', icon: Factory, module: 'suppliers' },
   { to: '/team', label: 'Team & Roles', icon: Users, module: 'team' },
