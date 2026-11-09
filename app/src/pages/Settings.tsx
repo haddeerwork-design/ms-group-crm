@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
+import { SystemCheck } from '@/components/settings/SystemCheck'
 import { PageHeader } from '@/components/layout/AppShell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -82,6 +83,7 @@ export function Settings() {
         </CardContent>
       </Card>
       <QuotationDefaults canEdit={canEdit} />
+      {canEdit && <SystemCheck />}
     </>
   )
 }

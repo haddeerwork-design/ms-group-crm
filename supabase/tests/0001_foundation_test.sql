@@ -16,7 +16,8 @@ end $$;
 
 -- new profile created by the old app gets a role automatically
 insert into public.profiles (id, full_name, email, role, legacy_id)
-values (:'Q','Quality','quality@msgroup-egy.com','QUALITY','u3');
+values (:'Q','Quality','quality@msgroup-egy.com','QUALITY','u3')
+  on conflict (id) do update set full_name = excluded.full_name, role = excluded.role, legacy_id = excluded.legacy_id; -- 0011 may have created the profile already
 do $$ begin
   assert (select role from public.user_roles where user_id='00000000-0000-0000-0000-00000000000c') = 'quality_officer';
   raise notice 'PASS new profile synced';

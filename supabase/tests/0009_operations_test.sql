@@ -5,8 +5,9 @@
 \set Q '00000000-0000-0000-0000-00000000000c'
 
 do $$ begin assert (select public from storage.buckets where id='order-documents') = false; raise notice 'PASS private documents bucket'; end $$;
-insert into auth.users values ('00000000-0000-0000-0000-00000000000d','logistics@msgroup-egy.com');
-insert into public.profiles (id, full_name, email, legacy_id) values ('00000000-0000-0000-0000-00000000000d','Logi','logistics@msgroup-egy.com','u4');
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-00000000000d','logistics@msgroup-egy.com');
+insert into public.profiles (id, full_name, email, legacy_id) values ('00000000-0000-0000-0000-00000000000d','Logi','logistics@msgroup-egy.com','u4')
+  on conflict (id) do update set full_name = excluded.full_name, legacy_id = excluded.legacy_id;
 insert into public.user_roles (user_id, role) values ('00000000-0000-0000-0000-00000000000d','logistics_officer');
 insert into public.user_roles (user_id, role) values (:'Q', 'finance_officer') on conflict do nothing;
 

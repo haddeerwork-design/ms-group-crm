@@ -8,4 +8,13 @@ export default defineConfig({
   base: '/ms-group-crm/app/',
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        // Split big libraries into their own cached files so app updates download less.
+        manualChunks: { charts: ['recharts'], supabase: ['@supabase/supabase-js'], react: ['react', 'react-dom', 'react-router-dom'] },
+      },
+    },
+  },
 })

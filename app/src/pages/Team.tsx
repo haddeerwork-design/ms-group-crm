@@ -57,11 +57,12 @@ export function Team() {
                 </tr>
               </thead>
               <tbody>
-                {people.map((p) => (
+                {[...people].sort((a, b) => Number(roles.some((x) => x.user_id === a.id)) - Number(roles.some((x) => x.user_id === b.id))).map((p) => (
                   <tr key={p.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3">
                       <div className="font-medium">{p.full_name || '—'}</div>
                       <div className="text-xs text-muted-foreground">{p.email}</div>
+                      {!roles.some((x) => x.user_id === p.id) && <div className="mt-1 inline-block rounded border border-amber-300 bg-amber-50 px-1.5 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Waiting for role</div>}
                     </td>
                     {ROLES.map((r) => {
                       const has = roles.find((x) => x.user_id === p.id && x.role === r)
@@ -82,7 +83,7 @@ export function Team() {
           )}
         </CardContent>
       </Card>
-      <p className="mt-3 text-xs text-muted-foreground">New employees are still created in Supabase → Authentication, then added in the current CRM. An invitation flow comes in a later step.</p>
+      <p className="mt-3 text-xs text-muted-foreground">New employee: Supabase → Authentication → Users → Invite user. They appear here automatically as “Waiting for role”; tick the role they need. Remove all roles to block someone's access.</p>
     </>
   )
 }

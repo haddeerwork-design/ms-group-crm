@@ -32,6 +32,8 @@ export const MODULE_ACCESS = {
   payments: ['super_admin', 'sales_manager', 'finance_officer', 'sales_officer'],
   reports: ['super_admin', 'sales_manager', 'sales_officer', 'finance_officer', 'logistics_officer'],
   research: ['super_admin', 'sales_manager', 'sales_officer'], // must match app_can_plan() in 0010
+  archive: ROLES, // rows filtered by RLS (own old records unless manager/finance)
+  help: ROLES,
   team: ['super_admin', 'sales_manager'],
   settings: ROLES, // everyone can read; only super_admin can edit (enforced by RLS)
 } satisfies Record<string, readonly AppRole[]>
