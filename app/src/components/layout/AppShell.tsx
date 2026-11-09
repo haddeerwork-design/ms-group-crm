@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
+import { Archive, LifeBuoy, BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { canAccess, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
 import { applyTheme, getTheme } from '@/lib/theme'
@@ -8,6 +8,7 @@ import { LEGACY_CRM_URL } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { NotificationBell } from './NotificationBell'
+import { GlobalSearch } from './GlobalSearch'
 import { QuickAdd } from './QuickAdd'
 
 const NAV: { to: string; label: string; icon: typeof Users; module: ModuleKey }[] = [
@@ -28,6 +29,8 @@ const NAV: { to: string; label: string; icon: typeof Users; module: ModuleKey }[
   { to: '/suppliers', label: 'Suppliers', icon: Factory, module: 'suppliers' },
   { to: '/team', label: 'Team & Roles', icon: Users, module: 'team' },
   { to: '/settings', label: 'Company Settings', icon: Settings, module: 'settings' },
+  { to: '/archive', label: 'Old CRM Archive', icon: Archive, module: 'archive' },
+  { to: '/help', label: 'Help', icon: LifeBuoy, module: 'help' },
 ]
 
 export function AppShell() {
@@ -59,7 +62,7 @@ export function AppShell() {
         </NavLink>
       ))}
       <div className="mt-auto space-y-1 border-t border-border pt-3">
-        <a href={LEGACY_CRM_URL} title="Market research and the calendar still live in the current CRM"
+        <a href={LEGACY_CRM_URL} title="The current CRM stays available until it is switched off"
            className={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground', collapsed && 'justify-center px-0')}>
           <ExternalLink className="size-4 shrink-0" />{!collapsed && 'Open current CRM'}
         </a>
@@ -84,6 +87,7 @@ export function AppShell() {
           <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => setCollapsed((c) => !c)} aria-label="Toggle sidebar">
             {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
           </Button>
+          <GlobalSearch />
           <div className="ml-auto flex items-center gap-2">
             <QuickAdd />
             <NotificationBell />

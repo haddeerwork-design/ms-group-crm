@@ -4,7 +4,7 @@
 do $$ begin create role anon nologin; exception when duplicate_object then null; end $$;
 do $$ begin create role authenticated nologin; exception when duplicate_object then null; end $$;
 create schema auth;
-create table auth.users (id uuid primary key, email text);
+create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb);
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth to anon, authenticated;
@@ -44,7 +44,7 @@ create function public.is_crm_admin() returns boolean language sql stable securi
 create policy profiles_select_self_or_admin on public.profiles for select to authenticated using ((id = auth.uid()) or is_crm_admin());
 create policy profiles_admin_update on public.profiles for update to authenticated using (is_crm_admin()) with check (is_crm_admin());
 
-insert into auth.users values
+insert into auth.users (id, email) values
  ('00000000-0000-0000-0000-00000000000a','admin@msgroup-egy.com'),
  ('00000000-0000-0000-0000-00000000000b','test.sales@msgroup-egy.com'),
  ('00000000-0000-0000-0000-00000000000c','quality@msgroup-egy.com');
