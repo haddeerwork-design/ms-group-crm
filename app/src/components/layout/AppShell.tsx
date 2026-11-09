@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
+import { BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { canAccess, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
 import { applyTheme, getTheme } from '@/lib/theme'
@@ -12,6 +12,8 @@ import { QuickAdd } from './QuickAdd'
 
 const NAV: { to: string; label: string; icon: typeof Users; module: ModuleKey }[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+  { to: '/reports', label: 'Reports', icon: BarChart3, module: 'reports' },
+  { to: '/research', label: 'Market Research', icon: Globe2, module: 'research' },
   { to: '/crm', label: 'CRM & Importers', icon: Building2, module: 'crm' },
   { to: '/pipeline', label: 'Sales Pipeline', icon: Handshake, module: 'pipeline' },
   { to: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },

@@ -28,6 +28,8 @@ import { Orders } from '@/pages/Orders'
 import { OrderCreate } from '@/pages/OrderCreate'
 import { OrderDetail } from '@/pages/OrderDetail'
 import { Payments } from '@/pages/Payments'
+import { Reports } from '@/pages/Reports'
+import { MarketResearch } from '@/pages/MarketResearch'
 
 function Guard({ module, children }: { module: ModuleKey; children: JSX.Element }) {
   const { roles } = useAuth()
@@ -67,6 +69,8 @@ function Root() {
         <Route path="logistics" element={<Guard module="logistics"><Logistics /></Guard>} />
         <Route path="proformas" element={<Guard module="proformas"><Proformas /></Guard>} />
         <Route path="proformas/:id" element={<Guard module="proformas"><ProformaEditor /></Guard>} />
+        <Route path="reports" element={<Guard module="reports"><Reports /></Guard>} />
+        <Route path="research" element={<Guard module="research"><MarketResearch /></Guard>} />
         <Route path="team" element={<Guard module="team"><Team /></Guard>} />
         <Route path="settings" element={<Guard module="settings"><Settings /></Guard>} />
         <Route path="*" element={<Navigate to="/" replace />} />
