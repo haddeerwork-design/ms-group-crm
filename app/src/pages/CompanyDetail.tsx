@@ -18,6 +18,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { CompanyForm } from '@/components/crm/CompanyForm'
+import { OpportunityDialog } from '@/components/sales/OpportunityDialog'
+import { TaskDialog } from '@/components/sales/TaskDialog'
+import { fetchCatalog, type Product } from '@/lib/catalog'
+import { fetchStages, taskBucket, TASK_STATUS, type Opportunity, type Stage, type Task } from '@/lib/sales'
+import { money } from '@/lib/prices'
 import { cn } from '@/lib/utils'
 
 type Detail = Awaited<ReturnType<typeof fetchCompanyDetail>>
@@ -29,7 +34,7 @@ export function CompanyDetail() {
   const [d, setD] = useState<Detail | null>(null)
   const [team, setTeam] = useState<TeamMember[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'timeline' | 'contacts' | 'profile' | 'quotes'>('timeline')
+  const [tab, setTab] = useState<'timeline' | 'deals' | 'contacts' | 'profile' | 'quotes'>('timeline')
   const [editOpen, setEditOpen] = useState(false)
 
   const load = useCallback(() => Promise.all([fetchCompanyDetail(id!), fetchTeam()]).then(([x, t]) => { setD(x); setTeam(t) }).catch((e) => setError(e.message)), [id])
@@ -99,12 +104,13 @@ export function CompanyDetail() {
       </div>
 
       <div className="mb-4 flex gap-1 border-b border-border">
-        {([['timeline', `Timeline (${d.activities.length})`], ['contacts', `Contacts (${d.contacts.length})`], ['profile', 'Profile'], ['quotes', `Quotations (${d.quotations.length})`]] as const).map(([k, l]) => (
+        {([['timeline', `Timeline (${d.activities.length})`], ['deals', 'Deals & tasks'], ['contacts', `Contacts (${d.contacts.length})`], ['profile', 'Profile'], ['quotes', `Quotations (${d.quotations.length})`]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}>{l}</button>
         ))}
       </div>
 
       {tab === 'timeline' && <Timeline company={c} activities={d.activities} canEdit={canEdit} owner={owner} onChange={load} />}
+      {tab === 'deals' && <DealsAndTasks company={c} team={team} canEdit={canEdit} />}
       {tab === 'contacts' && <Contacts companyId={c.id} contacts={d.contacts} canEdit={canEdit} onChange={load} />}
       {tab === 'profile' && <Profile c={c} />}
       {tab === 'quotes' && (
@@ -264,5 +270,61 @@ function Profile({ c }: { c: Company }) {
         {rows.map(([k, v]) => <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="whitespace-pre-wrap text-sm">{v || '—'}</dd></div>)}
       </dl>
     </CardContent></Card>
+  )
+}
+
+function DealsAndTasks({ company, team, canEdit }: { company: Company; team: TeamMember[]; canEdit: boolean }) {
+  const [x, setX] = useState<{ stages: Stage[]; opps: Opportunity[]; tasks: Task[]; products: Product[] } | null>(null)
+  const [oppOpen, setOppOpen] = useState(false)
+  const [taskOpen, setTaskOpen] = useState(false)
+  const [opp, setOpp] = useState<Opportunity | null>(null)
+  const [task, setTask] = useState<Task | null>(null)
+  const load = useCallback(async () => {
+    const [stages, o, t, cat] = await Promise.all([fetchStages(),
+      supabase.from('opportunities').select('*').eq('company_id', company.id).order('created_at', { ascending: false }),
+      supabase.from('tasks').select('*').eq('company_id', company.id).order('due_date'), fetchCatalog()])
+    setX({ stages, opps: (o.data ?? []) as Opportunity[], tasks: (t.data ?? []) as Task[], products: cat.products })
+  }, [company.id])
+  useEffect(() => { load().catch((e) => toast.error(e.message)) }, [load])
+  if (!x) return <Loading />
+  const stage = Object.fromEntries(x.stages.map((s) => [s.id, s]))
+  const today = new Date().toISOString().slice(0, 10)
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Deals</CardTitle>
+          {canEdit && <Button variant="outline" size="sm" onClick={() => { setOpp(null); setOppOpen(true) }}><Plus />New deal</Button>}</CardHeader>
+        <CardContent>
+          {!x.opps.filter((o) => !o.archived_at).length ? <p className="text-sm text-muted-foreground">No deals yet.</p> : (
+            <ul className="divide-y divide-border text-sm">
+              {x.opps.filter((o) => !o.archived_at).map((o) => (
+                <li key={o.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-primary" onClick={() => { setOpp(o); setOppOpen(true) }}>
+                  <span><span className="font-medium">{o.title}</span><span className="block text-xs text-muted-foreground">{stage[o.stage_id]?.name}{o.probability != null ? ` · ${o.probability}%` : ''}{o.expected_close_date ? ` · close ${o.expected_close_date}` : ''}</span></span>
+                  <span className="tabular-nums">{o.expected_revenue != null ? money(o.expected_revenue, o.currency, 0) : ''}</span>
+                </button></li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Tasks</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => { setTask(null); setTaskOpen(true) }}><Plus />New task</Button></CardHeader>
+        <CardContent>
+          {!x.tasks.length ? <p className="text-sm text-muted-foreground">No tasks yet.</p> : (
+            <ul className="divide-y divide-border text-sm">
+              {x.tasks.map((t) => (
+                <li key={t.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-primary" onClick={() => { setTask(t); setTaskOpen(true) }}>
+                  <span className={cn(t.status === 'done' && 'text-muted-foreground line-through')}>{t.title}</span>
+                  <span className={cn('text-xs text-muted-foreground', taskBucket(t, today) === 'overdue' && 'text-destructive')}>{t.status === 'done' ? TASK_STATUS.done : t.due_date ?? 'No date'}</span>
+                </button></li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      <OpportunityDialog open={oppOpen} onOpenChange={setOppOpen} opp={opp} stages={x.stages} companies={[company]} products={x.products} team={team} defaultCompanyId={company.id} onSaved={load} />
+      <TaskDialog open={taskOpen} onOpenChange={setTaskOpen} task={task} companies={[company]} opportunities={x.opps} team={team} defaults={{ company_id: company.id }} onSaved={load} />
+    </div>
   )
 }

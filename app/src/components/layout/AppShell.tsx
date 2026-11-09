@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { BadgeDollarSign, Building2, ExternalLink, FileText, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
+import { BadgeDollarSign, Building2, CheckSquare, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { canAccess, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
 import { applyTheme, getTheme } from '@/lib/theme'
 import { LEGACY_CRM_URL } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { NotificationBell } from './NotificationBell'
+import { QuickAdd } from './QuickAdd'
 
 const NAV: { to: string; label: string; icon: typeof Users; module: ModuleKey }[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
   { to: '/crm', label: 'CRM & Importers', icon: Building2, module: 'crm' },
+  { to: '/pipeline', label: 'Sales Pipeline', icon: Handshake, module: 'pipeline' },
+  { to: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
   { to: '/products', label: 'Products', icon: Package, module: 'products' },
   { to: '/pricing', label: 'Pricing', icon: BadgeDollarSign, module: 'pricing' },
   { to: '/planner', label: 'Container Planner', icon: Truck, module: 'planner' },
@@ -74,6 +78,8 @@ export function AppShell() {
             {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
           </Button>
           <div className="ml-auto flex items-center gap-2">
+            <QuickAdd />
+            <NotificationBell />
             <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle dark mode">
               {theme === 'dark' ? <Sun /> : <Moon />}
             </Button>
