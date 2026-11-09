@@ -15,6 +15,8 @@ import { Planner } from '@/pages/Planner'
 import { Quotations } from '@/pages/Quotations'
 import { QuotationEditor } from '@/pages/QuotationEditor'
 import { QuotationPrint } from '@/pages/QuotationPrint'
+import { Companies } from '@/pages/Companies'
+import { CompanyDetail } from '@/pages/CompanyDetail'
 
 function Guard({ module, children }: { module: ModuleKey; children: JSX.Element }) {
   const { roles } = useAuth()
@@ -36,6 +38,8 @@ function Root() {
       <Route path="quotations/:id/print" element={<Guard module="quotations"><QuotationPrint /></Guard>} />
       <Route element={<AppShell />}>
         <Route index element={<Dashboard />} />
+        <Route path="crm" element={<Guard module="crm"><Companies /></Guard>} />
+        <Route path="crm/:id" element={<Guard module="crm"><CompanyDetail /></Guard>} />
         <Route path="products" element={<Guard module="products"><Products /></Guard>} />
         <Route path="pricing" element={<Guard module="pricing"><Pricing /></Guard>} />
         <Route path="planner" element={<Guard module="planner"><Planner /></Guard>} />

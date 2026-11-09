@@ -9,6 +9,7 @@ import { activePackaging, fetchCatalog, PRODUCT_TYPE_LABEL, type Category, type 
 import { CURRENCIES, INCOTERMS, type Incoterm } from '@/lib/pricing'
 import { fetchPriceList, isExpired, money, type PriceListRow } from '@/lib/prices'
 import { fetchPlan } from '@/lib/containers'
+import { fetchCompanies, type Company } from '@/lib/crm'
 import type { QtyUnit } from '@/lib/planner'
 import {
   addDays, fetchQuotation, fmtDateDMY, lineTotal, renderPolicy, STATUS_LABEL, STATUS_STYLE,
@@ -27,6 +28,10 @@ const s = (v: unknown) => (v == null ? '' : String(v))
 const n = (v: string) => (v.trim() === '' || !isFinite(Number(v)) ? null : Number(v))
 const t = (v: string) => (v.trim() === '' ? null : v.trim())
 const today = () => new Date().toISOString().slice(0, 10)
+const companyFields = (co: Company) => ({
+  customer_company: co.name, customer_country: co.country ?? '', customer_email: co.email ?? '', customer_phone: co.phone ?? co.whatsapp ?? '',
+  ...(co.preferred_incoterm ? { incoterm: co.preferred_incoterm } : {}), ...(co.preferred_payment_terms ? { payment_terms: co.preferred_payment_terms } : {}),
+})
 let seq = 0
 
 type Line = {
@@ -36,7 +41,7 @@ type Line = {
 type Form = {
   customer_name: string; customer_company: string; customer_country: string; customer_email: string; customer_phone: string
   destination: string; incoterm: Incoterm; currency: string; payment_terms: string; issue_date: string
-  validity_days: string; production_time: string; policy: string; show_quantities: boolean; notes: string; plan_id: string | null
+  validity_days: string; production_time: string; policy: string; show_quantities: boolean; notes: string; plan_id: string | null; company_id: string
 }
 type Settings = { quotation_policy: string[] | null; quotation_validity_days: number | null; quotation_production_time: string | null }
 
@@ -46,7 +51,7 @@ export function QuotationEditor() {
   const [params] = useSearchParams()
   const nav = useNavigate()
   const { hasRole, session } = useAuth()
-  const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings } | null>(null)
+  const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings; companies: Company[] } | null>(null)
   const [quote, setQuote] = useState<Quotation | null>(null)
   const [versions, setVersions] = useState<QuoteVersion[]>([])
   const [form, setForm] = useState<Form | null>(null)
@@ -67,17 +72,20 @@ export function QuotationEditor() {
 
   const load = useCallback(async () => {
     try {
-      const [cat, prices, st] = await Promise.all([fetchCatalog(), fetchPriceList(),
+      const [cat, prices, companies, st] = await Promise.all([fetchCatalog(), fetchPriceList(), fetchCompanies().catch(() => [] as Company[]),
         supabase.from('company_settings').select('quotation_policy, quotation_validity_days, quotation_production_time').eq('id', 1).single()])
       if (st.error) throw st.error
       const settings = st.data as Settings
-      setBase({ ...cat, prices, settings })
+      setBase({ ...cat, prices, settings, companies })
       if (isNew) {
         const f: Form = {
           customer_name: '', customer_company: '', customer_country: '', customer_email: '', customer_phone: '', destination: '',
           incoterm: 'CIF', currency: 'USD', payment_terms: '', issue_date: today(), validity_days: s(settings.quotation_validity_days),
-          production_time: settings.quotation_production_time ?? '', policy: '', show_quantities: false, notes: '', plan_id: null,
+          production_time: settings.quotation_production_time ?? '', policy: '', show_quantities: false, notes: '', plan_id: null, company_id: '',
         }
+        const companyId = params.get('company')
+        const co = companyId ? companies.find((x) => x.id === companyId) : undefined
+        if (co) Object.assign(f, companyFields(co))
         let ls: Line[] = []
         const planId = params.get('plan')
         if (planId) {
@@ -107,7 +115,7 @@ export function QuotationEditor() {
           customer_email: q.customer_email ?? '', customer_phone: q.customer_phone ?? '', destination: q.destination ?? '',
           incoterm: q.incoterm ?? 'CIF', currency: q.currency, payment_terms: q.payment_terms ?? '', issue_date: q.issue_date,
           validity_days: s(q.validity_days), production_time: q.production_time ?? '', policy: q.policy_lines.join('\n'),
-          show_quantities: q.show_quantities, notes: q.notes ?? '', plan_id: q.plan_id,
+          show_quantities: q.show_quantities, notes: q.notes ?? '', plan_id: q.plan_id, company_id: (q as Quotation & { company_id?: string | null }).company_id ?? '',
         })
         setLines((q.quotation_items ?? []).map((i) => ({
           key: ++seq, product_id: i.product_id ?? '', packaging_id: i.packaging_id ?? '', description: i.description, packing: i.packing ?? '',
@@ -162,7 +170,7 @@ export function QuotationEditor() {
       incoterm: form.incoterm, currency: form.currency, payment_terms: t(form.payment_terms), issue_date: form.issue_date,
       validity_days: vd, valid_until: vd ? addDays(form.issue_date, vd) : null, production_time: t(form.production_time),
       policy_lines: form.policy.split('\n').map((x) => x.trim()).filter(Boolean), show_quantities: form.show_quantities,
-      notes: t(form.notes), plan_id: form.plan_id,
+      notes: t(form.notes), plan_id: form.plan_id, company_id: form.company_id || null,
     }
     setBusy('save')
     let qid = quote?.id ?? null
@@ -207,6 +215,10 @@ export function QuotationEditor() {
     setBusy(null)
     if (error) return toast.error(error.message)
     toast.success(`Quotation ${STATUS_LABEL[st].toLowerCase()}`)
+    if (form?.company_id && (st === 'sent' || st === 'accepted' || st === 'rejected')) {
+      await supabase.from('activities').insert({ company_id: form.company_id, kind: 'quotation', summary: `Quotation ${quote?.number ?? ''} ${STATUS_LABEL[st].toLowerCase()}`, created_by: session?.user.id })
+      if (st === 'sent') await supabase.from('companies').update({ lead_status: 'quotation_sent', last_contact_date: today() }).eq('id', form.company_id).in('lead_status', ['new_lead', 'contacted', 'interested'])
+    }
     load()
   }
 
@@ -263,6 +275,15 @@ export function QuotationEditor() {
             <CardHeader><CardTitle>Buyer & terms</CardTitle><CardDescription>Buyer details print as “To:” only when filled (your PDF has none).</CardDescription></CardHeader>
             <CardContent>
               <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Company (from CRM)" className="sm:col-span-2 lg:col-span-3" hint="Choosing a company fills the buyer fields and adds this quotation to its timeline.">
+                  <Select value={form.company_id} onChange={(e) => {
+                    const co = base.companies.find((x) => x.id === e.target.value)
+                    upd(co ? { company_id: co.id, ...companyFields(co) } : { company_id: '' })
+                  }}>
+                    <option value="">— Not linked —</option>
+                    {base.companies.filter((x) => !x.archived_at || x.id === form.company_id).map((x) => <option key={x.id} value={x.id}>{x.name}{x.country ? ` — ${x.country}` : ''}</option>)}
+                  </Select>
+                </Field>
                 <Field label="Contact name"><Input value={form.customer_name} onChange={(e) => upd({ customer_name: e.target.value })} /></Field>
                 <Field label="Company"><Input value={form.customer_company} onChange={(e) => upd({ customer_company: e.target.value })} /></Field>
                 <Field label="Country"><Input value={form.customer_country} onChange={(e) => upd({ customer_country: e.target.value })} /></Field>
