@@ -45,7 +45,7 @@ export function Dashboard() {
         <Card className="md:col-span-2">
           <CardHeader><CardDescription>Still in use</CardDescription><CardTitle>Current CRM</CardTitle></CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">Customers, leads and quotations are still managed there. Products, pricing and the container planner now live here.</p>
+            <p className="text-sm text-muted-foreground">Customers, leads and invoices are still managed there. Products, pricing, the container planner and quotations now live here.</p>
             <Button variant="outline" asChild><a href={LEGACY_CRM_URL}><ExternalLink />Open current CRM</a></Button>
           </CardContent>
         </Card>
