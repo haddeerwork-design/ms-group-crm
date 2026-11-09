@@ -11,6 +11,12 @@
 Rules: only the publishable key is in the frontend (`app/src/config.ts`). Every table has Row Level Security.
 Migrations only add things; they never delete existing data.
 
+## Edge Function `admin-users`
+
+`supabase/functions/admin-users/index.ts` lets the Super Admin add employees and reset passwords from **Team & Roles**.
+It runs on Supabase's servers and uses the secret key from Supabase's own environment, so no secret key is ever in the app.
+Deploy: Supabase → Edge Functions → Deploy a new function → Via Editor → name `admin-users` → paste the file → Deploy → turn **Verify JWT** off (the function checks the login and the super_admin role itself).
+
 ## Checks
 
 - `cd app && npm test` — unit tests for all formulas (pricing, planner, quotations, analytics…).

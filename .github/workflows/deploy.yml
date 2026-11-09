@@ -41,6 +41,14 @@ jobs:
         working-directory: app
         run: npm test
 
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Test admin-users Edge Function (fake Supabase)
+        working-directory: supabase/functions/admin-users
+        run: ADMIN_USERS_TEST=1 deno test --allow-env --allow-net index.test.ts
+
       - name: Build new platform
         working-directory: app
         env:

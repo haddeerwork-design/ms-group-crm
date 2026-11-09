@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ErrorState, Loading } from '@/components/ui/states'
 import { Button } from '@/components/ui/button'
 import { Login } from '@/pages/Login'
+import { ForcedPasswordChange } from '@/components/layout/ChangePassword'
 import { Dashboard } from '@/pages/Dashboard'
 import { Settings } from '@/pages/Settings'
 import { Team } from '@/pages/Team'
@@ -42,6 +43,7 @@ function Root() {
   const { loading, session, error, signOut } = useAuth()
   if (loading) return <div className="grid min-h-screen place-items-center"><Loading /></div>
   if (!session) return <Login />
+  if (session.user.user_metadata?.must_change_password) return <ForcedPasswordChange onSignOut={signOut} />
   if (error) return (
     <div className="mx-auto mt-24 max-w-md space-y-4 p-6">
       <ErrorState message={error} />

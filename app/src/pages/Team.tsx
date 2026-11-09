@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { ROLES, ROLE_LABEL, type AppRole } from '@/lib/roles'
 import { PageHeader } from '@/components/layout/AppShell'
+import { AddEmployeeDialog, ResetPasswordDialog } from '@/components/team/EmployeeDialogs'
+import { Button } from '@/components/ui/button'
+import { KeyRound, UserPlus } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 
@@ -17,6 +20,8 @@ export function Team() {
   const [roles, setRoles] = useState<RoleRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [resetting, setResetting] = useState<Row | null>(null)
 
   async function load() {
     const [p, r] = await Promise.all([
@@ -43,7 +48,8 @@ export function Team() {
   return (
     <>
       <PageHeader title="Team & Roles"
-        summary="One employee can hold several roles. Roles marked “from CRM” follow the role set in the current CRM." />
+        summary="One employee can hold several roles. Roles marked “from CRM” follow the role set in the current CRM."
+        action={isSuper ? <Button onClick={() => setAdding(true)}><UserPlus />Add employee</Button> : undefined} />
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {error ? <div className="p-5"><ErrorState message={error} /></div> : !people ? <Loading /> : !people.length ? (
@@ -54,6 +60,7 @@ export function Team() {
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="px-5 py-3 font-medium">Employee</th>
                   {ROLES.map((r) => <th key={r} className="px-2 py-3 text-center font-medium">{ROLE_LABEL[r]}</th>)}
+                  {isSuper && <th className="px-2 py-3" />}
                 </tr>
               </thead>
               <tbody>
@@ -76,6 +83,11 @@ export function Team() {
                         </td>
                       )
                     })}
+                    {isSuper && (
+                      <td className="px-2 py-3 text-right">
+                        {p.id !== session?.user.id && <Button variant="ghost" size="sm" onClick={() => setResetting(p)} title="Give a new temporary password"><KeyRound />Reset</Button>}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -83,7 +95,9 @@ export function Team() {
           )}
         </CardContent>
       </Card>
-      <p className="mt-3 text-xs text-muted-foreground">New employee: Supabase → Authentication → Users → Invite user. They appear here automatically as “Waiting for role”; tick the role they need. Remove all roles to block someone's access.</p>
+      <AddEmployeeDialog open={adding} onOpenChange={setAdding} onCreated={load} />
+      <ResetPasswordDialog person={resetting} onOpenChange={(o) => !o && setResetting(null)} />
+      <p className="mt-3 text-xs text-muted-foreground">New employee: “Add employee” gives you a temporary password to send them; they choose their own at first login. Forgot password: “Reset”. To block someone, remove all their roles.</p>
     </>
   )
 }
