@@ -18,6 +18,7 @@ import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { ProductDialog } from '@/components/products/ProductDialog'
 import { CategoriesDialog } from '@/components/products/CategoriesDialog'
 import { cn } from '@/lib/utils'
+import { MobileFilters } from '@/components/ui/mobile-filters'
 
 const TYPE_STYLE = {
   fresh: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900',
@@ -92,27 +93,35 @@ export function Products() {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input className="pl-8" placeholder="Search product, variety or category" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <div className="w-48"><Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
+        <MobileFilters active={[cat, avail, setup].filter(Boolean).length + (showArchived ? 1 : 0)}>
+        <div className="w-full sm:w-48"><Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
           <option value="">All categories</option>
           {data?.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select></div>
-        <div className="w-44"><Select value={avail} onChange={(e) => setAvail(e.target.value)} aria-label="Availability">
+        <div className="w-full sm:w-44"><Select value={avail} onChange={(e) => setAvail(e.target.value)} aria-label="Availability">
           <option value="">Any availability</option>
           {Object.entries(AVAILABILITY_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           <option value="unset">Not set</option>
         </Select></div>
-        <div className="w-40"><Select value={setup} onChange={(e) => setSetup(e.target.value)} aria-label="Setup">
+        <div className="w-full sm:w-40"><Select value={setup} onChange={(e) => setSetup(e.target.value)} aria-label="Setup">
           <option value="">Any setup</option><option value="missing">Needs setup</option><option value="ready">Ready</option>
         </Select></div>
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
           <input type="checkbox" className="size-4 accent-[#23856B]" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />Archived
         </label>
+        </MobileFilters>
         <div className="ml-auto flex rounded-md border border-border p-0.5">
           <Button variant={view === 'list' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('list')}><List />List</Button>
           <Button variant={view === 'season' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('season')}><CalendarDays />Seasons</Button>
         </div>
       </div>
 
+      {data && needSetup > 0 && setup !== 'missing' && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" role="status">
+          <span className="flex-1"><b>{needSetup} products</b> still need packaging weight or cartons per pallet. The planner and quotations need these to work out tons.</span>
+          <Button size="sm" variant="outline" onClick={() => setSetup('missing')}>Show them</Button>
+        </div>
+      )}
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {error ? <div className="p-5"><ErrorState message={error} /></div>
@@ -120,7 +129,28 @@ export function Products() {
             : !rows.length ? <div className="p-5"><Empty title="No products match" hint={data.products.length ? 'No product fits these filters.' : 'Run migration 0002 in Supabase first.'}
               action={data.products.length > 0 && <Button variant="outline" onClick={() => { setQ(''); setCat(''); setAvail(''); setSetup(''); setShowArchived(false) }}>Clear filters</Button>} /></div>
             : view === 'list' ? (
-              <table className="w-full min-w-[760px] text-sm">
+              <>
+              <ul className="divide-y divide-border md:hidden">
+                {rows.map((p) => {
+                  const pk = activePackaging(p)[0]
+                  const miss = missingSetup(p)
+                  return (
+                    <li key={p.id} className="flex items-start gap-2 px-4 py-3">
+                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => open(p)}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{p.name}</span>
+                          <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}>{PRODUCT_TYPE_LABEL[p.product_type]}</span>
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">{catById[p.category_id]?.name}{pk ? ` · ${pk.label}` : ''}{seasonLabel(p) ? ` · ${seasonLabel(p)}` : ''}</div>
+                        {miss.length > 0 && <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300"><span className="size-1.5 rounded-full bg-amber-500" />Missing {miss.join(', ')}</div>}
+                      </button>
+                      {canEdit && !p.archived_at && <Button variant="ghost" size="icon" onClick={() => { setEditing(null); setDupOf(p); setDialogOpen(true) }} aria-label={`Duplicate ${p.name}`}><Copy /></Button>}
+                      {canEdit && <Button variant="ghost" size="icon" onClick={() => toggleArchive(p)} aria-label={p.archived_at ? 'Restore' : 'Archive'}>{p.archived_at ? <ArchiveRestore /> : <Archive />}</Button>}
+                    </li>
+                  )
+                })}
+              </ul>
+              <table className="hidden w-full min-w-[760px] text-sm md:table">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-5 py-3 font-medium">Product</th>
@@ -155,7 +185,9 @@ export function Products() {
                               </div>
                             </>
                           ) : null}
-                          {miss.length > 0 && <Badge className={cn(pk && 'mt-1', 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200')}>Missing {miss.join(', ')}</Badge>}
+                          {miss.length > 0 && (setup === 'missing'
+                            ? <Badge className={cn(pk && 'mt-1', 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200')}>Missing {miss.join(', ')}</Badge>
+                            : <span className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', pk && 'mt-0.5')} title={`Missing ${miss.join(', ')}`}><span className="size-1.5 rounded-full bg-amber-500" />Needs setup</span>)}
                         </td>
                         <td className="px-3 py-3 text-muted-foreground">{seasonLabel(p) ?? '—'}</td>
                         <td className="px-3 py-3 text-muted-foreground">{p.availability ? AVAILABILITY_LABEL[p.availability] : '—'}</td>
@@ -176,6 +208,7 @@ export function Products() {
                   })}
                 </tbody>
               </table>
+              </>
             ) : (
               <SeasonCalendar rows={rows} onOpen={open} />
             )}
