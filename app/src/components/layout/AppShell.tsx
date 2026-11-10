@@ -50,7 +50,7 @@ export function AppShell() {
       <div className={cn('mb-4 flex h-12 items-center rounded-md px-2', collapsed && 'justify-center px-0')}>
         {collapsed
           ? <span className="grid size-9 place-items-center rounded-md bg-forest text-sm font-bold text-white">MS</span>
-          : <img src={`${import.meta.env.BASE_URL}logo.png`} alt="MS El-brancy Group" className="h-9 w-auto rounded dark:bg-white dark:p-1" />}
+          : <><img src={`${import.meta.env.BASE_URL}logo.png`} alt="MS El-brancy Group" className="h-9 w-auto dark:hidden" /><img src={`${import.meta.env.BASE_URL}logo-white.png`} alt="MS El-brancy Group" className="hidden h-9 w-auto dark:block" /></>}
       </div>
       {items.map(({ to, label, icon: Icon }) => (
         <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined}

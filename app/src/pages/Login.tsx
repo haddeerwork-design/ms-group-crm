@@ -35,7 +35,7 @@ export function Login() {
       </div>
       <div className="flex items-center justify-center p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm space-y-5" noValidate>
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="MS El-brancy Group" className="mb-2 h-12 w-auto dark:rounded dark:bg-white dark:p-1" />
+          <><img src={`${import.meta.env.BASE_URL}logo.png`} alt="MS El-brancy Group" className="mb-2 h-12 w-auto dark:hidden" /><img src={`${import.meta.env.BASE_URL}logo-white.png`} alt="MS El-brancy Group" className="hidden mb-2 h-12 w-auto dark:block" /></>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
             <p className="mt-1 text-sm text-muted-foreground">Use your company email and password.</p>
