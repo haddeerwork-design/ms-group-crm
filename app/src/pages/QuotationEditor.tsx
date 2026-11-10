@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, FileText, History, Loader2, Pencil, Plus, Printer, RotateCcw, Save, Send, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, FileText, History, Loader2, Pencil, Plus, Printer, RotateCcw, Save, Send, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -66,6 +66,8 @@ function parseShrink(packing: string): { k: number; jar: string } | null {
   return null
 }
 
+const Step = ({ n }: { n: number }) => <span className="mr-2 inline-grid size-6 place-items-center rounded-full bg-primary/10 align-[2px] text-xs font-semibold text-primary">{n}</span>
+
 export function QuotationEditor() {
   const { id } = useParams()
   const isNew = !id || id === 'new'
@@ -78,6 +80,7 @@ export function QuotationEditor() {
   const [form, setForm] = useState<Form | null>(null)
   const [lines, setLines] = useState<Line[]>([])
   const [dirty, setDirty] = useState(false)
+  const [more, setMore] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -435,7 +438,7 @@ export function QuotationEditor() {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card>
-            <CardHeader><CardTitle>Buyer & terms</CardTitle><CardDescription>Buyer details print as “To:” only when filled (your PDF has none).</CardDescription></CardHeader>
+            <CardHeader><CardTitle><Step n={1} />Buyer & terms</CardTitle><CardDescription>Buyer details print as “To:” only when filled (your PDF has none).</CardDescription></CardHeader>
             <CardContent>
               <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Language" hint="Language of the printed quotation.">
@@ -460,8 +463,6 @@ export function QuotationEditor() {
                 <Field label="Contact name"><Input value={form.customer_name} onChange={(e) => upd({ customer_name: e.target.value })} /></Field>
                 <Field label="Company"><Input value={form.customer_company} onChange={(e) => upd({ customer_company: e.target.value })} /></Field>
                 <Field label="Country"><Input value={form.customer_country} onChange={(e) => upd({ customer_country: e.target.value })} /></Field>
-                <Field label="Email (not printed)"><Input type="email" value={form.customer_email} onChange={(e) => upd({ customer_email: e.target.value })} /></Field>
-                <Field label="Phone / WhatsApp (not printed)"><Input value={form.customer_phone} onChange={(e) => upd({ customer_phone: e.target.value })} /></Field>
                 <Field label="Destination"><Input value={form.destination} onChange={(e) => upd({ destination: e.target.value })} /></Field>
                 {form.brand !== 'prime_roots' && <Field label="Incoterm">
                   <Select value={form.incoterm} onChange={(e) => {
@@ -485,18 +486,29 @@ export function QuotationEditor() {
                     upd({ validity_days: e.target.value, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, validity_days: e.target.value }) } : {}) })
                   }} />
                 </Field>
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                    <ChevronDown className={cn('size-4 transition-transform', !more && '-rotate-90')} />
+                    {more ? 'Fewer details' : 'More details'} <span className="font-normal text-muted-foreground">(email, phone, production time, payment terms)</span>
+                  </button>
+                </div>
+                {more && <>
+                <Field label="Email (not printed)"><Input type="email" value={form.customer_email} onChange={(e) => upd({ customer_email: e.target.value })} /></Field>
+                <Field label="Phone / WhatsApp (not printed)"><Input value={form.customer_phone} onChange={(e) => upd({ customer_phone: e.target.value })} /></Field>
                 <Field label="Production time"><Input value={form.production_time} onChange={(e) => {
                   const policyWasDefault = form.policy === policyFrom(base.settings, form)
                   upd({ production_time: e.target.value, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, production_time: e.target.value }) } : {}) })
                 }} /></Field>
                 <Field label="Payment terms (optional)"><Input placeholder="e.g. 50% advance, 50% before shipment" value={form.payment_terms} onChange={(e) => upd({ payment_terms: e.target.value })} /></Field>
+                </>}
               </fieldset>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <div><CardTitle>Products</CardTitle><CardDescription>{form.brand === 'prime_roots' ? 'Prime Roots letterhead: only jams are listed.' : 'MS El-brancy letterhead: jams are listed under Prime Roots.'} Description, packing and price fill in from Products and the price list. All editable.</CardDescription></div>
+              <div><CardTitle><Step n={2} />Products</CardTitle><CardDescription>{form.brand === 'prime_roots' ? 'Prime Roots letterhead: only jams are listed.' : 'MS El-brancy letterhead: jams are listed under Prime Roots.'} Description, packing and price fill in from Products and the price list. All editable.</CardDescription></div>
               {canEdit && <Button variant="outline" size="sm" onClick={addLine}><Plus />Add product</Button>}
             </CardHeader>
             <CardContent className="space-y-3">
@@ -618,7 +630,7 @@ export function QuotationEditor() {
         <div className="space-y-4">
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <div><CardTitle>Our Policy</CardTitle><CardDescription>One line per point; start a line with “## ” for a heading. Defaults come from Company Settings.</CardDescription></div>
+              <div><CardTitle><Step n={3} />Our Policy</CardTitle><CardDescription>One line per point; start a line with “## ” for a heading. Defaults come from Company Settings.</CardDescription></div>
               {canEdit && <Button variant="ghost" size="icon" title="Reset to defaults" aria-label="Reset to defaults" onClick={() => upd({ policy: policyFrom(base.settings, form) })}><RotateCcw /></Button>}
             </CardHeader>
             <CardContent><Textarea dir={form.language === 'ar' ? 'rtl' : 'ltr'} className="min-h-[170px] text-sm" disabled={!canEdit} value={form.policy} onChange={(e) => upd({ policy: e.target.value })} /></CardContent>

@@ -82,7 +82,7 @@ export function Tasks() {
             ))}
           </div>
           <Card><CardContent className="p-0">
-            {!list.length ? <div className="p-5"><Empty title="Nothing here" hint={tab === 'today' ? 'No tasks due today.' : undefined} /></div> : (
+            {!list.length ? <div className="p-5"><Empty title="Nothing here" hint={tab === 'today' ? 'No tasks due today.' : undefined} action={<Button variant="outline" onClick={() => openNew()}><Plus />New task</Button>} /></div> : (
               <ul className="divide-y divide-border">
                 {list.map((t) => {
                   const b = taskBucket(t, today)

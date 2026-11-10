@@ -76,7 +76,10 @@ export function Companies() {
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {error ? <div className="p-5"><ErrorState message={error} /></div> : !rows ? <Loading /> : !list.length ? (
-            <div className="p-5"><Empty title={rows.length ? 'No companies match' : 'No companies yet'} hint={rows.length ? 'Try clearing the filters.' : 'Add one, or import a CSV / Excel file.'} /></div>
+            <div className="p-5"><Empty title={rows.length ? 'No companies match' : 'No companies yet'} hint={rows.length ? 'No company fits these filters.' : 'Add your first importer, or bring your list from Excel.'}
+              action={rows.length
+                ? <Button variant="outline" onClick={() => setF({ q: '', status: '', country: '', owner: '', priority: '', follow: '', archived: false })}>Clear filters</Button>
+                : canWrite && <><Button onClick={() => setAddOpen(true)}><Plus />Add company</Button><Button variant="outline" onClick={() => setImportOpen(true)}><FileUp />Import Excel / CSV</Button></>} /></div>
           ) : (
             <table className="w-full min-w-[860px] text-sm">
               <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">

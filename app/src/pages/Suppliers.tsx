@@ -111,7 +111,8 @@ export function Suppliers() {
       </div>
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3"><CardContent className="overflow-x-auto p-0">
-          {!list.length ? <div className="p-5"><Empty title="No suppliers" hint={canEdit ? 'Add your farms, packers and packaging suppliers.' : undefined} /></div> : (
+          {!list.length ? <div className="p-5"><Empty title="No suppliers" hint={canEdit ? 'Add your farms, packers and packaging suppliers.' : undefined}
+            action={canEdit && <Button onClick={() => { setEditing(null); setOpen(true) }}><Plus />Add supplier</Button>} /></div> : (
             <table className="w-full min-w-[560px] text-sm">
               <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Supplier</th><th className="px-3 py-3 font-medium">Location</th><th className="px-3 py-3 font-medium">Products</th><th className="px-3 py-3" /></tr></thead>
               <tbody>

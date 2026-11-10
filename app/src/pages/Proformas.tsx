@@ -23,7 +23,8 @@ export function Proformas() {
         action={hasRole(...QUOTE_WRITERS) && <Button variant="outline" onClick={() => nav('/proformas/new')}>New without quotation</Button>} />
       <Card><CardContent className="overflow-x-auto p-0">
         {error ? <div className="p-5"><ErrorState message={error} /></div> : !rows ? <Loading /> : !rows.length ? (
-          <div className="p-5"><Empty title="No proforma invoices yet" hint="Open an accepted quotation and click “Create proforma”." /></div>
+          <div className="p-5"><Empty title="No proforma invoices yet" hint="Open an accepted quotation and click “Create proforma”."
+            action={<Button variant="outline" onClick={() => nav('/quotations')}>Go to quotations</Button>} /></div>
         ) : (
           <table className="w-full min-w-[640px] text-sm">
             <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Number</th><th className="px-3 py-3 font-medium">Buyer</th><th className="px-3 py-3 font-medium">Date</th><th className="px-3 py-3 text-right font-medium">Total</th><th className="px-3 py-3 font-medium">Status</th></tr></thead>

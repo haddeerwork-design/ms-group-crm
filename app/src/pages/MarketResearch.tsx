@@ -134,7 +134,8 @@ export function MarketResearch() {
         </Select>
         <span className="ml-auto self-center text-sm text-muted-foreground">{list.length} of {rows.filter((r) => !r.archived_at).length}</span>
       </div>
-      {list.length === 0 ? <Empty title="No research leads here" hint="Add companies you find on trade directories, LinkedIn or import records — with the link where you found them." /> : (
+      {list.length === 0 ? <Empty title="No research leads here" hint="Add companies you find on trade directories, LinkedIn or import records — with the link where you found them."
+        action={<Button onClick={() => setEdit('new')}><Plus />Add research lead</Button>} /> : (
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">

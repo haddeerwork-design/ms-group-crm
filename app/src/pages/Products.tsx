@@ -117,7 +117,8 @@ export function Products() {
         <CardContent className="overflow-x-auto p-0">
           {error ? <div className="p-5"><ErrorState message={error} /></div>
             : !data ? <Loading />
-            : !rows.length ? <div className="p-5"><Empty title="No products match" hint={data.products.length ? 'Try clearing the filters.' : 'Run migration 0002 in Supabase first.'} /></div>
+            : !rows.length ? <div className="p-5"><Empty title="No products match" hint={data.products.length ? 'No product fits these filters.' : 'Run migration 0002 in Supabase first.'}
+              action={data.products.length > 0 && <Button variant="outline" onClick={() => { setQ(''); setCat(''); setAvail(''); setSetup(''); setShowArchived(false) }}>Clear filters</Button>} /></div>
             : view === 'list' ? (
               <table className="w-full min-w-[760px] text-sm">
                 <thead>
