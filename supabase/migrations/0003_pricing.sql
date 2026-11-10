@@ -145,14 +145,22 @@ create trigger product_prices_audit after insert on public.product_prices
 -- Latest selling price per product / packaging / Incoterm / variety.
 -- Runs with the owner's rights so Sales Officers can read selling prices
 -- WITHOUT seeing costs; the WHERE clause still limits it to employees.
-create or replace view public.product_price_list as
+-- Created only once: later migrations (0013) add columns to this view, and
+-- re-running this file must not try to remove them.
+do $v$ begin
+  if not exists (select 1 from pg_views where schemaname = 'public' and viewname = 'product_price_list') then
+    execute $sql$
+create view public.product_price_list as
 select distinct on (product_id, packaging_id, incoterm, coalesce(variety, ''))
        id, product_id, packaging_id, variety, incoterm, destination,
        net_weight_kg, cartons_per_pallet, sell_currency, price_per_ton,
        valid_from, valid_until, source, created_at
   from public.product_prices
  where public.app_is_member()
- order by product_id, packaging_id, incoterm, coalesce(variety, ''), created_at desc;
+ order by product_id, packaging_id, incoterm, coalesce(variety, ''), created_at desc
+    $sql$;
+  end if;
+end $v$;
 
 revoke all on public.product_price_list from anon;
 grant select on public.product_price_list to authenticated;

@@ -26,3 +26,15 @@ describe('policy and formatting', () => {
     expect(fmtPrice(950.5, 'EGP')).toBe('950.5 EGP')
   })
 })
+
+describe('per-unit prices (jars)', () => {
+  it('total from units, cartons or tons', async () => {
+    const { lineTotal, unitToTon, unitsLabel } = await import('./quotations')
+    const jar = { net_weight_kg: 0.16, cartons_per_pallet: null, price_per_ton: unitToTon(245, 0.16), price_basis: 'unit' as const, unit_price: 245 }
+    expect(unitToTon(185, 0.16)).toBe(1156250)
+    expect(lineTotal({ ...jar, quantity: 500, quantity_unit: 'units' })).toBe(122500)
+    expect(lineTotal({ ...jar, quantity: 0.08, quantity_unit: 'tons' })).toBe(122500) // 80 kg = 500 jars
+    expect(lineTotal({ ...jar, unit_price: null, quantity: 5, quantity_unit: 'units' })).toBeNull()
+    expect(unitsLabel('jar')).toBe('jars'); expect(unitsLabel('bunch')).toBe('bunches'); expect(unitsLabel('jar', 1)).toBe('jar')
+  })
+})

@@ -1,4 +1,4 @@
-import { fmtDateDMY, fmtPrice, lineTons, type QuoteItem } from '@/lib/quotations'
+import { BRANDS, fmtDateDMY, fmtPrice, lineTons, unitsLabel, type Brand, type QuoteItem } from '@/lib/quotations'
 
 /** Data needed to print. Works for the live quotation and for saved versions. */
 export type PrintableQuote = {
@@ -6,10 +6,11 @@ export type PrintableQuote = {
   incoterm: string | null; destination: string | null; payment_terms: string | null
   customer_name: string | null; customer_company: string | null; customer_country: string | null
   policy_lines: string[]; show_quantities: boolean; items: QuoteItem[]
+  brand?: Brand | null
 }
 type Company = { company_name: string; slogan: string | null }
 
-const LETTERHEAD = `${import.meta.env.BASE_URL}letterhead.jpg`
+export const letterheadUrl = (b?: Brand | null) => `${import.meta.env.BASE_URL}${BRANDS[b ?? 'ms_elbrancy'].letterhead}`
 
 function paginate<T>(rows: T[], firstExtra: number) {
   // Capacities measured on the letterhead's writable area (46 mm → ~226 mm).
@@ -28,7 +29,19 @@ function paginate<T>(rows: T[], firstExtra: number) {
   return { pages, compact }
 }
 
-export function QuotationDocument({ q, company }: { q: PrintableQuote; company: Company }) {
+export function QuotationDocument({ q, company: settings }: { q: PrintableQuote; company: Company }) {
+  const brand = BRANDS[q.brand ?? 'ms_elbrancy']
+  // Prime Roots prints its own name and slogan; MS El-brancy uses Company Settings.
+  const company = brand.name ? { company_name: brand.name, slogan: brand.slogan } : settings
+  const anyUnit = q.items.some((i) => i.price_basis === 'unit')
+  const priceCell = (it: QuoteItem) => it.price_basis === 'unit' && it.unit_price
+    ? `${fmtPrice(it.unit_price, q.currency)} / ${it.unit_label || 'unit'}`
+    : anyUnit ? `${fmtPrice(it.price_per_ton, q.currency)} / ton` : fmtPrice(it.price_per_ton, q.currency)
+  const qtyCell = (it: QuoteItem) => {
+    if (it.quantity && it.quantity_unit === 'units') return `${it.quantity.toLocaleString('en-US')} ${unitsLabel(it.unit_label, it.quantity)}`
+    const t = lineTons(it)
+    return t != null ? `${+t.toFixed(3)} t` : '—'
+  }
   const hasCustomer = !!(q.customer_name || q.customer_company)
   const { pages, compact } = paginate(q.items, hasCustomer ? 1 : 0)
   const showQty = q.show_quantities
@@ -39,10 +52,10 @@ export function QuotationDocument({ q, company }: { q: PrintableQuote; company: 
   const cols = showQty ? ['34%', '13%', '13%', '12%', '13%', '15%'] : ['44%', '15%', '17%', '24%']
 
   return (
-    <div className="quote-doc">
+    <div className={'quote-doc brand-' + (q.brand ?? 'ms_elbrancy')} style={{ ['--q-primary' as string]: brand.primary, ['--q-heading' as string]: brand.heading }}>
       {pages.map((pg, pi) => (
         <div className="q-page" key={pi}>
-          <img className="q-bg" src={LETTERHEAD} alt="" />
+          <img className="q-bg" src={letterheadUrl(q.brand)} alt="" />
           <div className="q-content">
             {pi === 0 ? (
               <>
@@ -64,18 +77,17 @@ export function QuotationDocument({ q, company }: { q: PrintableQuote; company: 
                 <colgroup>{cols.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
                 <thead><tr>
                   <th>Product Description</th><th>Packing</th><th>Product type</th>
-                  {showQty && <th>Quantity</th>}<th>Price/Ton</th>{showQty && <th>Total</th>}
+                  {showQty && <th>Quantity</th>}<th>{anyUnit ? 'Price' : 'Price/Ton'}</th>{showQty && <th>Total</th>}
                 </tr></thead>
                 <tbody>
                   {pg.rows.map((it, i) => {
-                    const t = lineTons(it)
                     return (
                       <tr key={i}>
                         <td className="l">{it.description}</td>
                         <td>{it.packing}</td>
                         <td>{it.product_type_label}</td>
-                        {showQty && <td>{t != null ? `${+t.toFixed(3)} t` : '—'}</td>}
-                        <td>{fmtPrice(it.price_per_ton, q.currency)}</td>
+                        {showQty && <td>{qtyCell(it)}</td>}
+                        <td>{priceCell(it)}</td>
                         {showQty && <td>{fmtPrice(it.line_total, q.currency)}</td>}
                       </tr>
                     )
@@ -117,23 +129,24 @@ export const QUOTE_PRINT_CSS = `
 .q-page:last-child { page-break-after: auto; break-after: auto }
 .q-bg { position: absolute; inset: 0; width: 210mm; height: 297mm; z-index: 0 }
 .q-content { position: absolute; z-index: 1; left: 17mm; right: 16mm; top: 46mm }
+.brand-prime_roots .q-content { top: 50mm }
 .q-date { text-align: right; font-size: 11pt; color: #555; margin-right: -2mm }
 .q-ref { font-size: 8.5pt; color: #777; margin-top: 1mm }
 .q-cont { text-align: right; font-size: 9pt; color: #777 }
-.quote-doc h1 { text-align: center; color: #176b4b; font-size: 25pt; margin: 5mm 0 8mm; font-weight: 700 }
+.quote-doc h1 { text-align: center; color: var(--q-heading, #176b4b); font-size: 25pt; margin: 5mm 0 8mm; font-weight: 700 }
 .q-to { font-size: 9.5pt; margin: 0 0 3mm }
 .q-greet { font-size: 9.5pt; margin: 0 0 3mm }
-.q-greet.g { color: #176b4b; font-weight: 700 }
+.q-greet.g { color: var(--q-primary, #176b4b); font-weight: 700 }
 .quote-doc table { width: 100%; border-collapse: collapse; margin-top: 8mm; table-layout: fixed }
-.quote-doc th { background: #145a3c; color: #fff; font-size: 9.5pt; padding: 4mm 2mm; border: 1px solid #145a3c; text-align: center }
+.quote-doc th { background: var(--q-primary, #145a3c); color: #fff; font-size: 9.5pt; padding: 4mm 2mm; border: 1px solid var(--q-primary, #145a3c); text-align: center }
 .quote-doc th:first-child { text-align: left; padding-left: 5mm }
 .quote-doc td { border: 1px solid #c9cfcc; padding: 4.2mm 3mm; font-size: 9.5pt; font-weight: 700; text-align: center; background: rgba(255,255,255,.88); word-wrap: break-word }
 .quote-doc td.l { text-align: left; padding-left: 5mm }
 .quote-doc table.compact td { padding: 2.2mm 3mm }
-.quote-doc tr.q-total td { background: #eef4f1; color: #145a3c }
+.quote-doc tr.q-total td { background: #eef4f1; color: var(--q-primary, #145a3c) }
 .q-policy { margin-top: 12mm }
 .q-policy.tight { margin-top: 6mm }
-.q-policy .t { font-size: 9.5pt; font-weight: 700; color: #176b4b }
+.q-policy .t { font-size: 9.5pt; font-weight: 700; color: var(--q-primary, #176b4b) }
 .q-policy ol { margin: 3mm 0 0 8mm; padding: 0; font-size: 9.5pt; line-height: 1.8; list-style: decimal }
 .q-policy li { padding-left: 1mm }
 .q-sign { margin-top: 6mm; display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm }

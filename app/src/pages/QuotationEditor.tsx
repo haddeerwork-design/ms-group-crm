@@ -10,10 +10,10 @@ import { CURRENCIES, INCOTERMS, type Incoterm } from '@/lib/pricing'
 import { fetchPriceList, isExpired, money, type PriceListRow } from '@/lib/prices'
 import { fetchPlan } from '@/lib/containers'
 import { fetchCompanies, type Company } from '@/lib/crm'
-import type { QtyUnit } from '@/lib/planner'
 import {
   addDays, fetchQuotation, fmtDateDMY, lineTotal, renderPolicy, STATUS_LABEL, STATUS_STYLE,
   type Quotation, type QuoteStatus, type QuoteVersion,
+  BRANDS, unitToTon, unitsLabel, type Brand, type PriceBasis, type QuoteQtyUnit,
 } from '@/lib/quotations'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,12 +36,14 @@ let seq = 0
 
 type Line = {
   key: number; product_id: string; packaging_id: string; description: string; packing: string; product_type_label: string
-  quantity: string; quantity_unit: QtyUnit; net: string; cpp: string; price: string; price_id: string | null; priceNote: string
+  quantity: string; quantity_unit: QuoteQtyUnit; net: string; cpp: string; price: string; price_id: string | null; priceNote: string
+  basis: PriceBasis; unit_price: string; unit_label: string
 }
 type Form = {
   customer_name: string; customer_company: string; customer_country: string; customer_email: string; customer_phone: string
   destination: string; incoterm: Incoterm; currency: string; payment_terms: string; issue_date: string
   validity_days: string; production_time: string; policy: string; show_quantities: boolean; notes: string; plan_id: string | null; company_id: string
+  brand: Brand
 }
 type Settings = { quotation_policy: string[] | null; quotation_validity_days: number | null; quotation_production_time: string | null }
 
@@ -82,6 +84,7 @@ export function QuotationEditor() {
           customer_name: '', customer_company: '', customer_country: '', customer_email: '', customer_phone: '', destination: '',
           incoterm: 'CIF', currency: 'USD', payment_terms: '', issue_date: today(), validity_days: s(settings.quotation_validity_days),
           production_time: settings.quotation_production_time ?? '', policy: '', show_quantities: false, notes: '', plan_id: null, company_id: '',
+          brand: params.get('brand') === 'prime_roots' ? 'prime_roots' : 'ms_elbrancy',
         }
         const companyId = params.get('company')
         const co = companyId ? companies.find((x) => x.id === companyId) : undefined
@@ -100,7 +103,7 @@ export function QuotationEditor() {
               description: [pr?.name, it.variety].filter(Boolean).join(' — '), packing: pk?.label ?? '',
               product_type_label: pr ? PRODUCT_TYPE_LABEL[pr.product_type] : '', quantity: s(it.quantity), quantity_unit: it.qty_unit,
               net: s(it.net_weight_kg), cpp: s(it.cartons_per_pallet), price: s(it.price_per_ton), price_id: it.price_id,
-              priceNote: it.price_id ? 'From the container plan' : '',
+              priceNote: it.price_id ? 'From the container plan' : '', basis: 'ton' as PriceBasis, unit_price: '', unit_label: '',
             }
           })
           toast.success('Filled from the container plan')
@@ -116,11 +119,13 @@ export function QuotationEditor() {
           incoterm: q.incoterm ?? 'CIF', currency: q.currency, payment_terms: q.payment_terms ?? '', issue_date: q.issue_date,
           validity_days: s(q.validity_days), production_time: q.production_time ?? '', policy: q.policy_lines.join('\n'),
           show_quantities: q.show_quantities, notes: q.notes ?? '', plan_id: q.plan_id, company_id: (q as Quotation & { company_id?: string | null }).company_id ?? '',
+          brand: q.brand ?? 'ms_elbrancy',
         })
         setLines((q.quotation_items ?? []).map((i) => ({
           key: ++seq, product_id: i.product_id ?? '', packaging_id: i.packaging_id ?? '', description: i.description, packing: i.packing ?? '',
           product_type_label: i.product_type_label ?? '', quantity: s(i.quantity), quantity_unit: i.quantity_unit ?? 'tons',
           net: s(i.net_weight_kg), cpp: s(i.cartons_per_pallet), price: s(i.price_per_ton), price_id: i.price_id, priceNote: '',
+          basis: i.price_basis ?? 'ton', unit_price: s(i.unit_price), unit_label: i.unit_label ?? '',
         })))
         setDirty(false)
       }
@@ -134,9 +139,12 @@ export function QuotationEditor() {
   function findPrice(productId: string, packagingId: string, incoterm: Incoterm, currency: string) {
     const c = (base?.prices ?? []).filter((p) => p.product_id === productId && p.sell_currency === currency && !isExpired(p))
     const hit = c.find((p) => p.incoterm === incoterm && (p.packaging_id ?? '') === packagingId) ?? c.find((p) => p.incoterm === incoterm)
-    if (hit) return { price: s(hit.price_per_ton), price_id: hit.id, priceNote: `Price list · ${hit.incoterm}` }
+    const fromRow = (r: PriceListRow) => r.price_basis === 'unit' && r.unit_price
+      ? { price: s(r.price_per_ton), basis: 'unit' as PriceBasis, unit_price: s(r.unit_price), unit_label: r.unit_label ?? 'unit' }
+      : { price: s(r.price_per_ton), basis: 'ton' as PriceBasis, unit_price: '' }
+    if (hit) return { ...fromRow(hit), price_id: hit.id, priceNote: `Price list · ${hit.incoterm}` }
     const other = c[0]
-    if (other) return { price: s(other.price_per_ton), price_id: other.id, priceNote: `⚠ Price list has ${other.incoterm ?? 'no Incoterm'}, not ${incoterm}` }
+    if (other) return { ...fromRow(other), price_id: other.id, priceNote: other.incoterm ? `⚠ Price list has ${other.incoterm}, not ${incoterm}` : 'Price list (no Incoterm set)' }
     return { price: '', price_id: null, priceNote: `No ${incoterm} price in ${currency} — enter it` }
   }
   function pickProduct(key: number, productId: string, packagingId?: string) {
@@ -146,13 +154,20 @@ export function QuotationEditor() {
     updLine(key, {
       product_id: productId, packaging_id: pk?.id ?? '', description: p.name, packing: pk?.label ?? '',
       product_type_label: PRODUCT_TYPE_LABEL[p.product_type], net: s(pk?.net_weight_kg), cpp: s(pk?.cartons_per_pallet),
+      unit_label: pk?.unit_name ?? '',
       ...findPrice(productId, pk?.id ?? '', form.incoterm, form.currency),
     })
+    // Jams are sold under Prime Roots: switch the letterhead when every line is a jam.
+    const others = lines.filter((l) => l.key !== key && l.product_id)
+    if (p.product_type === 'jam' && form.brand !== 'prime_roots' && others.every((l) => prod[l.product_id]?.product_type === 'jam')) {
+      upd({ brand: 'prime_roots' }); toast.message('Letterhead set to Prime Roots (you can change it under “Letterhead”).')
+    }
   }
-  const addLine = () => { setLines((ls) => [...ls, { key: ++seq, product_id: '', packaging_id: '', description: '', packing: '', product_type_label: '', quantity: '', quantity_unit: 'tons', net: '', cpp: '', price: '', price_id: null, priceNote: '' }]); setDirty(true) }
+  const addLine = () => { setLines((ls) => [...ls, { key: ++seq, product_id: '', packaging_id: '', description: '', packing: '', product_type_label: '', quantity: '', quantity_unit: 'tons', net: '', cpp: '', price: '', price_id: null, priceNote: '', basis: 'ton', unit_price: '', unit_label: '' }]); setDirty(true) }
 
   const computed = lines.map((l) => ({
-    ...l, total: lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: n(l.net), cartons_per_pallet: n(l.cpp), price_per_ton: n(l.price) }),
+    ...l, total: lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: n(l.net), cartons_per_pallet: n(l.cpp),
+      price_per_ton: n(l.price), price_basis: l.basis, unit_price: n(l.unit_price) }),
   }))
   const grand = computed.length && computed.every((l) => l.total != null) ? computed.reduce((a, l) => a + (l.total ?? 0), 0) : null
 
@@ -161,7 +176,11 @@ export function QuotationEditor() {
     if (!lines.length) { toast.error('Add at least one product.'); return null }
     for (const l of lines) {
       if (!l.description.trim()) { toast.error('Every line needs a product description.'); return null }
-      if (!(n(l.price)! > 0)) { toast.error(`Enter the price per ton for “${l.description}”.`); return null }
+      if (l.basis === 'unit') {
+        if (!(n(l.unit_price)! > 0)) { toast.error(`Enter the price per ${l.unit_label || 'unit'} for “${l.description}”.`); return null }
+        if (!(n(l.net)! > 0)) { toast.error(`“${l.description}” needs the weight of one ${l.unit_label || 'unit'} (choose its packing).`); return null }
+      } else if (!(n(l.price)! > 0)) { toast.error(`Enter the price per ton for “${l.description}”.`); return null }
+      if (l.quantity_unit === 'units' && n(l.quantity) && !(n(l.net)! > 0)) { toast.error(`“${l.description}”: quantity in units needs the unit weight (choose its packing).`); return null }
     }
     const vd = n(form.validity_days)
     const row = {
@@ -171,6 +190,7 @@ export function QuotationEditor() {
       validity_days: vd, valid_until: vd ? addDays(form.issue_date, vd) : null, production_time: t(form.production_time),
       policy_lines: form.policy.split('\n').map((x) => x.trim()).filter(Boolean), show_quantities: form.show_quantities,
       notes: t(form.notes), plan_id: form.plan_id, company_id: form.company_id || null,
+      ...(form.brand !== 'ms_elbrancy' || quote?.brand ? { brand: form.brand } : {}),
     }
     setBusy('save')
     let qid = quote?.id ?? null
@@ -187,8 +207,11 @@ export function QuotationEditor() {
     const items = computed.map((l, i) => ({
       quotation_id: qid, product_id: l.product_id || null, packaging_id: l.packaging_id || null, description: l.description.trim(),
       packing: t(l.packing), product_type_label: t(l.product_type_label), quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null,
-      net_weight_kg: n(l.net), cartons_per_pallet: n(l.cpp) ? Math.round(n(l.cpp)!) : null, price_per_ton: n(l.price), line_total: l.total,
+      net_weight_kg: n(l.net), cartons_per_pallet: n(l.cpp) ? Math.round(n(l.cpp)!) : null,
+      price_per_ton: l.basis === 'unit' ? unitToTon(n(l.unit_price)!, n(l.net)!) : n(l.price), line_total: l.total,
       price_id: l.price_id, sort_order: i,
+      // unit-price fields exist from migration 0013; only sent when used
+      ...(l.basis === 'unit' || quote?.brand ? { price_basis: l.basis, unit_price: l.basis === 'unit' ? n(l.unit_price) : null, unit_label: l.basis === 'unit' ? t(l.unit_label) ?? 'unit' : null } : {}),
     }))
     const r = await supabase.from('quotation_items').insert(items)
     setBusy(null)
@@ -276,6 +299,11 @@ export function QuotationEditor() {
             <CardHeader><CardTitle>Buyer & terms</CardTitle><CardDescription>Buyer details print as “To:” only when filled (your PDF has none).</CardDescription></CardHeader>
             <CardContent>
               <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Letterhead" className="sm:col-span-2 lg:col-span-3" hint="Which company the quotation is printed under.">
+                  <Select value={form.brand} onChange={(e) => upd({ brand: e.target.value as Brand })}>
+                    {(Object.keys(BRANDS) as Brand[]).map((b) => <option key={b} value={b}>{BRANDS[b].label}</option>)}
+                  </Select>
+                </Field>
                 <Field label="Company (from CRM)" className="sm:col-span-2 lg:col-span-3" hint="Choosing a company fills the buyer fields and adds this quotation to its timeline.">
                   <Select value={form.company_id} onChange={(e) => {
                     const co = base.companies.find((x) => x.id === e.target.value)
@@ -349,13 +377,22 @@ export function QuotationEditor() {
                       <Field label="Quantity (optional)" className="sm:col-span-3">
                         <div className="flex gap-1">
                           <Input inputMode="decimal" value={l.quantity} onChange={(e) => updLine(l.key, { quantity: e.target.value })} />
-                          <Select value={l.quantity_unit} onChange={(e) => updLine(l.key, { quantity_unit: e.target.value as QtyUnit })} className="w-[92px]" aria-label="Unit">
+                          <Select value={l.quantity_unit} onChange={(e) => updLine(l.key, { quantity_unit: e.target.value as QuoteQtyUnit })} className="w-[100px]" aria-label="Unit">
                             <option value="tons">tons</option><option value="cartons">cartons</option><option value="pallets">pallets</option>
+                            <option value="units">{unitsLabel(l.unit_label)}</option>
                           </Select>
                         </div>
                       </Field>
-                      <Field label={`Price / ton (${form.currency})`} hint={l.priceNote} className="sm:col-span-3">
-                        <Input inputMode="decimal" value={l.price} onChange={(e) => updLine(l.key, { price: e.target.value, price_id: null, priceNote: 'Entered manually' })} />
+                      <Field label={l.basis === 'unit' ? `Price / ${l.unit_label || 'unit'} (${form.currency})` : `Price / ton (${form.currency})`} hint={l.priceNote} className="sm:col-span-3">
+                        <div className="flex gap-1">
+                          {l.basis === 'unit'
+                            ? <Input inputMode="decimal" value={l.unit_price} onChange={(e) => updLine(l.key, { unit_price: e.target.value, price_id: null, priceNote: 'Entered manually' })} />
+                            : <Input inputMode="decimal" value={l.price} onChange={(e) => updLine(l.key, { price: e.target.value, price_id: null, priceNote: 'Entered manually' })} />}
+                          <Select value={l.basis} aria-label="Price per" className="w-[92px]"
+                            onChange={(e) => updLine(l.key, { basis: e.target.value as PriceBasis, unit_label: l.unit_label || 'unit', price_id: null, priceNote: '' })}>
+                            <option value="ton">/ ton</option><option value="unit">/ {l.unit_label || 'unit'}</option>
+                          </Select>
+                        </div>
                       </Field>
                       <div className="flex items-end justify-between gap-2 sm:col-span-3">
                         <div className="pb-2 text-sm"><span className="text-xs text-muted-foreground">Total </span><b className="tabular-nums">{money(l.total, form.currency)}</b></div>

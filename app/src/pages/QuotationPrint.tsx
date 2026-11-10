@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { fetchQuotation } from '@/lib/quotations'
-import { QuotationDocument, QUOTE_PRINT_CSS, type PrintableQuote } from '@/components/quotations/QuotationDocument'
+import { letterheadUrl, QuotationDocument, QUOTE_PRINT_CSS, type PrintableQuote } from '@/components/quotations/QuotationDocument'
 import { Button } from '@/components/ui/button'
 import { ErrorState, Loading } from '@/components/ui/states'
 
@@ -32,7 +32,7 @@ export function QuotationPrint() {
   useEffect(() => {
     if (!doc) return
     // wait for the letterhead image before opening the print dialog
-    const img = new Image(); img.src = `${import.meta.env.BASE_URL}letterhead.jpg`
+    const img = new Image(); img.src = letterheadUrl(doc.brand)
     const go = () => setTimeout(() => window.print(), 300)
     if (img.complete) go(); else img.onload = go
   }, [doc])

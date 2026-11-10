@@ -26,6 +26,9 @@ const packSchema = z.object({
   net_weight_kg: optNum, gross_weight_kg: optNum,
   length_cm: optNum, width_cm: optNum, height_cm: optNum,
   cartons_per_pallet: optInt,
+  variety: z.string().trim().max(80),
+  units_per_pack: optInt, unit_name: z.string().trim().max(30), unit_weight_g: optNum,
+  packs_per_container: optInt,
   notes: z.string().trim().max(300),
 }).refine((p) => !p.net_weight_kg || !p.gross_weight_kg || Number(p.gross_weight_kg) >= Number(p.net_weight_kg),
   { message: 'Gross weight must be ≥ net weight', path: ['gross_weight_kg'] })
@@ -54,7 +57,7 @@ const s = (v: unknown) => (v == null ? '' : String(v))
 const n = (v: string) => (v.trim() === '' ? null : Number(v))
 const t = (v: string) => (v.trim() === '' ? null : v.trim())
 
-const emptyPack: PackForm = { label: '', packaging_type: '', net_weight_kg: '', gross_weight_kg: '', length_cm: '', width_cm: '', height_cm: '', cartons_per_pallet: '', notes: '' }
+const emptyPack: PackForm = { label: '', packaging_type: '', net_weight_kg: '', gross_weight_kg: '', length_cm: '', width_cm: '', height_cm: '', cartons_per_pallet: '', variety: '', units_per_pack: '', unit_name: '', unit_weight_g: '', packs_per_container: '', notes: '' }
 
 function toForm(p: Product | null, categories: Category[]): Form {
   const packs = p ? activePackaging(p) : []
@@ -72,6 +75,8 @@ function toForm(p: Product | null, categories: Category[]): Form {
       net_weight_kg: s(x.net_weight_kg), gross_weight_kg: s(x.gross_weight_kg),
       length_cm: s(x.length_cm), width_cm: s(x.width_cm), height_cm: s(x.height_cm),
       cartons_per_pallet: s(x.cartons_per_pallet), notes: x.notes ?? '',
+      variety: x.variety ?? '', units_per_pack: s(x.units_per_pack), unit_name: x.unit_name ?? '',
+      unit_weight_g: s(x.unit_weight_g), packs_per_container: s(x.packs_per_container),
     })),
   }
 }
@@ -86,6 +91,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, canEdit
   useEffect(() => { if (open) reset(toForm(product, categories)) }, [open, product, categories, reset])
 
   const defaultIndex = watch('default_index')
+  const varietyOptions = (watch('varieties') ?? '').split(',').map((x) => x.trim()).filter(Boolean)
   const activeCats = categories.filter((c) => !c.archived_at || c.id === product?.category_id)
 
   async function onSubmit(v: Form) {
@@ -119,12 +125,18 @@ export function ProductDialog({ open, onOpenChange, product, categories, canEdit
     for (const x of existing) if (!keepIds.has(x.id)) {
       steps.push(supabase.from('product_packaging').update({ archived_at: new Date().toISOString() }).eq('id', x.id))
     }
+    // The extra packaging fields exist only after migration 0012; don't send them before that.
+    const hasSpecCols = existing.some((x) => 'units_per_pack' in x) || v.packaging.some((p) => p.variety || p.units_per_pack || p.unit_name || p.unit_weight_g || p.packs_per_container)
     v.packaging.forEach((p, i) => {
       const pr = {
         product_id: id!, label: p.label.trim(), packaging_type: t(p.packaging_type),
         net_weight_kg: n(p.net_weight_kg), gross_weight_kg: n(p.gross_weight_kg),
         length_cm: n(p.length_cm), width_cm: n(p.width_cm), height_cm: n(p.height_cm),
         cartons_per_pallet: n(p.cartons_per_pallet), notes: t(p.notes), is_default: i === v.default_index,
+        ...(hasSpecCols ? {
+          variety: t(p.variety), units_per_pack: n(p.units_per_pack), unit_name: t(p.unit_name),
+          unit_weight_g: n(p.unit_weight_g), packs_per_container: n(p.packs_per_container),
+        } : {}),
       }
       steps.push(p.id ? supabase.from('product_packaging').update(pr).eq('id', p.id) : supabase.from('product_packaging').insert(pr))
     })
@@ -204,6 +216,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, canEdit
                     const e = errors.packaging?.[i]
                     return (
                       <div key={f.id} className="rounded-md border border-border p-3">
+                        {i === 0 && <datalist id="pack-varieties">{varietyOptions.map((v) => <option key={v} value={v} />)}</datalist>}
                         <div className="mb-3 flex items-center gap-2">
                           <button type="button" onClick={() => setValue('default_index', i, { shouldDirty: true })}
                             className={i === defaultIndex ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground'}
@@ -227,7 +240,12 @@ export function ProductDialog({ open, onOpenChange, product, categories, canEdit
                           <Field label="Length cm" error={e?.length_cm?.message}><Input inputMode="decimal" {...register(`packaging.${i}.length_cm`)} /></Field>
                           <Field label="Width cm" error={e?.width_cm?.message}><Input inputMode="decimal" {...register(`packaging.${i}.width_cm`)} /></Field>
                           <Field label="Height cm" error={e?.height_cm?.message}><Input inputMode="decimal" {...register(`packaging.${i}.height_cm`)} /></Field>
-                          <Field label="Notes"><Input {...register(`packaging.${i}.notes`)} /></Field>
+                          <Field label="For variety"><Input placeholder="All varieties" list="pack-varieties" {...register(`packaging.${i}.variety`)} /></Field>
+                          <Field label="Units / pack" error={e?.units_per_pack?.message}><Input inputMode="numeric" placeholder="e.g. 14" {...register(`packaging.${i}.units_per_pack`)} /></Field>
+                          <Field label="Unit"><Input placeholder="bunch, punnet…" {...register(`packaging.${i}.unit_name`)} /></Field>
+                          <Field label="Unit weight g" error={e?.unit_weight_g?.message}><Input inputMode="decimal" {...register(`packaging.${i}.unit_weight_g`)} /></Field>
+                          <Field label="Packs / container" error={e?.packs_per_container?.message}><Input inputMode="numeric" {...register(`packaging.${i}.packs_per_container`)} /></Field>
+                          <Field label="Notes" className="sm:col-span-3"><Input {...register(`packaging.${i}.notes`)} /></Field>
                         </div>
                       </div>
                     )

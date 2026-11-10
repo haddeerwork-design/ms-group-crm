@@ -66,6 +66,13 @@ export function ProformaEditor() {
           })
           setMeta({ quotation_id: q.id, company_id: (q as unknown as { company_id?: string | null }).company_id ?? null })
           ls = (q.quotation_items ?? []).map((i) => {
+            if (i.price_basis === 'unit' && i.unit_price) {
+              // Priced per jar/bunch: keep it per piece on the proforma.
+              const tons = lineTons(i)
+              const pcs = i.quantity_unit === 'units' ? i.quantity : tons != null && i.net_weight_kg ? Math.round((tons * 1000) / i.net_weight_kg) : null
+              return { key: ++seq, product_id: i.product_id, description: i.description, packing: i.packing ?? '', quantity: pcs ? String(pcs) : '',
+                unit: 'pieces' as QtyUnitPI, net: s(i.net_weight_kg), price: s(i.unit_price), price_unit: 'piece' as PriceUnit }
+            }
             const tons = lineTons(i)
             return { key: ++seq, product_id: i.product_id, description: i.description, packing: i.packing ?? '', quantity: tons != null ? String(+tons.toFixed(3)) : '',
               unit: 'tons' as QtyUnitPI, net: s(i.net_weight_kg), price: s(i.price_per_ton), price_unit: 'ton' as PriceUnit }

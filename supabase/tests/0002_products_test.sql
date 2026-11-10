@@ -6,7 +6,7 @@
 do $$ begin
   assert (select count(*) from public.product_categories) = 6;
   -- 47 seeded + "Keitt Mango" and a duplicate "Lemon" imported as new products
-  assert (select count(*) from public.products) = 49, (select count(*)::text from public.products);
+  assert (select count(*) from public.products) = 50 /* 47 seed + 2 legacy + fresh Strawberries from 0012 */, (select count(*)::text from public.products);
   raise notice 'PASS seed counts';
 end $$;
 
@@ -24,7 +24,7 @@ do $$ begin
   -- bad gross weight (below net) not copied
   assert (select gross_weight_kg from public.product_packaging pp join public.products p on p.id=pp.product_id where p.legacy_key='p20') is null;
   -- empty legacy item: linked, no packaging created
-  assert (select count(*) from public.product_packaging pp join public.products p on p.id=pp.product_id where p.legacy_key='p12') = 0;
+  assert (select count(*) from public.product_packaging pp join public.products p on p.id=pp.product_id where p.legacy_key='p12' and pp.label <> 'Carton or crate 15 kg' /* added by 0012 */) = 0;
   assert exists (select 1 from public.products where legacy_key='p99' and name like 'Lemons (from CRM%' or legacy_key='p99' and name like 'Lemon%');
   -- current CRM data untouched
   assert (select count(*) from public.crm_records where record_type='products') = 5;
@@ -35,7 +35,7 @@ end $$;
 set role authenticated;
 select set_config('request.jwt.claim.sub', :'S', false);
 do $$ begin
-  assert (select count(*) from public.products) = 49, 'sales should read products';
+  assert (select count(*) from public.products) = 50 /* 47 seed + 2 legacy + fresh Strawberries from 0012 */, 'sales should read products';
   raise notice 'PASS sales reads catalog';
 end $$;
 update public.products set name='HACK' where name='Okra';
@@ -56,7 +56,7 @@ do $$ begin
   raise notice 'PASS sales cannot write catalog';
 end $$;
 delete from public.products;
-do $$ begin assert (select count(*) from public.products) = 49; raise notice 'PASS nobody hard-deletes'; end $$;
+do $$ begin assert (select count(*) from public.products) = 50 /* 47 seed + 2 legacy + fresh Strawberries from 0012 */; raise notice 'PASS nobody hard-deletes'; end $$;
 
 -- ===== user with no role sees nothing =====
 reset role;
