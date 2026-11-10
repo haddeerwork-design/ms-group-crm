@@ -54,6 +54,8 @@ type Settings = { quotation_policy: string[] | null; quotation_validity_days: nu
   quotation_policy_ar?: string[] | null; quotation_production_time_ar?: string | null
   prime_roots_terms?: string[] | null; prime_roots_terms_ar?: string[] | null; prime_roots_validity_days?: number | null }
 
+/** Default jars per shrink (given by Haddeer, 10 Nov 2026); editable on every line. */
+const JARS_PER_SHRINK = '12'
 const SHRINK_RE = [/^Shrink of (\d+) jars \((.*)\)$/, /^شرينك (\d+) برطمان \((.*)\)$/]
 /** Printed packing for a shrink line, and back (to edit it again). */
 const shrinkPacking = (k: number, jar: string, lang: QuoteLang) => (lang === 'ar' ? `شرينك ${k} برطمان (${jar})` : `Shrink of ${k} jars (${jar})`)
@@ -212,7 +214,7 @@ export function QuotationEditor() {
     const cur = lines.find((l) => l.key === key)
     const other = lines.find((l) => l.key !== key && prod[l.product_id]?.product_type === 'jam')
     const sell = cur?.sell ?? other?.sell ?? 'jar'
-    return { basis: 'unit', unit_label: 'jar', quantity_unit: 'units', sell, per_shrink: cur?.per_shrink || other?.per_shrink || '' }
+    return { basis: 'unit', unit_label: 'jar', quantity_unit: 'units', sell, per_shrink: cur?.per_shrink || other?.per_shrink || JARS_PER_SHRINK }
   }
   /** Brand changes the default terms and validity (only if they were still the defaults). */
   function switchBrand(brand: Brand) {
@@ -536,7 +538,7 @@ export function QuotationEditor() {
                       {isJam(l) && (
                         <div className="grid gap-3 sm:col-span-12 sm:grid-cols-3">
                           <Field label="Sell by">
-                            <Select value={l.sell ?? 'jar'} onChange={(e) => updLine(l.key, { sell: e.target.value as 'jar' | 'shrink' })}>
+                            <Select value={l.sell ?? 'jar'} onChange={(e) => updLine(l.key, { sell: e.target.value as 'jar' | 'shrink', per_shrink: l.per_shrink || JARS_PER_SHRINK })}>
                               <option value="jar">Jar</option><option value="shrink">Shrink (pack of jars)</option>
                             </Select>
                           </Field>
