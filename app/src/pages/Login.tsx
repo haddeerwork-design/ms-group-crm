@@ -34,7 +34,7 @@ export function Login() {
         <div className="relative hidden flex-col px-12 pb-10 pt-10 lg:flex">
           <img src={`${BASE}logo.png`} alt="MS El-brancy Group" className="h-14 w-auto self-start" />
           <img src={`${BASE}login-illustration.webp`} alt="A crate of Egyptian fruit and vegetables in front of the farm, with a plane flying over a world map"
-            className="mx-auto my-auto w-full max-w-[640px] select-none mix-blend-multiply" draggable={false} />
+            className="mx-auto my-auto w-full max-w-[640px] select-none drop-shadow-[0_18px_30px_rgba(20,83,45,0.12)]" draggable={false} />
           <p className="mt-auto pr-16 text-center text-2xl font-medium italic text-[#14532d]">From our farms to global markets.</p>
           <div className="mx-auto mt-3 h-1 w-24 rounded-full bg-[#8bc34a] pr-16" />
         </div>
