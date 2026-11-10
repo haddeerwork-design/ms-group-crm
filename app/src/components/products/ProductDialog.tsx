@@ -35,6 +35,7 @@ const packSchema = z.object({
 
 const schema = z.object({
   name: z.string().trim().min(2, 'Required').max(120),
+  name_ar: z.string().trim().max(120),
   category_id: z.string().min(1, 'Choose a category'),
   product_type: z.enum(['fresh', 'frozen', 'jam']),
   varieties: z.string().max(300),
@@ -63,7 +64,7 @@ function toForm(p: Product | null, categories: Category[]): Form {
   const packs = p ? activePackaging(p) : []
   const cat = p ? categories.find((c) => c.id === p.category_id) : undefined
   return {
-    name: p?.name ?? '', category_id: p?.category_id ?? '', product_type: p?.product_type ?? cat?.product_type ?? 'fresh',
+    name: p?.name ?? '', name_ar: p?.name_ar ?? '', category_id: p?.category_id ?? '', product_type: p?.product_type ?? cat?.product_type ?? 'fresh',
     varieties: (p?.varieties ?? []).join(', '), origin: p?.origin ?? 'Egypt',
     season_start_month: s(p?.season_start_month), season_end_month: s(p?.season_end_month),
     availability: p?.availability ?? '', specifications: p?.specifications ?? '', size_caliber: p?.size_caliber ?? '',
@@ -96,7 +97,9 @@ export function ProductDialog({ open, onOpenChange, product, categories, canEdit
 
   async function onSubmit(v: Form) {
     const row = {
-      name: v.name.trim(), category_id: v.category_id, product_type: v.product_type as ProductType,
+      name: v.name.trim(), category_id: v.category_id,
+      // Arabic name exists from migration 0014; only sent when that column is there
+      ...(product && 'name_ar' in product || v.name_ar.trim() ? { name_ar: t(v.name_ar) } : {}), product_type: v.product_type as ProductType,
       varieties: v.varieties.split(',').map((x) => x.trim()).filter(Boolean),
       origin: t(v.origin), season_start_month: n(v.season_start_month), season_end_month: n(v.season_end_month),
       availability: (t(v.availability) as Availability | null), specifications: t(v.specifications),
@@ -160,6 +163,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, canEdit
             <fieldset disabled={!canEdit} className="space-y-6">
               <section className="grid gap-4 sm:grid-cols-2">
                 <Field label="Product name" htmlFor="name" error={errors.name?.message}><Input id="name" {...register('name')} /></Field>
+                <Field label="Arabic name (for Arabic quotations)" htmlFor="name_ar"><Input id="name_ar" dir="rtl" lang="ar" {...register('name_ar')} /></Field>
                 <Field label="Category" htmlFor="category_id" error={errors.category_id?.message}>
                   <Select id="category_id" {...register('category_id', {
                     onChange: (e) => { const c = categories.find((x) => x.id === e.target.value); if (c) setValue('product_type', c.product_type) },

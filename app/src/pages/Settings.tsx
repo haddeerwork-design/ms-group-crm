@@ -89,13 +89,18 @@ export function Settings() {
 }
 
 function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
-  const [v, setV] = useState<{ policy: string; days: string; production: string; bank: string } | null>(null)
+  const [v, setV] = useState<{ policy: string; days: string; production: string; bank: string; policyAr: string; productionAr: string; hasAr: boolean } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   async function load() {
-    const { data, error } = await supabase.from('company_settings').select('quotation_policy, quotation_validity_days, quotation_production_time, bank_details').eq('id', 1).single()
-    if (error) return setErr(error.message.includes('column') ? 'Run the latest migration to enable these settings.' : error.message)
-    setV({ policy: (data.quotation_policy ?? []).join('\n'), days: data.quotation_validity_days == null ? '' : String(data.quotation_validity_days), production: data.quotation_production_time ?? '', bank: data.bank_details ?? '' })
+    const { data, error } = await supabase.from('company_settings').select('*').eq('id', 1).single()
+    if (error) return setErr(error.message)
+    if (!('quotation_policy' in data)) return setErr('Run the latest migration to enable these settings.')
+    setV({
+      policy: (data.quotation_policy ?? []).join('\n'), days: data.quotation_validity_days == null ? '' : String(data.quotation_validity_days),
+      production: data.quotation_production_time ?? '', bank: data.bank_details ?? '',
+      hasAr: 'quotation_policy_ar' in data, policyAr: (data.quotation_policy_ar ?? []).join('\n'), productionAr: data.quotation_production_time_ar ?? '',
+    })
   }
   useEffect(() => { load() }, [])
   async function save() {
@@ -106,6 +111,7 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
     const { data, error } = await supabase.from('company_settings').update({
       quotation_policy: v.policy.split('\n').map((x) => x.trim()).filter(Boolean), quotation_validity_days: days,
       quotation_production_time: v.production.trim() || null, bank_details: v.bank.trim() || null,
+      ...(v.hasAr ? { quotation_policy_ar: v.policyAr.split('\n').map((x) => x.trim()).filter(Boolean), quotation_production_time_ar: v.productionAr.trim() || null } : {}),
     }).eq('id', 1).select('id')
     setSaving(false)
     if (error) return toast.error(error.message)
@@ -127,6 +133,16 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
             </div>
             <div className="space-y-2"><Label htmlFor="qdays">Valid for (days)</Label><Input id="qdays" inputMode="numeric" disabled={!canEdit} value={v.days} onChange={(e) => setV({ ...v, days: e.target.value })} /></div>
             <div className="space-y-2"><Label htmlFor="qprod">Production time</Label><Input id="qprod" disabled={!canEdit} value={v.production} onChange={(e) => setV({ ...v, production: e.target.value })} /></div>
+            {v.hasAr && (
+              <>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="qpolicyar">Arabic policy lines — for quotations in Arabic</Label>
+                  <Textarea id="qpolicyar" dir="rtl" lang="ar" className="min-h-[130px]" disabled={!canEdit} value={v.policyAr} onChange={(e) => setV({ ...v, policyAr: e.target.value })} />
+                </div>
+                <div className="space-y-2"><Label htmlFor="qprodar">Production time (Arabic)</Label><Input id="qprodar" dir="rtl" lang="ar" disabled={!canEdit} value={v.productionAr} onChange={(e) => setV({ ...v, productionAr: e.target.value })} /></div>
+                <div />
+              </>
+            )}
             <div className="space-y-2 sm:col-span-2"><Label htmlFor="qbank">Bank details for proforma invoices</Label><Textarea id="qbank" disabled={!canEdit} value={v.bank} placeholder="Bank name, account name, IBAN, SWIFT…" onChange={(e) => setV({ ...v, bank: e.target.value })} /></div>
             {canEdit && <div className="sm:col-span-2"><Button onClick={save} disabled={saving}>{saving && <Loader2 className="animate-spin" />}Save document defaults</Button></div>}
           </div>
