@@ -33,6 +33,16 @@ export function rangeFor(p: Preset, today: string): Range {
     case 'all': return { from: '0000-01-01', to: '9999-12-31' }
   }
 }
+/** The period of the same length just before r (null for "all time"). */
+export function previousRange(r: Range): Range | null {
+  if (r.from === '0000-01-01') return null
+  const day = 864e5
+  const from = Date.parse(r.from + 'T00:00:00Z'), to = Date.parse(r.to + 'T00:00:00Z')
+  const n = Math.round((to - from) / day) + 1
+  return { from: iso(new Date(from - n * day)), to: iso(new Date(from - day)) }
+}
+/** % change from prev to cur; null when there is nothing to compare with. */
+export const deltaPct = (cur: number, prev: number | null | undefined) => (prev == null || prev === 0 ? null : ((cur - prev) / prev) * 100)
 export const inRange = (d: string | null | undefined, r: Range) => !!d && d.slice(0, 10) >= r.from && d.slice(0, 10) <= r.to
 
 /** Month keys (YYYY-MM) covering the range; for "all time" the span of the data. */

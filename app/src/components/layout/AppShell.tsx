@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Archive, LifeBuoy, BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { canAccess, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
@@ -36,6 +36,7 @@ const NAV: { to: string; label: string; icon: typeof Users; module: ModuleKey }[
 
 export function AppShell() {
   const { profile, roles, signOut } = useAuth()
+  const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('ms_nav') === '1' } catch { return false } })
   const [mobileOpen, setMobileOpen] = useState(false)
   const [theme, setTheme] = useState(getTheme())
@@ -109,7 +110,7 @@ export function AppShell() {
             <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut /></Button>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-8"><Outlet /></main>
+        <main className={cn('mx-auto w-full flex-1 p-4 md:p-8', pathname === '/' ? 'max-w-[1440px]' : 'max-w-6xl')}><Outlet /></main>
       </div>
     </div>
   )
