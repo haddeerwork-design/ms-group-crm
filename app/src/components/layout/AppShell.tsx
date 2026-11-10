@@ -46,23 +46,26 @@ export function AppShell() {
   const name = profile?.full_name || profile?.email || 'User'
 
   const sidebar = (
-    <nav className="flex h-full flex-col gap-1 p-3">
-      <div className={cn('mb-4 flex h-12 items-center rounded-md px-2', collapsed && 'justify-center px-0')}>
+    <nav className="flex h-full min-h-0 flex-col p-3">
+      <div className={cn('mb-3 flex h-12 shrink-0 items-center rounded-md px-2', collapsed && 'justify-center px-0')}>
         {collapsed
           ? <span className="grid size-9 place-items-center rounded-md bg-forest text-sm font-bold text-white">MS</span>
           : <><img src={`${import.meta.env.BASE_URL}logo.png`} alt="MS El-brancy Group" className="h-9 w-auto dark:hidden" /><img src={`${import.meta.env.BASE_URL}logo-white.png`} alt="MS El-brancy Group" className="hidden h-9 w-auto dark:block" /></>}
       </div>
+      {/* The menu scrolls on its own when the screen is not tall enough; logo and bottom link stay put. */}
+      <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-1 [scrollbar-width:thin]">
       {items.map(({ to, label, icon: Icon }) => (
         <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined}
           className={({ isActive }) => cn(
-            'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+            'flex shrink-0 items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
             isActive && 'bg-accent text-foreground',
             collapsed && 'justify-center px-0',
           )}>
           <Icon className="size-4 shrink-0" />{!collapsed && label}
         </NavLink>
       ))}
-      <div className="mt-auto space-y-1 border-t border-border pt-3">
+      </div>
+      <div className="mt-2 shrink-0 space-y-1 border-t border-border pt-2">
         <a href={LEGACY_CRM_URL} title="The current CRM stays available until it is switched off"
            className={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground', collapsed && 'justify-center px-0')}>
           <ExternalLink className="size-4 shrink-0" />{!collapsed && 'Open current CRM'}
