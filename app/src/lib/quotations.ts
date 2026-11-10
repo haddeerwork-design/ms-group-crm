@@ -90,6 +90,7 @@ export const unitToTon = (unitPrice: number, netKg: number) => Math.round((unitP
 /** Plural label for units, e.g. jar → jars. */
 export const unitsLabel = (label: string | null | undefined, n = 2) => {
   const l = (label || 'unit').trim()
+  if (/^(kg|g|t|ton)$/i.test(l)) return l === 'ton' && n !== 1 ? 'tons' : l
   return n === 1 || /s$/i.test(l) ? l : l.replace(/(ch|sh|x)$/i, '$1e') + 's'
 }
 
@@ -137,7 +138,7 @@ export const QUOTE_TEXT = {
 export const PRODUCT_TYPE_LABEL_AR = { fresh: 'طازج', frozen: 'مجمد', jam: 'مربى' } as const
 const PACK_AR: Record<string, [string, string]> = {
   jar: ['برطمان', 'برطمان'], carton: ['كرتونة', 'كرتونة'], basket: ['سبت', 'سبت'], crate: ['صندوق بلاستيك', 'صندوق بلاستيك'],
-  tray: ['صينية', 'صينية'], bag: ['شوال', 'شوال'], box: ['صندوق', 'صندوق'], bunch: ['حزمة', 'حزمة'], punnet: ['علبة', 'علبة'], unit: ['وحدة', 'وحدة'],
+  tray: ['صينية', 'صينية'], kg: ['كجم', 'كجم'], ton: ['طن', 'طن'], bag: ['شوال', 'شوال'], box: ['صندوق', 'صندوق'], bunch: ['حزمة', 'حزمة'], punnet: ['علبة', 'علبة'], unit: ['وحدة', 'وحدة'],
 }
 /** Unit name as printed, e.g. jar → "jars" (en) or "برطمان" (ar). */
 export function unitWord(label: string | null | undefined, lang: QuoteLang, n = 2) {

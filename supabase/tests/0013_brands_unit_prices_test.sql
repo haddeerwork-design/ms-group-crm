@@ -2,7 +2,7 @@
 \set ON_ERROR_STOP on
 \set A '00000000-0000-0000-0000-00000000000a'
 do $$ begin
-  assert (select count(*) from public.product_prices where price_basis = 'unit' and sell_currency = 'EGP') = 4, 'jam prices';
+  assert (select count(*) from public.product_prices where price_basis = 'unit' and sell_currency = 'EGP' and unit_label = 'jar') = 4, 'jam prices';
   assert (select unit_price from public.product_prices r join public.products p on p.id = r.product_id where p.name = 'Lychee Jam') = 245;
   assert (select price_per_ton from public.product_prices r join public.products p on p.id = r.product_id where p.name = 'Passion Fruit Jam') = 1156250;
   assert (select count(*) from public.product_packaging k join public.products p on p.id = k.product_id where p.product_type = 'jam' and k.label = 'Jar 160 g' and k.is_default) = 4;

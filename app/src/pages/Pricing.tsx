@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
-import { COST_VIEWERS } from '@/lib/roles'
+import { COST_VIEWERS, PRICE_MANAGERS } from '@/lib/roles'
 import { fetchCatalog, type Category, type Product } from '@/lib/catalog'
 import { fetchLatestRates, fetchPriceList, type PriceListRow, type SavedRate } from '@/lib/prices'
 import { PageHeader } from '@/components/layout/AppShell'
@@ -15,6 +15,7 @@ type Tab = 'list' | 'calc' | 'fx'
 export function Pricing() {
   const { hasRole } = useAuth()
   const seesCosts = hasRole(...COST_VIEWERS)
+  const editsPrices = hasRole(...PRICE_MANAGERS)
   const [tab, setTab] = useState<Tab>('list')
   const [data, setData] = useState<{ products: Product[]; categories: Category[]; list: PriceListRow[]; rates: SavedRate[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -45,7 +46,7 @@ export function Pricing() {
       </div>
       {error ? <ErrorState message={error} /> : !data ? <Loading /> : (
         <>
-          {tab === 'list' && <PriceList rows={data.list} products={data.products} categories={data.categories} canCalc={seesCosts}
+          {tab === 'list' && <PriceList rows={data.list} products={data.products} categories={data.categories} canCalc={seesCosts} canEdit={editsPrices} onSaved={load}
             onOpen={(productId, packagingId, incoterm) => { setInitial({ productId, packagingId, incoterm }); setTab('calc') }} />}
           {tab === 'calc' && seesCosts && <PriceCalculator products={data.products} categories={data.categories} rates={data.rates} initial={initial} onSaved={load} />}
           {tab === 'fx' && <ExchangeRates onChanged={load} />}
