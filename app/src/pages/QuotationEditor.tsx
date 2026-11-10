@@ -419,8 +419,8 @@ export function QuotationEditor() {
           <p className="text-sm text-muted-foreground">{quote ? `Issued ${fmtDateDMY(quote.issue_date)}${quote.valid_until ? ` · valid until ${fmtDateDMY(quote.valid_until)}` : ''}` : 'The number is given when you save.'}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canEdit && <Button variant="outline" onClick={save} disabled={!!busy}>{busy === 'save' ? <Loader2 className="animate-spin" /> : <Save />}Save</Button>}
-          <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>
+          {/* Save and Preview sit in the bar at the bottom while editing */}
+          {!canEdit && <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>}
           {canWrite && editableStatus && <Button onClick={() => setStatus('sent')} disabled={!!busy}>{busy === 'sent' ? <Loader2 className="animate-spin" /> : <Send />}Mark as sent</Button>}
           {canWrite && status === 'sent' && <>
             <Button onClick={() => setStatus('accepted')} disabled={!!busy}><Check />Accepted</Button>

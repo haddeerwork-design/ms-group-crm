@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Archive, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { archivedToast } from '@/lib/undo'
 import { useAuth } from '@/lib/auth'
 import { CONTAINER_MANAGERS } from '@/lib/roles'
 import { CURRENCIES } from '@/lib/pricing'
@@ -89,9 +90,9 @@ export function Logistics() {
     toast.success('Saved'); load(); return true
   }
   async function archive(table: string, id: string) {
-    if (!window.confirm('Archive this entry?')) return
     const { error } = await supabase.from(table).update({ archived_at: new Date().toISOString() }).eq('id', id)
-    if (error) toast.error(error.message); load()
+    if (error) return toast.error(error.message)
+    archivedToast(table === 'shipping_rates' ? 'Rate' : 'Forwarder', table, id, load); load()
   }
 
   const visible = rates.filter((r) => !r.archived_at && (!mode || r.mode === mode) && (showExpired || rateValidity(r) !== 'expired')

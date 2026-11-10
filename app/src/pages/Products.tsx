@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Archive, ArchiveRestore, CalendarDays, Copy, FolderCog, List, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { archivedToast } from '@/lib/undo'
 import { useAuth } from '@/lib/auth'
 import { CATALOG_MANAGERS } from '@/lib/roles'
 import {
@@ -68,11 +69,11 @@ export function Products() {
 
   async function toggleArchive(p: Product) {
     const archiving = !p.archived_at
-    if (archiving && !window.confirm(`Archive “${p.name}”? It will be hidden from pricing and quotations. You can restore it later.`)) return
     const { error, data: d } = await supabase.from('products').update({ archived_at: archiving ? new Date().toISOString() : null }).eq('id', p.id).select('id')
     if (error) return toast.error(error.message.includes('products_name_type_uq') ? 'An active product with the same name already exists.' : error.message)
     if (!d?.length) return toast.error('Your role cannot change products.')
-    toast.success(archiving ? 'Product archived' : 'Product restored'); load()
+    if (archiving) archivedToast(`“${p.name}”`, 'products', p.id, load); else toast.success('Product restored')
+    load()
   }
 
   const open = (p: Product | null) => { setEditing(p); setDialogOpen(true) }
@@ -142,7 +143,7 @@ export function Products() {
                           <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}>{PRODUCT_TYPE_LABEL[p.product_type]}</span>
                         </div>
                         <div className="mt-0.5 text-xs text-muted-foreground">{catById[p.category_id]?.name}{pk ? ` · ${pk.label}` : ''}{seasonLabel(p) ? ` · ${seasonLabel(p)}` : ''}</div>
-                        {miss.length > 0 && <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300"><span className="size-1.5 rounded-full bg-amber-500" />Missing {miss.join(', ')}</div>}
+                        {miss.length > 0 && <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-amber-500" />{setup === 'missing' ? `Missing ${miss.join(', ')}` : 'Needs setup'}</div>}
                       </button>
                       {canEdit && !p.archived_at && <Button variant="ghost" size="icon" onClick={() => { setEditing(null); setDupOf(p); setDialogOpen(true) }} aria-label={`Duplicate ${p.name}`}><Copy /></Button>}
                       {canEdit && <Button variant="ghost" size="icon" onClick={() => toggleArchive(p)} aria-label={p.archived_at ? 'Restore' : 'Archive'}>{p.archived_at ? <ArchiveRestore /> : <Archive />}</Button>}

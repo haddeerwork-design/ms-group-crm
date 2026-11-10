@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Archive, ArchiveRestore, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { archivedToast } from '@/lib/undo'
 import { useAuth } from '@/lib/auth'
 import { COST_VIEWERS, CRM_ASSIGNERS } from '@/lib/roles'
 import { CURRENCIES } from '@/lib/pricing'
@@ -86,7 +87,9 @@ export function Suppliers() {
   }
   async function toggleArchive(s: Supplier) {
     const { error } = await supabase.from('suppliers').update({ archived_at: s.archived_at ? null : new Date().toISOString() }).eq('id', s.id)
-    if (error) return toast.error(error.message); load()
+    if (error) return toast.error(error.message)
+    if (!s.archived_at) archivedToast(`“${s.name}”`, 'suppliers', s.id, load); else toast.success('Supplier restored')
+    load()
   }
 
   if (error) return <ErrorState message={error} />

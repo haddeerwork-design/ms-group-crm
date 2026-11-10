@@ -14,6 +14,16 @@ export function QuickAdd() {
     const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
     document.addEventListener('mousedown', close); return () => document.removeEventListener('mousedown', close)
   }, [])
+  // "N" opens this menu, Esc closes it (not while typing in a field)
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) || el?.isContentEditable || e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.key.toLowerCase() === 'n') { e.preventDefault(); setOpen(true) }
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key)
+  }, [])
   const items = [
     { show: hasRole(...CRM_WRITERS), label: 'Company', icon: Building2, to: '/crm?new=1' },
     { show: hasRole(...CRM_WRITERS), label: 'Deal', icon: Handshake, to: '/pipeline?new=1' },
@@ -22,7 +32,7 @@ export function QuickAdd() {
   ].filter((i) => i.show)
   return (
     <div className="relative" ref={ref}>
-      <Button size="sm" onClick={() => setOpen((o) => !o)} aria-label="Quick add"><Plus /><span className="hidden sm:inline">New</span></Button>
+      <Button size="sm" onClick={() => setOpen((o) => !o)} aria-label="Quick add" data-tip="New… (N)"><Plus /><span className="hidden sm:inline">New</span></Button>
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-xl">
           {items.map(({ label, icon: Icon, to }) => (

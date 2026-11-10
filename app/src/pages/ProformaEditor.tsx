@@ -173,8 +173,8 @@ export function ProformaEditor() {
           <p className="text-sm text-muted-foreground">{meta.quotation_id ? 'Made from a quotation' : 'Not linked to a quotation'}{pi ? ` · ${fmtDateDMY(pi.issue_date)}` : ''}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canEdit && <Button variant="outline" onClick={save} disabled={!!busy}>{busy === 'save' ? <Loader2 className="animate-spin" /> : <Save />}Save</Button>}
-          <Button variant="outline" onClick={() => printIt()} disabled={!!busy}><Printer />Preview / PDF</Button>
+          {/* Save and Preview sit in the bar at the bottom while editing */}
+          {!canEdit && <Button variant="outline" onClick={() => printIt()} disabled={!!busy}><Printer />Preview / PDF</Button>}
           {canWrite && editable && <Button onClick={() => setStatus('issued')} disabled={!!busy}><Stamp />Issue</Button>}
           {canWrite && status === 'issued' && pi && <Button onClick={() => nav(`/orders/new?proforma=${pi.id}`)}><Stamp />Create order</Button>}
           {canWrite && status === 'issued' && <><Button variant="outline" onClick={() => setStatus('revised')}><Pencil />Revise</Button><Button variant="outline" onClick={() => setStatus('cancelled')}><Ban />Cancel</Button></>}
