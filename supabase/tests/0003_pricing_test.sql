@@ -29,11 +29,7 @@ do $$ begin
   raise notice 'PASS admin saves price + rate';
 end $$;
 do $$ begin
-  begin
-    insert into public.product_prices (product_id, sell_currency, price_per_ton)
-    select id, 'USD', 900 from public.products where name='Okra';
-    raise exception 'FAIL price without incoterm';
-  exception when check_violation then raise notice 'PASS incoterm required'; end;
+  -- (since 0016 an Incoterm is optional, so a price without one is allowed)
   begin
     insert into public.product_prices (product_id, incoterm, sell_currency, price_per_ton, created_by)
     select id, 'FOB', 'USD', 900, '00000000-0000-0000-0000-00000000000b' from public.products where name='Okra';

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Calculator, Search } from 'lucide-react'
+import { Calculator, Pencil, Plus, Search } from 'lucide-react'
+import { QuickPriceDialog } from './QuickPriceDialog'
 import type { Category, Product } from '@/lib/catalog'
 import { INCOTERMS } from '@/lib/pricing'
 import { isExpired, money, type PriceListRow } from '@/lib/prices'
@@ -10,10 +11,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Empty } from '@/components/ui/states'
 
-export function PriceList({ rows, products, categories, canCalc, onOpen }: {
+export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen, onSaved }: {
   rows: PriceListRow[]; products: Product[]; categories: Category[]
-  canCalc: boolean; onOpen: (productId: string, packagingId: string | null, incoterm: string | null) => void
+  canCalc: boolean; canEdit: boolean; onOpen: (productId: string, packagingId: string | null, incoterm: string | null) => void; onSaved: () => void
 }) {
+  const [editing, setEditing] = useState<PriceListRow | 'new' | null>(null)
   const [q, setQ] = useState('')
   const [inc, setInc] = useState('')
   const [onlyMissing, setOnlyMissing] = useState(false)
@@ -38,6 +40,7 @@ export function PriceList({ rows, products, categories, canCalc, onOpen }: {
         <div className="w-40"><Select value={inc} onChange={(e) => setInc(e.target.value)} aria-label="Incoterm">
           <option value="">All Incoterms</option>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}<option value="none">Not set (imported)</option>
         </Select></div>
+        {canEdit && <Button onClick={() => setEditing('new')}><Plus />Add price</Button>}
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
           <input type="checkbox" className="size-4 accent-[#23856B]" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
           Show products without a price ({unpriced.length})
@@ -67,6 +70,7 @@ export function PriceList({ rows, products, categories, canCalc, onOpen }: {
                   <th className="px-3 py-3 text-right font-medium">Per kg</th>
                   <th className="px-3 py-3 text-right font-medium">Per carton</th>
                   <th className="px-3 py-3 font-medium">Valid</th>
+                  {(canEdit || canCalc) && <th className="px-3 py-3" />}
                 </tr>
               </thead>
               <tbody>
@@ -75,8 +79,8 @@ export function PriceList({ rows, products, categories, canCalc, onOpen }: {
                   const pk = p.product_packaging.find((x) => x.id === r.packaging_id)
                   const expired = isExpired(r)
                   return (
-                    <tr key={r.id} className={'border-b border-border last:border-0 ' + (canCalc ? 'cursor-pointer hover:bg-accent/50' : '')}
-                      onClick={() => canCalc && onOpen(r.product_id, r.packaging_id, r.incoterm)}>
+                    <tr key={r.id} className={'border-b border-border last:border-0 ' + (canEdit ? 'cursor-pointer hover:bg-accent/50' : '')}
+                      onClick={() => canEdit && setEditing(r)}>
                       <td className="px-5 py-3">
                         <div className="font-medium">{p.name}{r.variety ? <span className="font-normal text-muted-foreground"> · {r.variety}</span> : null}</div>
                         <div className="text-xs text-muted-foreground">{cat[p.category_id]?.name}</div>
@@ -89,11 +93,17 @@ export function PriceList({ rows, products, categories, canCalc, onOpen }: {
                       <td className="px-3 py-3 text-right font-medium tabular-nums">{money(r.price_per_ton, r.sell_currency)}
                         {r.price_basis === 'unit' && r.unit_price ? <div className="text-xs font-normal text-muted-foreground">{money(r.unit_price, r.sell_currency)} / {r.unit_label || 'unit'}</div> : null}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{money(r.price_per_ton / 1000, undefined, 3)}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{r.net_weight_kg ? money((r.price_per_ton * r.net_weight_kg) / 1000) : '—'}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{r.net_weight_kg && r.unit_label !== 'kg' ? money((r.price_per_ton * r.net_weight_kg) / 1000) : '—'}</td>
                       <td className="px-3 py-3 text-xs">
                         {expired ? <Badge className="border-red-200 bg-red-50 text-red-800">Expired {r.valid_until}</Badge>
                           : <span className="text-muted-foreground">from {r.valid_from}{r.valid_until ? ` to ${r.valid_until}` : ''}</span>}
                       </td>
+                      {(canEdit || canCalc) && (
+                        <td className="whitespace-nowrap px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          {canEdit && <Button variant="ghost" size="sm" onClick={() => setEditing(r)}><Pencil />Edit</Button>}
+                          {canCalc && <Button variant="ghost" size="icon" title="Open in calculator (build from costs)" aria-label="Open in calculator" onClick={() => onOpen(r.product_id, r.packaging_id, r.incoterm)}><Calculator /></Button>}
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
@@ -102,6 +112,8 @@ export function PriceList({ rows, products, categories, canCalc, onOpen }: {
           )}
         </CardContent>
       </Card>
+      <QuickPriceDialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)} row={editing === 'new' ? null : editing}
+        products={products} categories={categories} onSaved={onSaved} />
     </>
   )
 }

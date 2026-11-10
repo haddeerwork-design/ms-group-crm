@@ -56,3 +56,11 @@ it('policy sections and {currency}', async () => {
   expect(policySections(['x', 'y'])).toEqual([{ title: null, items: ['x', 'y'] }])
   expect(renderPolicy(['All prices are in {currency}.'], { validity_days: 5, incoterm: null, production_time: null, currency: 'EGP' })).toEqual(['All prices are in EGP.'])
 })
+
+it('per-ton from kg / ton / carton', async () => {
+  const { perTon } = await import('../components/pricing/QuickPriceDialog')
+  expect(perTon(49, 'kg', null)).toBe(49000)
+  expect(perTon(900, 'ton', null)).toBe(900)
+  expect(perTon(148, 'pack', 2.1)).toBe(70476.19)
+  expect(perTon(148, 'pack', null)).toBeNull()
+})

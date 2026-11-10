@@ -159,7 +159,8 @@ export function QuotationEditor() {
       ? { price: s(r.price_per_ton), basis: 'unit' as PriceBasis, unit_price: s(r.unit_price), unit_label: r.unit_label ?? 'unit', in_ccy: r.sell_currency, fx: '', fxNote: '' }
       : { price: s(r.price_per_ton), basis: 'ton' as PriceBasis, unit_price: '', in_ccy: r.sell_currency, fx: '', fxNote: '' }
     if (hit) return { ...fromRow(hit), price_id: hit.id, priceNote: `Price list · ${hit.incoterm}` }
-    const other = c[0]
+    // no price for this Incoterm: prefer one for the same packing, then one without packing
+    const other = c.find((p) => (p.packaging_id ?? '') === packagingId && packagingId) ?? c.find((p) => !p.packaging_id) ?? c[0]
     if (other) return { ...fromRow(other), price_id: other.id, priceNote: other.incoterm ? `⚠ Price list has ${other.incoterm}, not ${incoterm}` : 'Price list (no Incoterm set)' }
     return { price: '', price_id: null, priceNote: `No ${incoterm} price — enter it`, in_ccy: currency, fx: '', fxNote: '' }
   }
