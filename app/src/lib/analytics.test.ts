@@ -100,3 +100,12 @@ it('season wraps over the new year', () => {
   expect(inSeason(6, 11, 3)).toBe(false)
   expect(inSeason(6, null, 3)).toBe(false)
 })
+
+describe('comparison period', () => {
+  it('previous range has the same length', async () => {
+    const { previousRange, deltaPct, rangeFor } = await import('./analytics')
+    expect(previousRange({ from: '2026-11-01', to: '2026-11-10' })).toEqual({ from: '2026-10-22', to: '2026-10-31' })
+    expect(previousRange(rangeFor('all', '2026-11-10'))).toBeNull()
+    expect(deltaPct(120, 100)).toBe(20); expect(deltaPct(5, 0)).toBeNull()
+  })
+})

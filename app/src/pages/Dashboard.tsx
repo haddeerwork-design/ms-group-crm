@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, CircleDashed } from 'lucide-react'
+import {
+  AlertTriangle, BarChart3, CalendarClock, CheckCircle2, CircleDashed, FileText, Leaf, Ship, ShoppingCart, Target, Users, Wallet,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { CRM_ASSIGNERS } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
@@ -8,16 +10,18 @@ import { LEAD_STATUS } from '@/lib/crm'
 import { STAGE_LABEL, outstandingByCurrency } from '@/lib/orders'
 import { taskBucket } from '@/lib/sales'
 import {
-  PRESETS, companyStats, currencies, fetchAnalytics, groupSales, inSeason, leadsByStatus, money, onTime, pct, quoteStats, rangeFor,
-  salesByMonth, salesTotals, shipModes, upcomingShipments, type AnalyticsData, type Preset,
+  PRESETS, companyStats, currencies, deltaPct, employeePerformance, fetchAnalytics, groupSales, inRange, inSeason, leadsByStatus, onTime, pct,
+  previousRange, quoteStats, rangeFor, salesByMonth, salesTotals, shipModes, upcomingShipments, type AnalyticsData, type Preset,
 } from '@/lib/analytics'
-import { PageHeader } from '@/components/layout/AppShell'
-import { ChartCard, ColumnChart, Kpi, RankBars } from '@/components/analytics/charts'
+import { AreaTrend, DeltaPill, Donut, Panel, StatCard, initials } from '@/components/analytics/dash'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import { ErrorState, Loading } from '@/components/ui/states'
+import { cn } from '@/lib/utils'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 })
+const short = (v: number) => Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(v)
 
 export function Dashboard() {
   const { profile, session, hasRole } = useAuth()
@@ -32,6 +36,7 @@ export function Dashboard() {
 
   const t = today()
   const r = rangeFor(preset, t)
+  const prev = previousRange(r)
   // Employee filter (managers only): narrows every number to that person's records.
   const d = useMemo(() => {
     if (!raw || !person) return raw
@@ -43,7 +48,7 @@ export function Dashboard() {
   }, [raw, person])
 
   if (error) return <ErrorState message={error} />
-  if (!d) return <Loading />
+  if (!d || !raw) return <Loading />
 
   const ccys = currencies(d.orders)
   const cur = ccy && ccys.includes(ccy) ? ccy : ccys[0] ?? 'USD'
@@ -51,8 +56,14 @@ export function Dashboard() {
   const cs = companyStats(d.companies, r, t)
   const qs = quoteStats(d.quotes, r)
   const sales = salesTotals(d.orders, r)
-  const confirmed = d.orders.filter((o) => o.stage !== 'cancelled' && r.from <= o.order_date && o.order_date <= r.to).length
+  const salesCur = sales.find((x) => x.currency === cur)?.total ?? 0
+  const salesPrev = prev ? salesTotals(d.orders, prev).find((x) => x.currency === cur)?.total ?? 0 : null
+  const orderCount = (rr: { from: string; to: string }) => d.orders.filter((o) => o.stage !== 'cancelled' && inRange(o.order_date, rr)).length
+  const confirmed = orderCount(r)
+  const csPrev = prev ? companyStats(d.companies, prev, t) : null
+  const qsPrev = prev ? quoteStats(d.quotes, prev) : null
   const outstanding = outstandingByCurrency(d.payments, 'in', t)
+  const outCur = outstanding.find((x) => x.currency === cur) ?? outstanding[0]
   const upcoming = upcomingShipments(d.orders, t)
   const ot = onTime(d.orders, r)
   const modes = shipModes(d.orders, r)
@@ -60,95 +71,187 @@ export function Dashboard() {
   const seasonal = d.products.filter((p) => !p.archived_at && p.availability !== 'discontinued' && inSeason(month, p.season_start_month, p.season_end_month))
   const myTasks = d.tasks.filter((x) => x.assignee_id === (person || session?.user.id)).filter((x) => ['overdue', 'today'].includes(taskBucket(x, t)))
   const pendingQuotes = d.quotes.filter((q) => q.status === 'sent').sort((a, b) => (a.valid_until ?? '').localeCompare(b.valid_until ?? ''))
-  const recent = [...d.companies].filter((c) => !c.archived_at).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 6)
+  const leads = leadsByStatus(d.companies, LEAD_STATUS).filter((x) => x.value)
+  const leadMax = Math.max(1, ...leads.map((x) => x.value))
+  const products = groupSales(d.orders, r, cur, 'product', names, 6)
+  const prodTotal = products.reduce((s, x) => s + x.value, 0)
+  const team = isManager && !person
+    ? employeePerformance(raw.team, r, { companies: d.companies, quotes: d.quotes, orders: d.orders, opps: d.opps, stages: d.stages })
+        .filter((x) => x.newLeads || x.quotesSent || x.orders).sort((a, b) => (b.revenue.find((v) => v.currency === cur)?.total ?? 0) - (a.revenue.find((v) => v.currency === cur)?.total ?? 0))
+    : []
+  const teamMax = Math.max(1, ...team.map((x) => x.revenue.find((v) => v.currency === cur)?.total ?? 0))
+  const modeData = [{ label: 'Sea', value: modes.sea }, { label: 'Air', value: modes.air }, { label: 'Land', value: modes.land }, { label: 'Not set yet', value: modes.not_set }].filter((x) => x.value)
+  const vs = prev ? 'vs previous period' : undefined
+  const firstName = (profile?.full_name || profile?.email || '').split(/[\s@]/)[0]
 
   return (
-    <>
-      <PageHeader title={`Welcome, ${profile?.full_name || profile?.email || ''}`} summary="Live numbers from the platform. Everything respects what your role is allowed to see." />
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Select aria-label="Period" value={preset} onChange={(e) => setPreset(e.target.value as Preset)} className="w-40">
+    <div>
+      {/* Header */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="mr-auto">
+          <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {firstName} 👋</h1>
+          <p className="text-sm text-muted-foreground">Here is what is happening in the business · {PRESETS[preset]}{person ? ` · ${raw.team.find((u) => u.id === person)?.name}` : ''}</p>
+        </div>
+        <Select aria-label="Period" value={preset} onChange={(e) => setPreset(e.target.value as Preset)} className="h-10 w-40 rounded-xl bg-card">
           {Object.entries(PRESETS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </Select>
         {isManager && (
-          <Select aria-label="Employee" value={person} onChange={(e) => setPerson(e.target.value)} className="w-48">
+          <Select aria-label="Employee" value={person} onChange={(e) => setPerson(e.target.value)} className="h-10 w-44 rounded-xl bg-card">
             <option value="">Whole team</option>
-            {raw!.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            {raw.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
           </Select>
         )}
         {ccys.length > 1 && (
-          <Select aria-label="Currency for charts" value={cur} onChange={(e) => setCcy(e.target.value)} className="w-28">
+          <Select aria-label="Currency" value={cur} onChange={(e) => setCcy(e.target.value)} className="h-10 w-24 rounded-xl bg-card">
             {ccys.map((c) => <option key={c}>{c}</option>)}
           </Select>
         )}
-        <Link to="/reports" className="ml-auto text-sm text-primary hover:underline">Open reports →</Link>
+        <Link to="/reports" className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"><BarChart3 className="size-4" />Reports</Link>
       </div>
       {d.warnings.length > 0 && <p className="mb-3 text-xs text-muted-foreground">Some data could not be loaded: {d.warnings.join(' · ')}</p>}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <Kpi label="Importers in CRM" value={cs.total} hint={`${cs.customers} active customers`} to="/crm" />
-        <Kpi label="Active leads" value={cs.activeLeads} hint={`${cs.newInRange} new in period`} to="/crm" />
-        <Kpi label="Follow-ups due" value={cs.followUpsDue} tone={cs.overdueFollowUps.length ? 'bad' : undefined} hint={`${cs.overdueFollowUps.length} overdue`} to="/crm" />
-        <Kpi label="Quotations sent" value={qs.sent} hint={`${qs.waiting} waiting for answer`} to="/quotations" />
-        <Kpi label="Quotation success" value={pct(qs.successRate)} hint={qs.decided ? `${qs.accepted} of ${qs.decided} decided` : 'No answers yet'} />
-        <Kpi label="Lead → customer" value={pct(cs.conversionRate)} hint="Active customers ÷ all companies" />
-        <Kpi label="Confirmed orders" value={confirmed} hint={PRESETS[preset]} to="/orders" />
-        <Kpi label="Sales value" value={sales.length ? <span className="block text-lg leading-snug">{sales.map((s) => <span key={s.currency} className="block">{money(s.total, s.currency)}</span>)}</span> : '—'} hint="Per currency, not converted" />
-        <Kpi label="Outstanding from customers" value={outstanding.length ? <span className="block text-lg leading-snug">{outstanding.map((o) => <span key={o.currency} className="block">{money(o.outstanding, o.currency)}</span>)}</span> : '—'}
-          tone={outstanding.some((o) => o.overdue > 0) ? 'warn' : undefined} hint={outstanding.some((o) => o.overdue) ? `Overdue: ${outstanding.filter((o) => o.overdue).map((o) => money(o.overdue, o.currency)).join(' · ')}` : 'Nothing overdue'} to="/payments" />
-        <Kpi label="Shipments next 30 days" value={upcoming.length} hint={ot.rate == null ? 'On-time: not measured yet' : `On-time: ${pct(ot.rate)}`} to="/orders" />
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        <StatCard icon={Wallet} tone="emerald" label={`Sales (${cur})`} value={sales.length ? short(salesCur) : '—'} to="/orders"
+          delta={prev ? deltaPct(salesCur, salesPrev) : undefined} deltaSuffix={vs}
+          foot={sales.length > 1 ? `Also: ${sales.filter((x) => x.currency !== cur).map((x) => `${x.currency} ${short(x.total)}`).join(' · ')}` : 'Confirmed orders, not converted'} />
+        <StatCard icon={ShoppingCart} tone="blue" label="Confirmed orders" value={confirmed} to="/orders"
+          delta={prev ? deltaPct(confirmed, orderCount(prev)) : undefined} deltaSuffix={vs} foot={`${upcoming.length} shipments in the next 30 days`} />
+        <StatCard icon={Users} tone="violet" label="Active leads" value={cs.activeLeads} to="/crm"
+          delta={prev ? deltaPct(cs.newInRange, csPrev?.newInRange) : undefined} deltaSuffix="new leads vs previous"
+          foot={`${cs.newInRange} new · ${cs.total} importers in CRM`} />
+        <StatCard icon={FileText} tone="amber" label="Quotations sent" value={qs.sent} to="/quotations"
+          delta={prev ? deltaPct(qs.sent, qsPrev?.sent) : undefined} deltaSuffix={vs}
+          foot={qs.decided ? `${qs.accepted} accepted of ${qs.decided} answered` : `${qs.waiting} waiting for an answer`}
+          progress={{ pct: qs.successRate, label: `${pct(qs.successRate)} win` }} />
+        <StatCard icon={Target} tone="teal" label="Lead → customer" value={pct(cs.conversionRate)} to="/crm"
+          foot={`${cs.customers} active customers`} progress={{ pct: cs.conversionRate }} />
+        <StatCard icon={AlertTriangle} tone="rose" label="Receivables" to="/payments"
+          value={outCur ? `${outCur.currency} ${short(outCur.outstanding)}` : '—'}
+          foot={outCur ? (outCur.overdue ? `${outCur.currency} ${short(outCur.overdue)} overdue` : 'Nothing overdue') : 'No open customer payments'}
+          progress={outCur ? { pct: outCur.outstanding ? (outCur.overdue / outCur.outstanding) * 100 : 0, label: 'overdue' } : undefined} />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <ChartCard className="lg:col-span-2" title={`Sales by month (${cur})`} description="Confirmed orders, cancelled excluded.">
-          {sales.length ? <ColumnChart data={salesByMonth(d.orders, r, cur)} unit={cur} /> : <p className="py-10 text-center text-sm text-muted-foreground">No orders in this period yet.</p>}
-        </ChartCard>
-        <ChartCard title="Leads by status" description="All non-archived companies.">
-          <RankBars data={leadsByStatus(d.companies, LEAD_STATUS).filter((x) => x.value)} empty="No companies yet." />
-        </ChartCard>
-        <ChartCard title={`Top countries (${cur})`}><RankBars data={groupSales(d.orders, r, cur, 'country')} unit={cur} /></ChartCard>
-        <ChartCard title={`Top products (${cur})`}><RankBars data={groupSales(d.orders, r, cur, 'product', names)} unit={cur} /></ChartCard>
-        <ChartCard title="Shipping method" description="Orders in period.">
-          <RankBars data={[{ label: 'Sea', value: modes.sea }, { label: 'Air', value: modes.air }, { label: 'Land', value: modes.land }, { label: 'Not set yet', value: modes.not_set }].filter((x) => x.value)} />
-        </ChartCard>
+      {/* Trend + leads */}
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <Panel className="xl:col-span-2" title={<span className="flex flex-wrap items-baseline gap-x-3">Sales overview <span className="text-2xl font-semibold tabular-nums">{cur} {fmt(salesCur)}</span>{prev && <DeltaPill value={deltaPct(salesCur, salesPrev)} suffix={vs} />}</span>}
+          sub="Confirmed orders by month, cancelled excluded">
+          {sales.length ? <AreaTrend data={salesByMonth(d.orders, r, cur)} unit={cur} /> : <Empty text="No orders in this period yet." />}
+        </Panel>
+        <Panel title="Leads by status" sub={`${cs.total} companies · ${cs.followUpsDue} follow-ups due`} action={<Link to="/pipeline" className="text-xs font-medium text-primary hover:underline">Pipeline</Link>}>
+          {leads.length ? (
+            <ul className="space-y-3">
+              {leads.map((x) => (
+                <li key={x.key}>
+                  <div className="mb-1 flex justify-between text-sm"><span>{x.label}</span><span className="tabular-nums text-muted-foreground">{x.value}</span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-[#2a78d6] dark:bg-[#3987e5]" style={{ width: `${(x.value / leadMax) * 100}%` }} /></div>
+                </li>
+              ))}
+            </ul>
+          ) : <Empty text="No companies yet." />}
+        </Panel>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <ListCard title="Today & overdue tasks" to="/tasks" empty="Nothing due. 🎉"
-          rows={myTasks.slice(0, 6).map((x) => ({ key: x.id, main: x.title, side: x.due_date ?? '', bad: !!x.due_date && x.due_date < t }))} />
-        <ListCard title="Overdue follow-ups" to="/crm" empty="No overdue follow-ups."
-          rows={cs.overdueFollowUps.sort((a, b) => a.next_follow_up_date!.localeCompare(b.next_follow_up_date!)).slice(0, 6).map((c) => ({ key: c.id, main: c.name, side: c.next_follow_up_date!, to: `/crm/${c.id}`, bad: true }))} />
-        <ListCard title="Recently added importers" to="/crm" empty="No companies yet."
-          rows={recent.map((c) => ({ key: c.id, main: c.name, side: c.country ?? '', to: `/crm/${c.id}` }))} />
-        <ListCard title="Quotations waiting for answer" to="/quotations" empty="No quotations waiting."
-          rows={pendingQuotes.slice(0, 6).map((q) => ({ key: q.id, main: `${q.number} · ${q.customer_company ?? '—'}`, side: q.valid_until ? `valid to ${q.valid_until}` : '', to: `/quotations/${q.id}`, bad: !!q.valid_until && q.valid_until < t }))} />
-        <ListCard title="Upcoming shipments" to="/orders" empty="No shipments in the next 30 days."
-          rows={upcoming.slice(0, 6).map(({ o, date }) => ({ key: o.id, main: `${o.number} · ${o.customer_company ?? '—'}`, side: `${STAGE_LABEL[o.stage]} · ${date}`, to: `/orders/${o.id}` }))} />
-        <ListCard title="In season this month" to="/products" empty="No product has a season covering this month."
-          rows={seasonal.slice(0, 8).map((p) => ({ key: p.id, main: p.name, side: '' }))} />
+      {/* Products + shipping + team */}
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <Panel title={`Top products (${cur})`} sub="Share of confirmed sales in the period" action={<Link to="/reports" className="text-xs font-medium text-primary hover:underline">All products</Link>}>
+          {products.length ? (
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground"><th className="pb-2 font-medium">Product</th><th className="pb-2 text-right font-medium">Sales</th><th className="w-28 pb-2 pl-3 font-medium">Share</th></tr></thead>
+              <tbody className="divide-y divide-border/70">
+                {products.map((x) => {
+                  const share = prodTotal ? (x.value / prodTotal) * 100 : 0
+                  return (
+                    <tr key={x.label}>
+                      <td className="max-w-0 truncate py-2.5 pr-2">{x.label}</td>
+                      <td className="py-2.5 text-right tabular-nums">{short(x.value)}</td>
+                      <td className="py-2.5 pl-3"><div className="flex items-center gap-2"><div className="h-1.5 flex-1 rounded-full bg-muted"><div className="h-full rounded-full bg-[#1baf7a] dark:bg-[#199e70]" style={{ width: `${share}%` }} /></div><span className="w-8 text-right text-[11px] tabular-nums text-muted-foreground">{Math.round(share)}%</span></div></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          ) : <Empty text="No sales in this period." />}
+        </Panel>
+        <Panel title="Shipping method" sub={ot.rate == null ? 'On-time delivery: not measured yet' : `On-time delivery: ${pct(ot.rate)} (${ot.onTime} of ${ot.measured})`}>
+          {modeData.length ? <Donut data={modeData} centerValue={modeData.reduce((s, x) => s + x.value, 0)} centerLabel="orders" /> : <Empty text="No orders in this period." />}
+        </Panel>
+        {team.length > 0 ? (
+          <Panel title="Team performance" sub={`${PRESETS[preset]} · sales in ${cur}`} action={<Link to="/reports" className="text-xs font-medium text-primary hover:underline">Details</Link>}>
+            <ul className="space-y-3">
+              {team.slice(0, 6).map((u) => {
+                const rev = u.revenue.find((v) => v.currency === cur)?.total ?? 0
+                return (
+                  <li key={u.id} className="flex items-center gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{initials(u.name)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2"><span className="truncate text-sm font-medium">{u.name}</span><span className="text-sm tabular-nums">{short(rev)}</span></div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="h-1.5 flex-1 rounded-full bg-muted"><div className="h-full rounded-full bg-[#2a78d6] dark:bg-[#3987e5]" style={{ width: `${(rev / teamMax) * 100}%` }} /></div>
+                        <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-medium', (u.successRate ?? 0) >= 50 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-muted text-muted-foreground')}>{u.quotesSent} quotes · {pct(u.successRate)}</span>
+                      </div>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </Panel>
+        ) : (
+          <Panel title="In season this month" sub="Products whose season covers this month" action={<Link to="/products" className="text-xs font-medium text-primary hover:underline">Products</Link>}>
+            <Chips items={seasonal.map((p) => p.name)} empty="No product has a season covering this month." />
+          </Panel>
+        )}
       </div>
+
+      {/* Action lists */}
+      <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        <ListPanel icon={CalendarClock} title="Today & overdue tasks" to="/tasks" empty="Nothing due. 🎉"
+          rows={myTasks.slice(0, 6).map((x) => ({ key: x.id, main: x.title, side: x.due_date ?? '', tone: x.due_date && x.due_date < t ? 'bad' as const : 'muted' as const }))} />
+        <ListPanel icon={Users} title="Overdue follow-ups" to="/crm" empty="No overdue follow-ups."
+          rows={[...cs.overdueFollowUps].sort((a, b) => a.next_follow_up_date!.localeCompare(b.next_follow_up_date!)).slice(0, 6).map((c) => ({ key: c.id, main: c.name, side: c.next_follow_up_date!, to: `/crm/${c.id}`, tone: 'bad' as const }))} />
+        <ListPanel icon={FileText} title="Quotations waiting" to="/quotations" empty="No quotations waiting."
+          rows={pendingQuotes.slice(0, 6).map((q) => ({ key: q.id, main: `${q.number} · ${q.customer_company ?? '—'}`, side: q.valid_until ? (q.valid_until < t ? 'expired' : `to ${q.valid_until}`) : '', to: `/quotations/${q.id}`, tone: q.valid_until && q.valid_until < t ? 'bad' as const : 'warn' as const }))} />
+        <ListPanel icon={Ship} title="Upcoming shipments" to="/orders" empty="No shipments in the next 30 days."
+          rows={upcoming.slice(0, 6).map(({ o, date }) => ({ key: o.id, main: `${o.number} · ${o.customer_company ?? '—'}`, side: `${STAGE_LABEL[o.stage]} · ${date}`, to: `/orders/${o.id}`, tone: 'info' as const }))} />
+      </div>
+
+      {team.length > 0 && (
+        <Panel className="mt-4" title={<span className="flex items-center gap-2"><Leaf className="size-4 text-emerald-600" />In season this month</span>} action={<Link to="/products" className="text-xs font-medium text-primary hover:underline">Products</Link>}>
+          <Chips items={seasonal.map((p) => p.name)} empty="No product has a season covering this month." />
+        </Panel>
+      )}
 
       {hasRole('super_admin') && <SetupStatus />}
-    </>
+    </div>
   )
 }
 
-function ListCard({ title, to, rows, empty }: { title: string; to: string; empty: string; rows: { key: string; main: string; side: string; to?: string; bad?: boolean }[] }) {
+function Empty({ text }: { text: string }) {
+  return <p className="py-10 text-center text-sm text-muted-foreground">{text}</p>
+}
+function Chips({ items, empty }: { items: string[]; empty: string }) {
+  if (!items.length) return <p className="text-sm text-muted-foreground">{empty}</p>
+  return <div className="flex flex-wrap gap-2">{items.map((x) => <span key={x} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">{x}</span>)}</div>
+}
+
+const ROW_TONE = {
+  bad: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300', warn: 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  info: 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300', muted: 'bg-muted text-muted-foreground',
+}
+function ListPanel({ icon: Icon, title, to, rows, empty }: { icon: React.ComponentType<{ className?: string }>; title: string; to: string; empty: string; rows: { key: string; main: string; side: string; to?: string; tone: keyof typeof ROW_TONE }[] }) {
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-sm">{title}</CardTitle><Link to={to} className="text-xs text-primary hover:underline">View all</Link></CardHeader>
-      <CardContent>
-        {rows.length === 0 ? <p className="text-sm text-muted-foreground">{empty}</p> : (
-          <ul className="divide-y divide-border text-sm">
-            {rows.map((x) => (
-              <li key={x.key} className="flex items-center gap-3 py-2">
-                {x.to ? <Link to={x.to} className="truncate hover:underline">{x.main}</Link> : <span className="truncate">{x.main}</span>}
-                <span className={`ml-auto shrink-0 text-xs tabular-nums ${x.bad ? 'text-destructive' : 'text-muted-foreground'}`}>{x.side}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <Panel title={<span className="flex items-center gap-2"><Icon className="size-4 text-muted-foreground" />{title}</span>} action={<Link to={to} className="text-xs font-medium text-primary hover:underline">View all</Link>} bodyClass="pt-3">
+      {rows.length === 0 ? <p className="py-4 text-sm text-muted-foreground">{empty}</p> : (
+        <ul className="space-y-1">
+          {rows.map((x) => (
+            <li key={x.key} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-accent/60">
+              {x.to ? <Link to={x.to} className="min-w-0 flex-1 truncate text-sm">{x.main}</Link> : <span className="min-w-0 flex-1 truncate text-sm">{x.main}</span>}
+              {x.side && <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums', ROW_TONE[x.tone])}>{x.side}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   )
 }
 
