@@ -48,7 +48,8 @@ type Form = {
   brand: Brand; language: QuoteLang
 }
 type Settings = { quotation_policy: string[] | null; quotation_validity_days: number | null; quotation_production_time: string | null
-  quotation_policy_ar?: string[] | null; quotation_production_time_ar?: string | null }
+  quotation_policy_ar?: string[] | null; quotation_production_time_ar?: string | null
+  prime_roots_terms?: string[] | null; prime_roots_terms_ar?: string[] | null; prime_roots_validity_days?: number | null }
 
 export function QuotationEditor() {
   const { id } = useParams()
@@ -72,8 +73,10 @@ export function QuotationEditor() {
   const canWrite = hasRole(...QUOTE_WRITERS) && (mine || hasRole(...QUOTE_EDIT_ALL))
   const canEdit = canWrite && editableStatus
 
-  const policyFrom = useCallback((st: Settings, f: Pick<Form, 'validity_days' | 'incoterm' | 'production_time'> & { language?: QuoteLang }) =>
-    renderPolicy((f.language === 'ar' ? st.quotation_policy_ar : st.quotation_policy) ?? [], { validity_days: n(f.validity_days), incoterm: f.incoterm, production_time: t(f.production_time) }).join('\n'), [])
+  const policyFrom = useCallback((st: Settings, f: Pick<Form, 'validity_days' | 'incoterm' | 'production_time'> & { language?: QuoteLang; brand?: Brand; currency?: string }) =>
+    renderPolicy((f.brand === 'prime_roots' && st.prime_roots_terms
+      ? (f.language === 'ar' ? st.prime_roots_terms_ar : st.prime_roots_terms)
+      : (f.language === 'ar' ? st.quotation_policy_ar : st.quotation_policy)) ?? [], { validity_days: n(f.validity_days), incoterm: f.incoterm, production_time: t(f.production_time), currency: f.currency }).join('\n'), [])
 
   const load = useCallback(async () => {
     try {
@@ -113,6 +116,7 @@ export function QuotationEditor() {
           })
           toast.success('Filled from the container plan')
         }
+        if (f.brand === 'prime_roots' && settings.prime_roots_validity_days) f.validity_days = s(settings.prime_roots_validity_days)
         f.policy = policyFrom(settings, f)
         setForm(f); setLines(ls); setDirty(!!planId)
       } else {
@@ -172,8 +176,18 @@ export function QuotationEditor() {
     // Jams are sold under Prime Roots: switch the letterhead when every line is a jam.
     const others = lines.filter((l) => l.key !== key && l.product_id)
     if (p.product_type === 'jam' && form.brand !== 'prime_roots' && others.every((l) => prod[l.product_id]?.product_type === 'jam')) {
-      upd({ brand: 'prime_roots' }); toast.message('Letterhead set to Prime Roots (you can change it under “Letterhead”).')
+      switchBrand('prime_roots'); toast.message('Letterhead set to Prime Roots (you can change it under “Letterhead”).')
     }
+  }
+  /** Brand changes the default terms and validity (only if they were still the defaults). */
+  function switchBrand(brand: Brand) {
+    if (!form || !base) return
+    const st = base.settings
+    const validityDefault = (b: Brand) => s(b === 'prime_roots' ? st.prime_roots_validity_days ?? st.quotation_validity_days : st.quotation_validity_days)
+    const validity_days = form.validity_days === validityDefault(form.brand) ? validityDefault(brand) : form.validity_days
+    const policyWasDefault = form.policy === policyFrom(st, form)
+    const next = { ...form, brand, validity_days }
+    upd({ brand, validity_days, ...(policyWasDefault ? { policy: policyFrom(st, next) } : {}) })
   }
   function switchLanguage(lang: QuoteLang) {
     if (!form || !base) return
@@ -361,7 +375,7 @@ export function QuotationEditor() {
                   </Select>
                 </Field>
                 <Field label="Letterhead" className="sm:col-span-1 lg:col-span-2" hint="Which company the quotation is printed under.">
-                  <Select value={form.brand} onChange={(e) => upd({ brand: e.target.value as Brand })}>
+                  <Select value={form.brand} onChange={(e) => switchBrand(e.target.value as Brand)}>
                     {(Object.keys(BRANDS) as Brand[]).map((b) => <option key={b} value={b}>{BRANDS[b].label}</option>)}
                   </Select>
                 </Field>
@@ -391,7 +405,8 @@ export function QuotationEditor() {
                   <Select value={form.currency} onChange={(e) => {
                     // saved rates were to the old currency: use the latest rates for the new one
                     setLines((ls) => ls.map((l) => ({ ...l, fx: '', fxNote: '' })))
-                    upd({ currency: e.target.value })
+                    const policyWasDefault = form.policy === policyFrom(base.settings, form)
+                    upd({ currency: e.target.value, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, currency: e.target.value }) } : {}) })
                   }}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>
                 </Field>
                 <Field label="Date"><Input type="date" value={form.issue_date} onChange={(e) => upd({ issue_date: e.target.value })} /></Field>
@@ -495,7 +510,7 @@ export function QuotationEditor() {
         <div className="space-y-4">
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <div><CardTitle>Our Policy</CardTitle><CardDescription>One line per point. Defaults come from Company Settings.</CardDescription></div>
+              <div><CardTitle>Our Policy</CardTitle><CardDescription>One line per point; start a line with “## ” for a heading. Defaults come from Company Settings.</CardDescription></div>
               {canEdit && <Button variant="ghost" size="icon" title="Reset to defaults" aria-label="Reset to defaults" onClick={() => upd({ policy: policyFrom(base.settings, form) })}><RotateCcw /></Button>}
             </CardHeader>
             <CardContent><Textarea dir={form.language === 'ar' ? 'rtl' : 'ltr'} className="min-h-[170px] text-sm" disabled={!canEdit} value={form.policy} onChange={(e) => upd({ policy: e.target.value })} /></CardContent>

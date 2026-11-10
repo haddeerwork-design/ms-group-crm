@@ -94,8 +94,9 @@ export const unitsLabel = (label: string | null | undefined, n = 2) => {
 }
 
 /** Fills {validity_days}, {incoterm}, {production_time} in the policy templates. */
-export function renderPolicy(templates: string[], v: { validity_days: number | null; incoterm: string | null; production_time: string | null }) {
+export function renderPolicy(templates: string[], v: { validity_days: number | null; incoterm: string | null; production_time: string | null; currency?: string | null }) {
   return templates.map((t) => t
+    .replace(/\{currency\}/g, v.currency ?? '…')
     .replace(/\{validity_days\}/g, v.validity_days ? String(v.validity_days) : '…')
     .replace(/\{incoterm\}/g, v.incoterm ?? '…')
     .replace(/\{production_time\}/g, v.production_time ?? '…'))
@@ -152,4 +153,16 @@ export function packLabel(pk: { packaging_type?: string | null; label?: string |
   const t = `${pk.packaging_type ?? ''} ${pk.label ?? ''}`.toLowerCase()
   for (const w of ['jar', 'basket', 'crate', 'tray', 'bag', 'box']) if (t.includes(w)) return w
   return 'carton'
+}
+
+/** Policy lines → sections. A line starting with "## " is a heading; no headings = one untitled section. */
+export function policySections(lines: string[]): { title: string | null; items: string[] }[] {
+  const out: { title: string | null; items: string[] }[] = []
+  for (const raw of lines) {
+    const l = raw.trim()
+    if (!l) continue
+    if (l.startsWith('## ')) out.push({ title: l.slice(3).trim(), items: [] })
+    else { if (!out.length) out.push({ title: null, items: [] }); out[out.length - 1].items.push(l) }
+  }
+  return out
 }
