@@ -225,6 +225,8 @@ export function QuotationEditor() {
     const policyWasDefault = form.policy === policyFrom(st, form)
     const next = { ...form, brand, validity_days }
     upd({ brand, validity_days, ...(policyWasDefault ? { policy: policyFrom(st, next) } : {}) })
+    const odd = lines.filter((l) => prod[l.product_id] && (brand === 'prime_roots') !== (prod[l.product_id].product_type === 'jam')).length
+    if (odd) toast.warning(`${odd} product line${odd > 1 ? 's do' : ' does'} not belong to ${BRANDS[brand].label}. Remove ${odd > 1 ? 'them' : 'it'} or switch the letterhead back.`)
   }
   function switchLanguage(lang: QuoteLang) {
     if (!form || !base) return
@@ -248,7 +250,15 @@ export function QuotationEditor() {
     }))
     if (lang === 'ar') toast.message('Arabic: product names come from each product’s “Arabic name”; you can edit any printed text.')
   }
-  const addLine = () => { setLines((ls) => [...ls, { key: ++seq, product_id: '', packaging_id: '', description: '', packing: '', product_type_label: '', quantity: '', quantity_unit: 'tons', net: '', cpp: '', price: '', price_id: null, priceNote: '', basis: 'ton', unit_price: '', unit_label: '', in_ccy: form?.currency ?? 'USD', fx: '', fxNote: '' }]); setDirty(true) }
+  // new line: scroll to it and put the cursor in its Product box
+  const [focusKey, setFocusKey] = useState<number | null>(null)
+  useEffect(() => {
+    if (focusKey == null) return
+    const el = document.getElementById(`line-${focusKey}-product`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.focus({ preventScroll: true })
+    setFocusKey(null)
+  }, [focusKey])
+  const addLine = () => { const key = seq + 1; setFocusKey(key); setLines((ls) => [...ls, { key: ++seq, product_id: '', packaging_id: '', description: '', packing: '', product_type_label: '', quantity: '', quantity_unit: 'tons', net: '', cpp: '', price: '', price_id: null, priceNote: '', basis: 'ton', unit_price: '', unit_label: '', in_ccy: form?.currency ?? 'USD', fx: '', fxNote: '' }]); setDirty(true) }
 
   // Rate to show a line's price in the quotation currency: typed/saved rate first, else the latest saved rate.
   const rateFor = (l: Line) => {
@@ -383,7 +393,9 @@ export function QuotationEditor() {
     window.open(`${location.pathname}#/quotations/${qid}/print${version ? `?v=${version}` : ''}`, '_blank')
   }
 
-  const grouped = useMemo(() => (base?.categories ?? []).map((c) => ({ c, items: (base?.products ?? []).filter((p) => p.category_id === c.id && !p.archived_at).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => g.items.length), [base])
+  // Prime Roots sells jams only; MS El-brancy everything else
+  const forBrand = useCallback((p: Product) => (form?.brand === 'prime_roots') === (p.product_type === 'jam'), [form?.brand])
+  const grouped = useMemo(() => (base?.categories ?? []).map((c) => ({ c, items: (base?.products ?? []).filter((p) => p.category_id === c.id && !p.archived_at && forBrand(p)).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => g.items.length), [base, forBrand])
 
   if (error) return <ErrorState message={error} />
   if (!base || !form) return <Loading />
@@ -481,7 +493,7 @@ export function QuotationEditor() {
 
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <div><CardTitle>Products</CardTitle><CardDescription>Description, packing and price fill in from Products and the price list. All editable.</CardDescription></div>
+              <div><CardTitle>Products</CardTitle><CardDescription>{form.brand === 'prime_roots' ? 'Prime Roots letterhead: only jams are listed.' : 'MS El-brancy letterhead: jams are listed under Prime Roots.'} Description, packing and price fill in from Products and the price list. All editable.</CardDescription></div>
               {canEdit && <Button variant="outline" size="sm" onClick={addLine}><Plus />Add product</Button>}
             </CardHeader>
             <CardContent className="space-y-3">
@@ -489,15 +501,16 @@ export function QuotationEditor() {
                 <input type="checkbox" className="size-4 accent-[#23856B]" checked={form.show_quantities} disabled={!canEdit} onChange={(e) => upd({ show_quantities: e.target.checked })} />
                 Print quantity and total columns
               </label>
-              {!lines.length && <Empty title="No products yet" hint={canEdit ? 'Click “Add product”.' : undefined} />}
+              {!lines.length && !canEdit && <Empty title="No products yet" />}
               {computed.map((l) => {
                 const p = prod[l.product_id]
                 return (
                   <div key={l.key} className="rounded-md border border-border p-3">
                     <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-12">
                       <Field label="Product" className="sm:col-span-4">
-                        <Select value={l.product_id} onChange={(e) => pickProduct(l.key, e.target.value)}>
+                        <Select id={`line-${l.key}-product`} value={l.product_id} onChange={(e) => pickProduct(l.key, e.target.value)}>
                           <option value="">Choose… (or type below)</option>
+                          {p && !forBrand(p) && <option value={p.id}>{p.name} (other letterhead)</option>}
                           {grouped.map(({ c, items }) => <optgroup key={c.id} label={c.name}>{items.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</optgroup>)}
                         </Select>
                       </Field>
@@ -588,6 +601,12 @@ export function QuotationEditor() {
                   </div>
                 )
               })}
+              {canEdit && (
+                <button type="button" onClick={addLine}
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <Plus className="size-4" />Add {lines.length ? 'another' : 'a'} {form.brand === 'prime_roots' ? 'jam' : 'product'}
+                </button>
+              )}
               {lines.length > 0 && <div className="flex justify-end text-sm">Total: <b className="ml-2 tabular-nums">{grand != null ? money(grand, form.currency) : 'enter all quantities to see the total'}</b></div>}
             </CardContent>
           </Card>
