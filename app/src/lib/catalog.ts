@@ -17,6 +17,9 @@ export type Packaging = {
   net_weight_kg: number | null; gross_weight_kg: number | null
   length_cm: number | null; width_cm: number | null; height_cm: number | null
   cartons_per_pallet: number | null; is_default: boolean; notes: string | null; archived_at: string | null
+  // added in 0012 (may be missing before that migration runs)
+  variety?: string | null; units_per_pack?: number | null; unit_name?: string | null
+  unit_weight_g?: number | null; packs_per_container?: number | null
 }
 
 export type Product = {

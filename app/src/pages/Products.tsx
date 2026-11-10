@@ -146,7 +146,7 @@ export function Products() {
                         <td className="px-3 py-3">
                           {pk ? (
                             <>
-                              <div>{pk.label}</div>
+                              <div>{pk.label}{activePackaging(p).length > 1 && <span className="text-xs text-muted-foreground"> +{activePackaging(p).length - 1} more</span>}</div>
                               <div className="text-xs text-muted-foreground">
                                 {fmt(pk.net_weight_kg)} kg net · {pk.cartons_per_pallet ?? '—'} / pallet
                                 {pk.net_weight_kg && pk.cartons_per_pallet ? ` · ${fmt(pk.net_weight_kg * pk.cartons_per_pallet, 0)} kg/pallet` : ''}
