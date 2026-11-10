@@ -25,13 +25,8 @@ export function Login() {
   const field = 'flex h-14 items-center gap-1 rounded-full border border-white/25 bg-white/10 px-5 text-white transition focus-within:border-lime-300/80 focus-within:bg-white/15 focus-within:ring-2 focus-within:ring-lime-300/30'
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#0f5a35] via-[#0b4a2c] to-[#073620] p-4 sm:p-8">
-      {/* soft background shapes */}
-      <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 size-96 rounded-full bg-[#1f7a4a]/40 blur-2xl" />
-      <div aria-hidden="true" className="pointer-events-none absolute left-1/3 top-6 size-28 rounded-full bg-[#2b8a55]/50" />
-      <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 right-10 size-[28rem] rounded-full bg-[#1a6b40]/40 blur-2xl" />
-
-      <div className="relative grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-br from-[#227d4c] to-[#0b4429] shadow-[0_30px_80px_rgba(0,0,0,0.35)] lg:grid-cols-[1.1fr_1fr]">
+    <div className="min-h-screen">
+      <div className="relative grid min-h-screen w-full overflow-hidden bg-gradient-to-br from-[#227d4c] to-[#0b4429] lg:grid-cols-[1.1fr_1fr]">
         {/* white side with a wavy edge (large screens) */}
         <svg aria-hidden="true" className="absolute inset-y-0 left-0 hidden h-full w-[60%] lg:block" viewBox="0 0 100 100" preserveAspectRatio="none">
           <path d="M0 0 H80 C86 16 97 34 93 53 C89 71 74 82 71 100 H0 Z" fill="#f7f8f5" />
@@ -39,13 +34,13 @@ export function Login() {
         <div className="relative hidden flex-col px-12 pb-10 pt-10 lg:flex">
           <img src={`${BASE}logo.png`} alt="MS El-brancy Group" className="h-14 w-auto self-start" />
           <img src={`${BASE}login-illustration.webp`} alt="A crate of Egyptian fruit and vegetables in front of the farm, with a plane flying over a world map"
-            className="mx-auto mt-6 w-full max-w-[520px] select-none" draggable={false} />
+            className="mx-auto my-auto w-full max-w-[640px] select-none mix-blend-multiply" draggable={false} />
           <p className="mt-auto pr-16 text-center text-2xl font-medium italic text-[#14532d]">From our farms to global markets.</p>
           <div className="mx-auto mt-3 h-1 w-24 rounded-full bg-[#8bc34a] pr-16" />
         </div>
 
         {/* form side */}
-        <div className="relative flex flex-col justify-center px-6 py-10 text-white sm:px-12 lg:py-14">
+        <div className="relative mx-auto flex w-full max-w-xl flex-col justify-center px-6 py-10 text-white sm:px-12 lg:py-14">
           <img src={`${BASE}logo-white.png`} alt="MS El-brancy Group" className="mb-8 h-11 w-auto self-start lg:hidden" />
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">System Login</h1>
           <p className="mt-2 text-lg text-white/85">El Brancy Group Export System</p>
