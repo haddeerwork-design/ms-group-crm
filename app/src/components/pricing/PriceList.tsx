@@ -86,7 +86,8 @@ export function PriceList({ rows, products, categories, canCalc, onOpen }: {
                         {r.incoterm ? <span className="font-medium">{r.incoterm}</span> : <Badge className="border-amber-200 bg-amber-50 text-amber-800">Imported — no Incoterm</Badge>}
                         {r.destination && <div className="text-xs text-muted-foreground">{r.destination}</div>}
                       </td>
-                      <td className="px-3 py-3 text-right font-medium tabular-nums">{money(r.price_per_ton, r.sell_currency)}</td>
+                      <td className="px-3 py-3 text-right font-medium tabular-nums">{money(r.price_per_ton, r.sell_currency)}
+                        {r.price_basis === 'unit' && r.unit_price ? <div className="text-xs font-normal text-muted-foreground">{money(r.unit_price, r.sell_currency)} / {r.unit_label || 'unit'}</div> : null}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{money(r.price_per_ton / 1000, undefined, 3)}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{r.net_weight_kg ? money((r.price_per_ton * r.net_weight_kg) / 1000) : '—'}</td>
                       <td className="px-3 py-3 text-xs">

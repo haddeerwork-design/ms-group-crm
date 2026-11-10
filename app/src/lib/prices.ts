@@ -6,6 +6,7 @@ export type PriceListRow = {
   incoterm: Incoterm | null; destination: string | null; net_weight_kg: number | null; cartons_per_pallet: number | null
   sell_currency: string; price_per_ton: number; valid_from: string; valid_until: string | null
   source: 'app' | 'imported'; created_at: string
+  price_basis?: 'ton' | 'unit' | null; unit_price?: number | null; unit_label?: string | null
 }
 
 export type PriceVersion = PriceListRow & {

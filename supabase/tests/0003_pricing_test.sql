@@ -1,3 +1,4 @@
+-- (jam per-jar prices added by 0013 are excluded with price_basis = 'ton')
 -- LOCAL TESTING ONLY. Run after stub, 0001, 0002 fixture, 0002, 0003.
 \set ON_ERROR_STOP on
 \set A '00000000-0000-0000-0000-00000000000a'
@@ -6,9 +7,9 @@
 
 do $$ begin
   -- fixture p20 (Frozen Mangoes) had price 1200 USD
-  assert (select count(*) from public.product_prices where source='imported') = 1;
-  assert (select price_per_ton from public.product_prices where source='imported') = 1200;
-  assert (select net_weight_kg from public.product_prices where source='imported') = 10;
+  assert (select count(*) from public.product_prices where source='imported' and price_basis = 'ton') = 1;
+  assert (select price_per_ton from public.product_prices where source='imported' and price_basis = 'ton') = 1200;
+  assert (select net_weight_kg from public.product_prices where source='imported' and price_basis = 'ton') = 10;
   raise notice 'PASS legacy price imported';
 end $$;
 
@@ -45,7 +46,7 @@ update public.exchange_rates set rate = 1;
 delete from public.exchange_rates;
 do $$ begin
   assert (select price_per_ton from public.product_prices where incoterm='FOB') = 875, 'price edited';
-  assert (select count(*) from public.product_prices) = 2, 'price deleted';
+  assert (select count(*) from public.product_prices where price_basis = 'ton') = 2, 'price deleted';
   assert (select rate from public.exchange_rates) = 48.5, 'rate edited';
   raise notice 'PASS prices and rates are immutable';
 end $$;
@@ -64,7 +65,7 @@ reset role; set role authenticated;
 select set_config('request.jwt.claim.sub', :'S', false);
 do $$ begin
   assert (select count(*) from public.product_prices) = 0, 'sales sees costs';
-  assert (select count(*) from public.product_price_list) = 2, 'sales should see price list';
+  assert (select count(*) from public.product_price_list where price_basis = 'ton') = 2, 'sales should see price list';
   assert (select count(*) from public.exchange_rates_latest) = 1;
   raise notice 'PASS sales sees selling prices, not costs';
 end $$;
@@ -86,7 +87,7 @@ reset role; set role authenticated;
 select set_config('request.jwt.claim.sub', :'Q', false);
 insert into public.exchange_rates (base_currency, quote_currency, rate, source, rate_at) values ('USD','EUR',0.92,'open.er-api.com', now() - interval '2 hours');
 do $$ begin
-  assert (select count(*) from public.product_prices) = 3, 'finance should see costs';
+  assert (select count(*) from public.product_prices where price_basis = 'ton') = 3, 'finance should see costs';
   assert (select count(*) from public.exchange_rates_latest) = 2;
   begin
     insert into public.product_prices (product_id, incoterm, sell_currency, price_per_ton)

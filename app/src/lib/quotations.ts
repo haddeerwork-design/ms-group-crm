@@ -15,11 +15,24 @@ export const STATUS_STYLE: Record<QuoteStatus, string> = {
   expired: 'border-zinc-300 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300',
 }
 
+/** Quotation quantities can also be counted in units (jars, bunches…). */
+export type QuoteQtyUnit = QtyUnit | 'units'
+export type PriceBasis = 'ton' | 'unit'
+
 export type QuoteItem = {
   id?: string; quotation_id?: string; product_id: string | null; packaging_id: string | null
   description: string; packing: string | null; product_type_label: string | null
-  quantity: number | null; quantity_unit: QtyUnit | null; net_weight_kg: number | null; cartons_per_pallet: number | null
+  quantity: number | null; quantity_unit: QuoteQtyUnit | null; net_weight_kg: number | null; cartons_per_pallet: number | null
   price_per_ton: number; line_total: number | null; price_id: string | null; sort_order: number
+  // added in 0013 (missing on older rows / before the migration)
+  price_basis?: PriceBasis | null; unit_price?: number | null; unit_label?: string | null
+}
+
+/** Letterheads a quotation can be printed on. */
+export type Brand = 'ms_elbrancy' | 'prime_roots'
+export const BRANDS: Record<Brand, { label: string; name: string; slogan: string; letterhead: string; primary: string; heading: string }> = {
+  ms_elbrancy: { label: 'MS El-brancy Group', name: '', slogan: '', letterhead: 'letterhead.jpg', primary: '#145a3c', heading: '#176b4b' },
+  prime_roots: { label: 'Prime Roots (jams)', name: 'Prime Roots', slogan: 'Premium Tropical Jams', letterhead: 'letterhead-primeroots.jpg', primary: '#0f3d22', heading: '#c97f06' },
 }
 export type Quotation = {
   id: string; number: string; status: QuoteStatus; version: number; issue_date: string
@@ -29,6 +42,7 @@ export type Quotation = {
   incoterm: Incoterm | null; currency: string; payment_terms: string | null; production_time: string | null
   policy_lines: string[]; show_quantities: boolean; plan_id: string | null; notes: string | null
   sent_at: string | null; created_at: string; created_by: string; updated_at: string
+  brand?: Brand | null
   quotation_items?: QuoteItem[]
 }
 export type QuoteVersion = { id: number; quotation_id: string; version: number; status: QuoteStatus; snapshot: Quotation & { items: QuoteItem[] }; created_at: string }
@@ -50,18 +64,33 @@ export async function fetchQuotation(id: string) {
   return { quote, versions: (v.data ?? []) as QuoteVersion[] }
 }
 
-/** Net tons for a line, from its quantity and unit. */
+/** Net tons for a line, from its quantity and unit. For 'units' and 'cartons', net_weight_kg is the weight of one. */
 export function lineTons(i: Pick<QuoteItem, 'quantity' | 'quantity_unit' | 'net_weight_kg' | 'cartons_per_pallet'>): number | null {
   if (!i.quantity || !i.quantity_unit) return null
   if (i.quantity_unit === 'tons') return i.quantity
   if (!i.net_weight_kg) return null
-  if (i.quantity_unit === 'cartons') return (i.quantity * i.net_weight_kg) / 1000
+  if (i.quantity_unit === 'cartons' || i.quantity_unit === 'units') return (i.quantity * i.net_weight_kg) / 1000
   if (!i.cartons_per_pallet) return null
   return (i.quantity * i.cartons_per_pallet * i.net_weight_kg) / 1000
 }
-export function lineTotal(i: Parameters<typeof lineTons>[0] & { price_per_ton: number | null }) {
+export function lineTotal(i: Parameters<typeof lineTons>[0] & { price_per_ton: number | null; price_basis?: PriceBasis | null; unit_price?: number | null }) {
+  if (i.price_basis === 'unit') {
+    // Price per unit: count the units (exact when the quantity is already in units).
+    if (!i.unit_price || !i.quantity || !i.quantity_unit) return null
+    let units: number | null = null
+    if (i.quantity_unit === 'units') units = i.quantity
+    else { const t = lineTons(i); if (t != null && i.net_weight_kg) units = Math.round((t * 1000) / i.net_weight_kg) }
+    return units != null ? Math.round(units * i.unit_price * 100) / 100 : null
+  }
   const t = lineTons(i)
   return t != null && i.price_per_ton ? Math.round(t * i.price_per_ton * 100) / 100 : null
+}
+/** Per-ton equivalent of a unit price (unit weighs net_weight_kg). */
+export const unitToTon = (unitPrice: number, netKg: number) => Math.round((unitPrice / netKg) * 1000 * 100) / 100
+/** Plural label for units, e.g. jar → jars. */
+export const unitsLabel = (label: string | null | undefined, n = 2) => {
+  const l = (label || 'unit').trim()
+  return n === 1 || /s$/i.test(l) ? l : l.replace(/(ch|sh|x)$/i, '$1e') + 's'
 }
 
 /** Fills {validity_days}, {incoterm}, {production_time} in the policy templates. */
