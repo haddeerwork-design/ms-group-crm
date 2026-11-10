@@ -27,7 +27,7 @@ export function Pricing() {
 
   const tabs: { k: Tab; label: string; show: boolean }[] = [
     { k: 'list', label: 'Price list', show: true },
-    { k: 'calc', label: 'Calculator', show: seesCosts },
+    { k: 'calc', label: 'Calculator', show: true },
     { k: 'fx', label: 'Exchange rates', show: true },
   ]
 
@@ -35,7 +35,7 @@ export function Pricing() {
     <>
       <PageHeader title="Pricing" summary={seesCosts
         ? 'Build export prices from costs, keep every version, and track the exchange rates used.'
-        : 'Current selling prices approved by the Sales Manager.'} />
+        : 'Current selling prices approved by the Sales Manager. Use the Calculator to work out a price; only the Sales Manager can save it.'} />
       <div className="mb-5 flex gap-1 border-b border-border">
         {tabs.filter((t) => t.show).map((t) => (
           <button key={t.k} onClick={() => setTab(t.k)}
@@ -46,9 +46,9 @@ export function Pricing() {
       </div>
       {error ? <ErrorState message={error} /> : !data ? <Loading /> : (
         <>
-          {tab === 'list' && <PriceList rows={data.list} products={data.products} categories={data.categories} canCalc={seesCosts} canEdit={editsPrices} onSaved={load}
+          {tab === 'list' && <PriceList rows={data.list} products={data.products} categories={data.categories} canCalc canEdit={editsPrices} onSaved={load}
             onOpen={(productId, packagingId, incoterm) => { setInitial({ productId, packagingId, incoterm }); setTab('calc') }} />}
-          {tab === 'calc' && seesCosts && <PriceCalculator products={data.products} categories={data.categories} rates={data.rates} initial={initial} onSaved={load} />}
+          {tab === 'calc' && <PriceCalculator products={data.products} categories={data.categories} rates={data.rates} initial={initial} onSaved={load} />}
           {tab === 'fx' && <ExchangeRates onChanged={load} />}
         </>
       )}

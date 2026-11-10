@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, ArchiveRestore, CalendarDays, FolderCog, List, Plus, Search } from 'lucide-react'
+import { Archive, ArchiveRestore, CalendarDays, Copy, FolderCog, List, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -37,6 +37,7 @@ export function Products() {
   const [showArchived, setShowArchived] = useState(false)
   const [view, setView] = useState<'list' | 'season'>('list')
   const [editing, setEditing] = useState<Product | null>(null)
+  const [dupOf, setDupOf] = useState<Product | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [catsOpen, setCatsOpen] = useState(false)
 
@@ -158,6 +159,11 @@ export function Products() {
                         <td className="px-3 py-3 text-muted-foreground">{seasonLabel(p) ?? '—'}</td>
                         <td className="px-3 py-3 text-muted-foreground">{p.availability ? AVAILABILITY_LABEL[p.availability] : '—'}</td>
                         <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          {canEdit && !p.archived_at && (
+                            <Button variant="ghost" size="icon" onClick={() => { setEditing(null); setDupOf(p); setDialogOpen(true) }} title="Duplicate" aria-label={`Duplicate ${p.name}`}>
+                              <Copy />
+                            </Button>
+                          )}
                           {canEdit && (
                             <Button variant="ghost" size="icon" onClick={() => toggleArchive(p)} title={p.archived_at ? 'Restore' : 'Archive'} aria-label={p.archived_at ? 'Restore' : 'Archive'}>
                               {p.archived_at ? <ArchiveRestore /> : <Archive />}
@@ -177,7 +183,7 @@ export function Products() {
 
       {data && (
         <>
-          <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} product={editing} categories={data.categories} canEdit={canEdit} onSaved={load} />
+          <ProductDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setDupOf(null) }} product={editing} duplicateOf={dupOf} categories={data.categories} canEdit={canEdit} onSaved={load} />
           <CategoriesDialog open={catsOpen} onOpenChange={setCatsOpen} categories={data.categories} counts={counts} onSaved={load} />
         </>
       )}
