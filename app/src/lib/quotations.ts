@@ -111,3 +111,45 @@ export function fmtPrice(v: number | null | undefined, ccy: string) {
   const sym: Record<string, string> = { USD: '$', EUR: '€', GBP: '£' }
   return sym[ccy] ? `${n}${sym[ccy]}` : `${n} ${ccy}`
 }
+
+// ---------------------------------------------------------------------
+// Language of the printed quotation
+// ---------------------------------------------------------------------
+export type QuoteLang = 'en' | 'ar'
+export const QUOTE_TEXT = {
+  en: {
+    date: 'Date', ref: 'Ref', rev: 'rev.', title: 'Quotation', to: 'To', greeting: 'After greeting…',
+    honored: (name: string) => [name, ' Company is honored to offer a price for the following items at hopeful price.'] as const,
+    description: 'Product Description', packing: 'Packing', type: 'Product type', quantity: 'Quantity',
+    price: 'Price', pricePerTon: 'Price/Ton', total: 'Total', policy: 'Our Policy is:', payment: 'Payment terms',
+    signature: 'Authorized signature', continued: 'continued', ton: 'ton', tons: 't',
+  },
+  ar: {
+    date: 'التاريخ', ref: 'رقم المرجع', rev: 'مراجعة', title: 'عرض سعر', to: 'إلى السادة', greeting: 'بعد التحية،',
+    honored: (name: string) => ['تتشرف شركة ', name, ' بتقديم عرض السعر التالي:'] as const,
+    description: 'وصف المنتج', packing: 'التعبئة', type: 'نوع المنتج', quantity: 'الكمية',
+    price: 'السعر', pricePerTon: 'السعر / طن', total: 'الإجمالي', policy: 'سياستنا:', payment: 'شروط الدفع',
+    signature: 'التوقيع المعتمد', continued: 'تابع', ton: 'طن', tons: 'طن',
+  },
+} as const
+
+export const PRODUCT_TYPE_LABEL_AR = { fresh: 'طازج', frozen: 'مجمد', jam: 'مربى' } as const
+const PACK_AR: Record<string, [string, string]> = {
+  jar: ['برطمان', 'برطمان'], carton: ['كرتونة', 'كرتونة'], basket: ['سبت', 'سبت'], crate: ['صندوق بلاستيك', 'صندوق بلاستيك'],
+  tray: ['صينية', 'صينية'], bag: ['شوال', 'شوال'], box: ['صندوق', 'صندوق'], bunch: ['حزمة', 'حزمة'], punnet: ['علبة', 'علبة'], unit: ['وحدة', 'وحدة'],
+}
+/** Unit name as printed, e.g. jar → "jars" (en) or "برطمان" (ar). */
+export function unitWord(label: string | null | undefined, lang: QuoteLang, n = 2) {
+  if (lang === 'en') return unitsLabel(label, n)
+  const k = (label || 'unit').trim().toLowerCase().replace(/s$/, '')
+  return PACK_AR[k]?.[n === 1 ? 0 : 1] ?? label ?? 'وحدة'
+}
+
+/** What one "pack" of this packaging is called, for prices per pack: jar, carton, basket… */
+export function packLabel(pk: { packaging_type?: string | null; label?: string | null; units_per_pack?: number | null; unit_name?: string | null } | null | undefined) {
+  if (!pk) return 'carton'
+  if (pk.unit_name && (pk.units_per_pack ?? 1) === 1) return pk.unit_name.toLowerCase()
+  const t = `${pk.packaging_type ?? ''} ${pk.label ?? ''}`.toLowerCase()
+  for (const w of ['jar', 'basket', 'crate', 'tray', 'bag', 'box']) if (t.includes(w)) return w
+  return 'carton'
+}

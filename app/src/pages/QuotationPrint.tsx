@@ -32,8 +32,9 @@ export function QuotationPrint() {
   useEffect(() => {
     if (!doc) return
     // wait for the letterhead image before opening the print dialog
+    // wait for the letterhead image and the fonts (Arabic uses IBM Plex Sans Arabic) before printing
     const img = new Image(); img.src = letterheadUrl(doc.brand)
-    const go = () => setTimeout(() => window.print(), 300)
+    const go = () => setTimeout(() => { document.fonts.ready.then(() => window.print()) }, 600)
     if (img.complete) go(); else img.onload = go
   }, [doc])
 

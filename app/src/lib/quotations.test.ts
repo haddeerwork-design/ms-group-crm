@@ -38,3 +38,14 @@ describe('per-unit prices (jars)', () => {
     expect(unitsLabel('jar')).toBe('jars'); expect(unitsLabel('bunch')).toBe('bunches'); expect(unitsLabel('jar', 1)).toBe('jar')
   })
 })
+
+describe('language & pack names', () => {
+  it('pack label and Arabic units', async () => {
+    const { packLabel, unitWord } = await import('./quotations')
+    expect(packLabel({ packaging_type: 'Glass jar', units_per_pack: 1, unit_name: 'jar' })).toBe('jar')
+    expect(packLabel({ packaging_type: 'Carton', units_per_pack: 14, unit_name: 'bunch' })).toBe('carton')
+    expect(packLabel({ packaging_type: 'Plastic basket', units_per_pack: 28, unit_name: 'bunch' })).toBe('basket')
+    expect(packLabel(null)).toBe('carton')
+    expect(unitWord('jar', 'ar')).toBe('برطمان'); expect(unitWord('carton', 'en', 3)).toBe('cartons')
+  })
+})

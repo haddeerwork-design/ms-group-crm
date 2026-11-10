@@ -28,6 +28,7 @@ export type Product = {
   availability: Availability | null; specifications: string | null; size_caliber: string | null
   storage_temperature: string | null; shelf_life: string | null; moq_quantity: number | null; moq_unit: string | null
   notes: string | null; legacy_key: string | null; archived_at: string | null; updated_at: string
+  name_ar?: string | null // from 0014
   product_packaging: Packaging[]
 }
 
