@@ -82,14 +82,21 @@ function toForm(p: Product | null, categories: Category[]): Form {
   }
 }
 
-export function ProductDialog({ open, onOpenChange, product, categories, canEdit, onSaved }: {
-  open: boolean; onOpenChange: (o: boolean) => void; product: Product | null
+/** A new product pre-filled from another one (name marked as a copy, packaging copied as new rows). */
+function duplicateForm(src: Product, categories: Category[]): Form {
+  const f = toForm(src, categories)
+  return { ...f, name: `${src.name} (copy)`.slice(0, 120), packaging: f.packaging.map((x) => ({ ...x, id: undefined })) }
+}
+
+export function ProductDialog({ open, onOpenChange, product, duplicateOf, categories, canEdit, onSaved }: {
+  open: boolean; onOpenChange: (o: boolean) => void; product: Product | null; duplicateOf?: Product | null
   categories: Category[]; canEdit: boolean; onSaved: () => void
 }) {
-  const form = useForm<Form>({ resolver: zodResolver(schema), defaultValues: toForm(product, categories) })
+  const initialForm = () => (!product && duplicateOf ? duplicateForm(duplicateOf, categories) : toForm(product, categories))
+  const form = useForm<Form>({ resolver: zodResolver(schema), defaultValues: initialForm() })
   const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = form
   const packs = useFieldArray({ control: form.control, name: 'packaging' })
-  useEffect(() => { if (open) reset(toForm(product, categories)) }, [open, product, categories, reset])
+  useEffect(() => { if (open) reset(initialForm()) }, [open, product, duplicateOf, categories, reset]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const defaultIndex = watch('default_index')
   const varietyOptions = (watch('varieties') ?? '').split(',').map((x) => x.trim()).filter(Boolean)
@@ -155,8 +162,8 @@ export function ProductDialog({ open, onOpenChange, product, categories, canEdit
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{product ? product.name : 'Add product'}</DialogTitle>
-          <DialogDescription>{canEdit ? 'Leave a field empty if you don’t know it yet.' : 'Read-only for your role.'}</DialogDescription>
+          <DialogTitle>{product ? product.name : duplicateOf ? `Duplicate “${duplicateOf.name}”` : 'Add product'}</DialogTitle>
+          <DialogDescription>{!canEdit ? 'Read-only for your role.' : duplicateOf && !product ? 'A new product with the same details and packing. Change the name, then save.' : 'Leave a field empty if you don’t know it yet.'}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col" noValidate>
           <DialogBody>
