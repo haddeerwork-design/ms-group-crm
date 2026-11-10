@@ -41,7 +41,9 @@ export function Quotations() {
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {error ? <div className="p-5"><ErrorState message={error} /></div> : !rows ? <Loading /> : !list.length ? (
-            <div className="p-5"><Empty title={rows.length ? 'No quotations match' : 'No quotations yet'} hint={rows.length ? undefined : 'Create one here, or from a saved container plan.'} /></div>
+            <div className="p-5"><Empty title={rows.length ? 'No quotations match' : 'No quotations yet'} hint={rows.length ? 'No quotation fits this search.' : 'Create one here, or from a saved container plan.'}
+              action={rows.length ? <Button variant="outline" onClick={() => { setQ(''); setSt('') }}>Clear filters</Button>
+                : hasRole(...QUOTE_WRITERS) && <><Button onClick={() => nav('/quotations/new')}><Plus />New quotation</Button><Button variant="outline" onClick={() => nav('/quotations/new?brand=prime_roots')}>New Prime Roots quotation</Button></>} /></div>
           ) : (
             <table className="w-full min-w-[720px] text-sm">
               <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">

@@ -19,6 +19,7 @@ import { Field } from '@/components/ui/field'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { ContainerTypesDialog } from '@/components/planner/ContainerTypesDialog'
 import { cn } from '@/lib/utils'
+import { useLeaveGuard } from '@/lib/useLeaveGuard'
 
 const COLORS = ['#23856B', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#14B8A6', '#EC4899', '#84CC16']
 const s = (v: unknown) => (v == null ? '' : String(v))
@@ -189,6 +190,7 @@ export function Planner() {
   const activeTypes = (base?.types ?? []).filter((t) => !t.archived_at || t.id === meta.container_type_id)
   const visiblePlans = plans.filter((p) => !q.trim() || (p.name + ' ' + (p.customer_name ?? '')).toLowerCase().includes(q.trim().toLowerCase()))
 
+  useLeaveGuard(dirty, save)
   if (error) return <ErrorState message={error} />
   if (!base) return <Loading />
 

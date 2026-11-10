@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { archivedToast } from '@/lib/undo'
 import { useAuth } from '@/lib/auth'
 import { CRM_ASSIGNERS } from '@/lib/roles'
 import { CURRENCIES } from '@/lib/pricing'
@@ -62,10 +63,10 @@ export function OpportunityDialog({ open, onOpenChange, opp, stages, companies, 
   }
 
   async function archive() {
-    if (!opp || !window.confirm('Archive this deal? It disappears from the board.')) return
+    if (!opp) return
     const { error } = await supabase.from('opportunities').update({ archived_at: new Date().toISOString() }).eq('id', opp.id)
     if (error) return toast.error(error.message)
-    toast.success('Deal archived'); onOpenChange(false); onSaved()
+    archivedToast('Deal', 'opportunities', opp.id, onSaved); onOpenChange(false); onSaved()
   }
 
   return (

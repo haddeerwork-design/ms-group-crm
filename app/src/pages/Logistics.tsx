@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Archive, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { archivedToast } from '@/lib/undo'
 import { useAuth } from '@/lib/auth'
 import { CONTAINER_MANAGERS } from '@/lib/roles'
 import { CURRENCIES } from '@/lib/pricing'
@@ -89,9 +90,9 @@ export function Logistics() {
     toast.success('Saved'); load(); return true
   }
   async function archive(table: string, id: string) {
-    if (!window.confirm('Archive this entry?')) return
     const { error } = await supabase.from(table).update({ archived_at: new Date().toISOString() }).eq('id', id)
-    if (error) toast.error(error.message); load()
+    if (error) return toast.error(error.message)
+    archivedToast(table === 'shipping_rates' ? 'Rate' : 'Forwarder', table, id, load); load()
   }
 
   const visible = rates.filter((r) => !r.archived_at && (!mode || r.mode === mode) && (showExpired || rateValidity(r) !== 'expired')
@@ -115,7 +116,8 @@ export function Logistics() {
             <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground"><input type="checkbox" className="size-4 accent-[#23856B]" checked={showExpired} onChange={(e) => setShowExpired(e.target.checked)} />Show expired</label>
           </div>
           <Card><CardContent className="overflow-x-auto p-0">
-            {!visible.length ? <div className="p-5"><Empty title="No shipping rates" hint={canEdit ? 'Add rates exactly as your forwarders quote them, with a valid-until date.' : undefined} /></div> : (
+            {!visible.length ? <div className="p-5"><Empty title="No shipping rates" hint={canEdit ? 'Add rates exactly as your forwarders quote them, with a valid-until date.' : undefined}
+              action={canEdit && <Button onClick={() => { setRateEdit(null); setRateOpen(true) }}><Plus />Add rate</Button>} /></div> : (
               <table className="w-full min-w-[860px] text-sm">
                 <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="px-5 py-3 font-medium">Route</th><th className="px-3 py-3 font-medium">Mode</th><th className="px-3 py-3 text-right font-medium">Rate</th><th className="px-3 py-3 font-medium">Transit</th><th className="px-3 py-3 font-medium">By</th><th className="px-3 py-3 font-medium">Validity</th><th className="px-3 py-3" />

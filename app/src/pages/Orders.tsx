@@ -36,7 +36,8 @@ export function Orders() {
       </div>
       <Card><CardContent className="overflow-x-auto p-0">
         {error ? <div className="p-5"><ErrorState message={error} /></div> : !rows ? <Loading /> : !list.length ? (
-          <div className="p-5"><Empty title="No orders" hint="Create one from an issued proforma or an accepted quotation." /></div>
+          <div className="p-5"><Empty title="No orders" hint="Create one from an issued proforma or an accepted quotation."
+            action={hasRole(...QUOTE_WRITERS) && <><Button onClick={() => nav('/orders/new')}><Plus />New order</Button><Button variant="outline" onClick={() => nav('/quotations')}>Go to quotations</Button></>} /></div>
         ) : (
           <table className="w-full min-w-[760px] text-sm">
             <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Order</th><th className="px-3 py-3 font-medium">Buyer</th><th className="px-3 py-3 font-medium">Shipment</th><th className="px-3 py-3 text-right font-medium">Total</th><th className="px-3 py-3 font-medium">Stage</th></tr></thead>

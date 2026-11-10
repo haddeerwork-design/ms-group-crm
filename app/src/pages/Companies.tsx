@@ -13,6 +13,7 @@ import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { CompanyForm } from '@/components/crm/CompanyForm'
 import { ImportDialog } from '@/components/crm/ImportDialog'
 import { cn } from '@/lib/utils'
+import { MobileFilters } from '@/components/ui/mobile-filters'
 
 const FOLLOW = { overdue: 'text-destructive font-medium', today: 'text-amber-700 dark:text-amber-300 font-medium', soon: 'text-foreground' }
 
@@ -66,17 +67,22 @@ export function Companies() {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input className="pl-8" placeholder="Search name, country, email, product, tag…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
         </div>
-        <div className="w-40"><Select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} aria-label="Status"><option value="">All statuses</option>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
-        <div className="w-36"><Select value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} aria-label="Country"><option value="">All countries</option>{countries.map((c) => <option key={c}>{c}</option>)}</Select></div>
-        {team.length > 1 && <div className="w-40"><Select value={f.owner} onChange={(e) => setF({ ...f, owner: e.target.value })} aria-label="Owner"><option value="">All owners</option>{team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}<option value="none">Unassigned</option></Select></div>}
-        <div className="w-32"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} aria-label="Priority"><option value="">Any priority</option>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
-        <div className="w-40"><Select value={f.follow} onChange={(e) => setF({ ...f, follow: e.target.value })} aria-label="Follow-up"><option value="">Any follow-up</option><option value="due">Due / overdue</option><option value="soon">Next 7 days</option></Select></div>
+        <MobileFilters active={[f.status, f.country, f.owner, f.priority, f.follow].filter(Boolean).length + (f.archived ? 1 : 0)}>
+        <div className="w-full sm:w-40"><Select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} aria-label="Status"><option value="">All statuses</option>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
+        <div className="w-full sm:w-36"><Select value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} aria-label="Country"><option value="">All countries</option>{countries.map((c) => <option key={c}>{c}</option>)}</Select></div>
+        {team.length > 1 && <div className="w-full sm:w-40"><Select value={f.owner} onChange={(e) => setF({ ...f, owner: e.target.value })} aria-label="Owner"><option value="">All owners</option>{team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}<option value="none">Unassigned</option></Select></div>}
+        <div className="w-full sm:w-32"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} aria-label="Priority"><option value="">Any priority</option>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
+        <div className="w-full sm:w-40"><Select value={f.follow} onChange={(e) => setF({ ...f, follow: e.target.value })} aria-label="Follow-up"><option value="">Any follow-up</option><option value="due">Due / overdue</option><option value="soon">Next 7 days</option></Select></div>
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground"><input type="checkbox" className="size-4 accent-[#23856B]" checked={f.archived} onChange={(e) => setF({ ...f, archived: e.target.checked })} />Archived</label>
+        </MobileFilters>
       </div>
       <Card>
         <CardContent className="overflow-x-auto p-0">
           {error ? <div className="p-5"><ErrorState message={error} /></div> : !rows ? <Loading /> : !list.length ? (
-            <div className="p-5"><Empty title={rows.length ? 'No companies match' : 'No companies yet'} hint={rows.length ? 'Try clearing the filters.' : 'Add one, or import a CSV / Excel file.'} /></div>
+            <div className="p-5"><Empty title={rows.length ? 'No companies match' : 'No companies yet'} hint={rows.length ? 'No company fits these filters.' : 'Add your first importer, or bring your list from Excel.'}
+              action={rows.length
+                ? <Button variant="outline" onClick={() => setF({ q: '', status: '', country: '', owner: '', priority: '', follow: '', archived: false })}>Clear filters</Button>
+                : canWrite && <><Button onClick={() => setAddOpen(true)}><Plus />Add company</Button><Button variant="outline" onClick={() => setImportOpen(true)}><FileUp />Import Excel / CSV</Button></>} /></div>
           ) : (
             <table className="w-full min-w-[860px] text-sm">
               <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Archive, ArchiveRestore, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { archivedToast } from '@/lib/undo'
 import { useAuth } from '@/lib/auth'
 import { COST_VIEWERS, CRM_ASSIGNERS } from '@/lib/roles'
 import { CURRENCIES } from '@/lib/pricing'
@@ -86,7 +87,9 @@ export function Suppliers() {
   }
   async function toggleArchive(s: Supplier) {
     const { error } = await supabase.from('suppliers').update({ archived_at: s.archived_at ? null : new Date().toISOString() }).eq('id', s.id)
-    if (error) return toast.error(error.message); load()
+    if (error) return toast.error(error.message)
+    if (!s.archived_at) archivedToast(`“${s.name}”`, 'suppliers', s.id, load); else toast.success('Supplier restored')
+    load()
   }
 
   if (error) return <ErrorState message={error} />
@@ -111,7 +114,8 @@ export function Suppliers() {
       </div>
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3"><CardContent className="overflow-x-auto p-0">
-          {!list.length ? <div className="p-5"><Empty title="No suppliers" hint={canEdit ? 'Add your farms, packers and packaging suppliers.' : undefined} /></div> : (
+          {!list.length ? <div className="p-5"><Empty title="No suppliers" hint={canEdit ? 'Add your farms, packers and packaging suppliers.' : undefined}
+            action={canEdit && <Button onClick={() => { setEditing(null); setOpen(true) }}><Plus />Add supplier</Button>} /></div> : (
             <table className="w-full min-w-[560px] text-sm">
               <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Supplier</th><th className="px-3 py-3 font-medium">Location</th><th className="px-3 py-3 font-medium">Products</th><th className="px-3 py-3" /></tr></thead>
               <tbody>
