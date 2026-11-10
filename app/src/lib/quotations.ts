@@ -137,7 +137,7 @@ export const QUOTE_TEXT = {
 
 export const PRODUCT_TYPE_LABEL_AR = { fresh: 'طازج', frozen: 'مجمد', jam: 'مربى' } as const
 const PACK_AR: Record<string, [string, string]> = {
-  jar: ['برطمان', 'برطمان'], carton: ['كرتونة', 'كرتونة'], basket: ['سبت', 'سبت'], crate: ['صندوق بلاستيك', 'صندوق بلاستيك'],
+  jar: ['برطمان', 'برطمان'], shrink: ['شرينك', 'شرينك'], carton: ['كرتونة', 'كرتونة'], basket: ['سبت', 'سبت'], crate: ['صندوق بلاستيك', 'صندوق بلاستيك'],
   tray: ['صينية', 'صينية'], kg: ['كجم', 'كجم'], ton: ['طن', 'طن'], bag: ['شوال', 'شوال'], box: ['صندوق', 'صندوق'], bunch: ['حزمة', 'حزمة'], punnet: ['علبة', 'علبة'], unit: ['وحدة', 'وحدة'],
 }
 /** Unit name as printed, e.g. jar → "jars" (en) or "برطمان" (ar). */
