@@ -49,3 +49,10 @@ describe('language & pack names', () => {
     expect(unitWord('jar', 'ar')).toBe('برطمان'); expect(unitWord('carton', 'en', 3)).toBe('cartons')
   })
 })
+
+it('policy sections and {currency}', async () => {
+  const { policySections, renderPolicy } = await import('./quotations')
+  expect(policySections(['## Terms', 'a', 'b', '## Offer', 'c'])).toEqual([{ title: 'Terms', items: ['a', 'b'] }, { title: 'Offer', items: ['c'] }])
+  expect(policySections(['x', 'y'])).toEqual([{ title: null, items: ['x', 'y'] }])
+  expect(renderPolicy(['All prices are in {currency}.'], { validity_days: 5, incoterm: null, production_time: null, currency: 'EGP' })).toEqual(['All prices are in EGP.'])
+})

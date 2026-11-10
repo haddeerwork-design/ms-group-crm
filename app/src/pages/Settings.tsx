@@ -89,7 +89,8 @@ export function Settings() {
 }
 
 function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
-  const [v, setV] = useState<{ policy: string; days: string; production: string; bank: string; policyAr: string; productionAr: string; hasAr: boolean } | null>(null)
+  const [v, setV] = useState<{ policy: string; days: string; production: string; bank: string; policyAr: string; productionAr: string; hasAr: boolean
+    hasPR: boolean; prTerms: string; prTermsAr: string; prDays: string } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   async function load() {
@@ -100,6 +101,8 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
       policy: (data.quotation_policy ?? []).join('\n'), days: data.quotation_validity_days == null ? '' : String(data.quotation_validity_days),
       production: data.quotation_production_time ?? '', bank: data.bank_details ?? '',
       hasAr: 'quotation_policy_ar' in data, policyAr: (data.quotation_policy_ar ?? []).join('\n'), productionAr: data.quotation_production_time_ar ?? '',
+      hasPR: 'prime_roots_terms' in data, prTerms: (data.prime_roots_terms ?? []).join('\n'), prTermsAr: (data.prime_roots_terms_ar ?? []).join('\n'),
+      prDays: data.prime_roots_validity_days == null ? '' : String(data.prime_roots_validity_days),
     })
   }
   useEffect(() => { load() }, [])
@@ -107,10 +110,14 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
     if (!v) return
     const days = v.days.trim() === '' ? null : Number(v.days)
     if (days != null && !(Number.isInteger(days) && days >= 1 && days <= 365)) return toast.error('Validity must be 1–365 days')
+    const prDays = v.prDays.trim() === '' ? null : Number(v.prDays)
+    if (prDays != null && !(Number.isInteger(prDays) && prDays >= 1 && prDays <= 365)) return toast.error('Prime Roots validity must be 1–365 days')
+    const lines = (x: string) => x.split('\n').map((y) => y.trim()).filter(Boolean)
     setSaving(true)
     const { data, error } = await supabase.from('company_settings').update({
       quotation_policy: v.policy.split('\n').map((x) => x.trim()).filter(Boolean), quotation_validity_days: days,
       quotation_production_time: v.production.trim() || null, bank_details: v.bank.trim() || null,
+      ...(v.hasPR ? { prime_roots_terms: lines(v.prTerms), prime_roots_terms_ar: lines(v.prTermsAr), prime_roots_validity_days: prDays } : {}),
       ...(v.hasAr ? { quotation_policy_ar: v.policyAr.split('\n').map((x) => x.trim()).filter(Boolean), quotation_production_time_ar: v.productionAr.trim() || null } : {}),
     }).eq('id', 1).select('id')
     setSaving(false)
@@ -140,6 +147,18 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
                   <Textarea id="qpolicyar" dir="rtl" lang="ar" className="min-h-[130px]" disabled={!canEdit} value={v.policyAr} onChange={(e) => setV({ ...v, policyAr: e.target.value })} />
                 </div>
                 <div className="space-y-2"><Label htmlFor="qprodar">Production time (Arabic)</Label><Input id="qprodar" dir="rtl" lang="ar" disabled={!canEdit} value={v.productionAr} onChange={(e) => setV({ ...v, productionAr: e.target.value })} /></div>
+                <div />
+              </>
+            )}
+            {v.hasPR && (
+              <>
+                <div className="space-y-1 border-t border-border pt-4 sm:col-span-2">
+                  <div className="text-sm font-medium">Prime Roots quotations</div>
+                  <p className="text-xs text-muted-foreground">Start a line with <b>## </b> to make it a heading (e.g. “## Special Offer”). You can use {'{currency}'} and {'{validity_days}'}.</p>
+                </div>
+                <div className="space-y-2"><Label htmlFor="prterms">Terms (English)</Label><Textarea id="prterms" className="min-h-[220px]" disabled={!canEdit} value={v.prTerms} onChange={(e) => setV({ ...v, prTerms: e.target.value })} /></div>
+                <div className="space-y-2"><Label htmlFor="prtermsar">Terms (Arabic)</Label><Textarea id="prtermsar" dir="rtl" lang="ar" className="min-h-[220px]" disabled={!canEdit} value={v.prTermsAr} onChange={(e) => setV({ ...v, prTermsAr: e.target.value })} /></div>
+                <div className="space-y-2"><Label htmlFor="prdays">Prime Roots: valid for (days)</Label><Input id="prdays" inputMode="numeric" disabled={!canEdit} value={v.prDays} onChange={(e) => setV({ ...v, prDays: e.target.value })} /></div>
                 <div />
               </>
             )}

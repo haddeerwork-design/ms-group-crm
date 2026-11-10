@@ -1,4 +1,5 @@
-import { BRANDS, fmtDateDMY, fmtPrice, lineTons, QUOTE_TEXT, unitWord, type Brand, type QuoteItem, type QuoteLang } from '@/lib/quotations'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { BRANDS, fmtDateDMY, fmtPrice, lineTons, policySections, QUOTE_TEXT, unitWord, type Brand, type QuoteItem, type QuoteLang } from '@/lib/quotations'
 
 /** Data needed to print. Works for the live quotation and for saved versions. */
 export type PrintableQuote = {
@@ -12,17 +13,20 @@ type Company = { company_name: string; slogan: string | null }
 
 export const letterheadUrl = (b?: Brand | null) => `${import.meta.env.BASE_URL}${BRANDS[b ?? 'ms_elbrancy'].letterhead}`
 
-function paginate<T>(rows: T[], firstExtra: number) {
-  // Capacities measured on the letterhead's writable area (46 mm → ~226 mm).
+// Writable height of each letterhead, from the top of the content to just above its footer.
+const MAX_CONTENT_MM: Record<Brand, number> = { ms_elbrancy: 180, prime_roots: 204 }
+
+/** Starts optimistic (everything on one page) and is tightened by `shrink`
+ *  until every rendered page fits its letterhead (measured in the browser). */
+function paginate<T>(rows: T[], shrink: number) {
   const compact = rows.length > 4
-  // Measured on rendered PDFs: compact row ≈ 9.3 mm, policy + signature ≈ 47 mm.
-  const firstCap = (compact ? 11 : 8) - firstExtra, firstCapPolicy = (compact ? 6 : 4) - firstExtra
-  const nextCap = 16, nextCapPolicy = 10
+  const firstCap = Math.max(1, 16 - shrink), firstCapPolicy = 12 - shrink
+  const nextCap = Math.max(1, 22 - shrink), nextCapPolicy = 16 - shrink
   const pages: { rows: T[]; policy: boolean }[] = []
   let rest = rows, first = true
   for (;;) {
     const cap = first ? firstCap : nextCap, capP = first ? firstCapPolicy : nextCapPolicy
-    if (rest.length <= capP) { pages.push({ rows: rest, policy: true }); break }
+    if (capP >= 0 && rest.length <= capP) { pages.push({ rows: rest, policy: true }); break }
     if (rest.length <= cap) { pages.push({ rows: rest, policy: false }, { rows: [], policy: true }); break }
     pages.push({ rows: rest.slice(0, cap), policy: false }); rest = rest.slice(cap); first = false
   }
@@ -48,17 +52,36 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
   }
   const honored = T.honored(company.company_name)
   const hasCustomer = !!(q.customer_name || q.customer_company)
-  // Prime Roots' letterhead starts its writable area a little lower: one row less on page 1
-  const { pages, compact } = paginate(q.items, (hasCustomer ? 1 : 0) + (q.brand === 'prime_roots' ? 1 : 0))
+  // When a page is too tall: first make the layout denser (2 steps), then move rows to more pages.
+  const [dense, setDense] = useState(0)
+  const [shrink, setShrink] = useState(0)
+  const [, setFontsTick] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+  const maxMm = MAX_CONTENT_MM[q.brand ?? 'ms_elbrancy']
+  // content or fonts changed → start optimistic again and re-measure
+  const key = JSON.stringify([q.items.length, q.policy_lines, q.language, q.brand, q.show_quantities, hasCustomer])
+  useEffect(() => { setShrink(0); setDense(0) }, [key])
+  useEffect(() => { document.fonts?.ready.then(() => { setShrink(0); setDense(0); setFontsTick((x) => x + 1) }) }, [])
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || shrink > 24) return
+    const px = maxMm * (96 / 25.4)
+    if ([...el.querySelectorAll<HTMLElement>('.q-content')].some((c) => c.offsetHeight > px)) {
+      if (dense < 2) setDense((x) => x + 1); else setShrink((x) => x + 1)
+    }
+  })
+  const sections = policySections(q.policy_lines)
+  const titled = sections.some((x) => x.title)
+  const { pages, compact } = paginate(q.items, shrink)
   const showQty = q.show_quantities
   const total = showQty && q.items.length && q.items.every((i) => i.line_total != null)
     ? q.items.reduce((s, i) => s + (i.line_total ?? 0), 0) : null
   let lastRowsPage = -1
   pages.forEach((p, i) => { if (p.rows.length) lastRowsPage = i })
-  const cols = showQty ? ['34%', '13%', '13%', '12%', '13%', '15%'] : ['44%', '15%', '17%', '24%']
+  const cols = showQty ? ['30%', '16%', '12%', '12%', '14%', '16%'] : ['44%', '15%', '17%', '24%']
 
   return (
-    <div dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang} className={'quote-doc brand-' + (q.brand ?? 'ms_elbrancy') + ' lang-' + lang} style={{ ['--q-primary' as string]: brand.primary, ['--q-heading' as string]: brand.heading }}>
+    <div ref={ref} dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang} className={'quote-doc brand-' + (q.brand ?? 'ms_elbrancy') + ' lang-' + lang + (dense ? ' dense-1' : '') + (dense > 1 ? ' dense-2' : '')} style={{ ['--q-primary' as string]: brand.primary, ['--q-heading' as string]: brand.heading }}>
       {pages.map((pg, pi) => (
         <div className="q-page" key={pi}>
           <img className="q-bg" src={letterheadUrl(q.brand)} alt="" />
@@ -109,12 +132,24 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
 
             {pg.policy && (
               <>
-                <div className={'q-policy' + (compact || pg.rows.length === 0 ? ' tight' : '')}>
-                  <div className="t">{T.policy}</div>
-                  <ol>
-                    {q.policy_lines.map((l, i) => <li key={i}>{l}</li>)}
-                    {q.payment_terms && <li>{T.payment}: {q.payment_terms}</li>}
-                  </ol>
+                <div className={'q-policy' + (compact || pg.rows.length === 0 || titled ? ' tight' : '')}>
+                  {titled ? sections.map((sec, si) => (
+                    <div className="q-sec" key={si}>
+                      {sec.title && <div className="t">{sec.title}</div>}
+                      <ul>
+                        {sec.items.map((l, i) => <li key={i}>{l}</li>)}
+                        {si === 0 && q.payment_terms && <li>{T.payment}: {q.payment_terms}</li>}
+                      </ul>
+                    </div>
+                  )) : (
+                    <>
+                      <div className="t">{T.policy}</div>
+                      <ol>
+                        {q.policy_lines.map((l, i) => <li key={i}>{l}</li>)}
+                        {q.payment_terms && <li>{T.payment}: {q.payment_terms}</li>}
+                      </ol>
+                    </>
+                  )}
                 </div>
                 <div className="q-sign">
                   <div className="q-sign-box">{T.signature}</div>
@@ -157,6 +192,20 @@ export const QUOTE_PRINT_CSS = `
 .q-policy .t { font-size: 9.5pt; font-weight: 700; color: var(--q-primary, #176b4b) }
 .q-policy ol { margin: 3mm 0 0; margin-inline-start: 8mm; padding: 0; font-size: 9.5pt; line-height: 1.8; list-style: decimal }
 .q-policy li { padding-inline-start: 1mm }
+.q-policy ul { margin: 1mm 0 0; margin-inline-start: 6mm; padding: 0; font-size: 9pt; line-height: 1.55; list-style: disc }
+.q-sec + .q-sec { margin-top: 2.5mm }
+.quote-doc.dense-1 h1 { font-size: 20pt; margin: 1mm 0 4mm }
+.quote-doc.dense-1 .q-to, .quote-doc.dense-1 .q-greet { margin-bottom: 1.5mm }
+.quote-doc.dense-1 table { margin-top: 4mm }
+.quote-doc.dense-1 th { padding: 2.5mm 2mm }
+.quote-doc.dense-1 td { padding: 2.2mm 2.5mm }
+.quote-doc.dense-1 .q-policy, .quote-doc.dense-1 .q-policy.tight { margin-top: 4mm }
+.quote-doc.dense-1 .q-sign { margin-top: 4mm }
+.quote-doc.dense-2 .q-date { font-size: 10pt }
+.quote-doc.dense-2 th, .quote-doc.dense-2 td { font-size: 8.5pt }
+.quote-doc.dense-2 td { padding: 1.6mm 2mm }
+.quote-doc.dense-2 .q-policy ul, .quote-doc.dense-2 .q-policy ol { font-size: 8.5pt; line-height: 1.4 }
+.quote-doc.dense-2 .q-sec + .q-sec { margin-top: 1.5mm }
 .quote-doc.lang-ar { font-family: 'IBM Plex Sans Arabic', Arial, sans-serif }
 .quote-doc.lang-ar .q-policy ol { list-style: arabic-indic }
 .q-sign { margin-top: 6mm; display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm }
