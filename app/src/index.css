@@ -35,3 +35,14 @@
   --sidebar: 165 30% 9%;
 }
 body { @apply bg-background text-foreground antialiased; font-feature-settings: "cv11", "ss01"; }
+
+/* Small tooltip for icon-only buttons: <button data-tip="Notifications"> */
+@media (hover: hover) {
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after {
+    content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    white-space: nowrap; pointer-events: none; z-index: 60; border-radius: 6px; padding: 4px 8px;
+    font-size: 12px; font-weight: 500; line-height: 1.2; background: hsl(var(--foreground)); color: hsl(var(--background));
+  }
+}
+@media (hover: hover) { [data-tip-end]:hover::after, [data-tip-end]:focus-visible::after { left: auto; right: 0; transform: none; } }

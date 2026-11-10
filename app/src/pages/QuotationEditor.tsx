@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
+import { StickyActions } from '@/components/ui/sticky-actions'
+import { useLeaveGuard } from '@/lib/useLeaveGuard'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
 
@@ -397,13 +399,14 @@ export function QuotationEditor() {
   const forBrand = useCallback((p: Product) => (form?.brand === 'prime_roots') === (p.product_type === 'jam'), [form?.brand])
   const grouped = useMemo(() => (base?.categories ?? []).map((c) => ({ c, items: (base?.products ?? []).filter((p) => p.category_id === c.id && !p.archived_at && forBrand(p)).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => g.items.length), [base, forBrand])
 
+  useLeaveGuard(dirty && canEdit, canEdit ? save : undefined)
   if (error) return <ErrorState message={error} />
   if (!base || !form) return <Loading />
 
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => (!dirty || window.confirm('Leave without saving?')) && nav('/quotations')} aria-label="Back"><ArrowLeft /></Button>
+        <Button variant="ghost" size="icon" onClick={() => (!dirty || !canEdit || window.confirm('You have unsaved changes. Leave without saving?')) && nav('/quotations')} aria-label="Back"><ArrowLeft /></Button>
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
             {quote?.number ?? 'New quotation'}
@@ -646,6 +649,12 @@ export function QuotationEditor() {
           )}
         </div>
       </div>
+      {canEdit && (
+        <StickyActions dirty={dirty} info={<span className="text-muted-foreground">{lines.length} product{lines.length === 1 ? '' : 's'} · Total <b className="text-foreground tabular-nums">{grand != null ? money(grand, form.currency) : '—'}</b></span>}>
+          <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>
+          <Button onClick={save} disabled={!!busy} title="Ctrl + S">{busy === 'save' ? <Loader2 className="animate-spin" /> : <Save />}Save</Button>
+        </StickyActions>
+      )}
     </>
   )
 }

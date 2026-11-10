@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
+import { StickyActions } from '@/components/ui/sticky-actions'
+import { useLeaveGuard } from '@/lib/useLeaveGuard'
 import { ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
 
@@ -157,13 +159,14 @@ export function ProformaEditor() {
   }
 
   if (error) return <ErrorState message={error} />
+  useLeaveGuard(dirty && canEdit, canEdit ? save : undefined)
   if (!h) return <Loading />
   const inp = (k: keyof Head, label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}, cls = '') => <Field label={label} className={cls}><Input value={h[k]} onChange={upd(k)} {...props} /></Field>
 
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Button variant="ghost" size="icon" aria-label="Back" onClick={() => (!dirty || window.confirm('Leave without saving?')) && nav('/proformas')}><ArrowLeft /></Button>
+        <Button variant="ghost" size="icon" aria-label="Back" onClick={() => (!dirty || !canEdit || window.confirm('You have unsaved changes. Leave without saving?')) && nav('/proformas')}><ArrowLeft /></Button>
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">{pi?.number ?? 'New proforma invoice'}{pi && pi.version > 1 && <span className="text-sm font-normal text-muted-foreground">rev. {pi.version}</span>}
             <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', PI_STYLE[status])}>{PI_STATUS[status]}</span></h1>
@@ -236,6 +239,12 @@ export function ProformaEditor() {
           {canWrite && pi?.status === 'draft' && pi.version === 1 && <Button variant="ghost" className="w-full text-destructive" onClick={remove}><Trash2 />Delete draft</Button>}
         </div>
       </div>
+      {canEdit && (
+        <StickyActions dirty={dirty} info={<span className="text-muted-foreground">Total <b className="text-foreground tabular-nums">{money(total, h.currency)}</b></span>}>
+          <Button variant="outline" onClick={() => printIt()} disabled={!!busy}><Printer />Preview / PDF</Button>
+          <Button onClick={save} disabled={!!busy} title="Ctrl + S">{busy === 'save' ? <Loader2 className="animate-spin" /> : <Save />}Save</Button>
+        </StickyActions>
+      )}
     </>
   )
 }

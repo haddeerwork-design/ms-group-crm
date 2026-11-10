@@ -51,7 +51,7 @@ export function NotificationBell() {
 
   return (
     <div className="relative" ref={ref}>
-      <Button variant="ghost" size="icon" aria-label={`Notifications (${badge})`} onClick={() => { setOpen((o) => !o); if (!open) load() }}>
+      <Button variant="ghost" size="icon" aria-label={`Notifications (${badge})`} data-tip="Notifications" onClick={() => { setOpen((o) => !o); if (!open) load() }}>
         <Bell />
         {badge > 0 && <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-white">{badge > 99 ? '99+' : badge}</span>}
       </Button>

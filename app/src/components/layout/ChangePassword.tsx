@@ -57,7 +57,7 @@ export function ChangePasswordButton() {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Change password" title="Change password"><KeyRound /></Button>
+      <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Change password" data-tip="Change password"><KeyRound /></Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Change password</DialogTitle><DialogDescription>Pick a password only you know.</DialogDescription></DialogHeader>
