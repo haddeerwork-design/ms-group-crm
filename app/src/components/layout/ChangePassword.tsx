@@ -3,7 +3,7 @@ import { KeyRound, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -28,8 +28,8 @@ function Form({ onDone }: { onDone?: () => void }) {
   }
   return (
     <form onSubmit={save} className="space-y-4">
-      <div className="space-y-2"><Label htmlFor="np">New password</Label><Input id="np" type="password" autoComplete="new-password" value={p} onChange={(e) => setP(e.target.value)} /></div>
-      <div className="space-y-2"><Label htmlFor="np2">Repeat new password</Label><Input id="np2" type="password" autoComplete="new-password" value={c} onChange={(e) => setC(e.target.value)} /></div>
+      <div className="space-y-2"><Label htmlFor="np">New password</Label><PasswordInput id="np" autoComplete="new-password" value={p} onChange={(e) => setP(e.target.value)} /></div>
+      <div className="space-y-2"><Label htmlFor="np2">Repeat new password</Label><PasswordInput id="np2" autoComplete="new-password" value={c} onChange={(e) => setC(e.target.value)} /></div>
       <p className="text-xs text-muted-foreground">At least 10 characters, with letters and numbers.</p>
       <Button type="submit" disabled={busy} className="w-full">{busy && <Loader2 className="animate-spin" />}Save new password</Button>
     </form>
