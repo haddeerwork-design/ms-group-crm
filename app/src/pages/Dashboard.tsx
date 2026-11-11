@@ -6,13 +6,14 @@ import {
 import { useAuth } from '@/lib/auth'
 import { CRM_ASSIGNERS } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
-import { LEAD_STATUS } from '@/lib/crm'
+import { LEAD_STATUS, todayISO } from '@/lib/crm'
 import { STAGE_LABEL, outstandingByCurrency } from '@/lib/orders'
 import { taskBucket } from '@/lib/sales'
 import {
   PRESETS, companyStats, currencies, deltaPct, employeePerformance, fetchAnalytics, groupSales, inRange, inSeason, leadsByStatus, onTime, pct,
   previousRange, quoteStats, rangeFor, salesByMonth, salesTotals, shipModes, upcomingShipments, type AnalyticsData, type Preset,
 } from '@/lib/analytics'
+import { MyDay } from '@/components/analytics/MyDay'
 import { AreaTrend, DeltaPill, Donut, Panel, StatCard, initials } from '@/components/analytics/dash'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
@@ -109,6 +110,8 @@ export function Dashboard() {
         <Link to="/reports" className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"><BarChart3 className="size-4" />Reports</Link>
       </div>
       {d.warnings.length > 0 && <p className="mb-3 text-xs text-muted-foreground">Some data could not be loaded: {d.warnings.join(' · ')}</p>}
+
+      {session && <MyDay data={raw} userId={session.user.id} today={todayISO()} name={profile?.full_name} />}
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">

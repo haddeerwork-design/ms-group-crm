@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
+import { usePersistentState } from '@/lib/usePersistentState'
 
 const TONE: Partial<Record<Stage, string>> = { shipped: 'bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-900', arrived: 'bg-violet-50 text-violet-800 border-violet-200 dark:bg-violet-950 dark:text-violet-200 dark:border-violet-900', completed: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900', cancelled: 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-900' }
 
@@ -21,7 +22,7 @@ export function Orders() {
   const { hasRole } = useAuth()
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchOrders>> | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [q, setQ] = useState(''); const [st, setSt] = useState('active')
+  const [q, setQ] = usePersistentState('orders.q', ''); const [st, setSt] = usePersistentState('orders.stage', 'active')
   useEffect(() => { fetchOrders().then(setRows).catch((e) => setError(e.message)) }, [])
   const list = useMemo(() => (rows ?? []).filter((r) => (st === 'active' ? !['completed', 'cancelled'].includes(r.stage) : !st || r.stage === st)
     && (!q.trim() || [r.number, r.customer_company, r.customer_name, r.bl_awb_number, r.container_numbers, r.destination].some((x) => (x ?? '').toLowerCase().includes(q.trim().toLowerCase())))), [rows, q, st])

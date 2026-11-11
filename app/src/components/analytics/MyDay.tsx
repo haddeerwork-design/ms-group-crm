@@ -1,0 +1,54 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { CalendarClock, CheckCircle2, CheckSquare, ChevronDown, Clock, PhoneCall, Ship } from 'lucide-react'
+import { AWAIT_DAYS, myDay, type AnalyticsData } from '@/lib/analytics'
+import { Panel } from './dash'
+import { cn } from '@/lib/utils'
+
+const dm = (iso: string) => new Date(iso.slice(0, 10) + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+const ago = (iso: string, today: string) => Math.round((Date.parse(today) - Date.parse(iso.slice(0, 10))) / 86400000)
+
+/** Personal to-do for today, built from what is already in the system. */
+export function MyDay({ data, userId, today, name }: { data: AnalyticsData; userId: string; today: string; name?: string | null }) {
+  const r = myDay(data, userId, today)
+  const [open, setOpen] = useState(true)
+  const groups = [
+    { key: 'tasks', icon: CheckSquare, title: 'Tasks due', to: '/tasks', items: r.tasks.map((t) => ({ id: t.id, to: '/tasks', label: t.title, meta: t.due_date! < today ? `overdue · ${dm(t.due_date!)}` : 'today', late: t.due_date! < today })) },
+    { key: 'follow', icon: PhoneCall, title: 'Follow-ups', to: '/crm', items: r.followUps.map((c) => ({ id: c.id, to: `/crm/${c.id}`, label: c.name, meta: c.next_follow_up_date! < today ? `overdue · ${dm(c.next_follow_up_date!)}` : 'today', late: c.next_follow_up_date! < today })) },
+    { key: 'await', icon: Clock, title: `No answer for ${AWAIT_DAYS}+ days`, to: '/quotations', items: r.awaiting.map((q) => ({ id: q.id, to: `/quotations/${q.id}`, label: `${q.number}${q.customer_company ? ` · ${q.customer_company}` : ''}`, meta: `sent ${ago(q.sent_at!, today)} days ago`, late: false })) },
+    { key: 'exp', icon: CalendarClock, title: 'Quotations expiring', to: '/quotations', items: r.expiring.map((q) => ({ id: q.id, to: `/quotations/${q.id}`, label: `${q.number}${q.customer_company ? ` · ${q.customer_company}` : ''}`, meta: q.valid_until === today ? 'expires today' : `until ${dm(q.valid_until!)}`, late: q.valid_until === today })) },
+    { key: 'arr', icon: Ship, title: 'Arriving this week', to: '/orders', items: r.arriving.map((o) => ({ id: o.id, to: `/orders/${o.id}`, label: `${o.number}${o.customer_company ? ` · ${o.customer_company}` : ''}`, meta: `ETA ${dm(o.eta!)}`, late: false })) },
+  ].filter((g) => g.items.length)
+
+  return (
+    <Panel className="mb-4"
+      title={<span>My day{name ? `, ${name.split(' ')[0]}` : ''}</span>}
+      sub={r.total ? `${r.total} thing${r.total > 1 ? 's' : ''} need${r.total > 1 ? '' : 's'} you today` : 'Nothing waiting for you today'}
+      action={r.total > 0 && <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">{open ? 'Hide' : 'Show'}<ChevronDown className={cn('size-3.5 transition-transform', !open && '-rotate-90')} /></button>}>
+      {!r.total ? (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle2 className="size-4 text-emerald-600" />All clear. No tasks, follow-ups or quotations need you right now.</p>
+      ) : open && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {groups.map(({ key, icon: Icon, title, to, items }) => (
+            <div key={key} className="min-w-0">
+              <Link to={to} className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+                <Icon className="size-3.5" />{title}<span className="ml-auto rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-foreground">{items.length}</span>
+              </Link>
+              <ul className="space-y-1">
+                {items.slice(0, 4).map((i) => (
+                  <li key={i.id}>
+                    <Link to={i.to} className="block rounded-md px-2 py-1.5 hover:bg-accent">
+                      <div className="truncate text-sm font-medium">{i.label}</div>
+                      <div className={cn('text-xs', i.late ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>{i.meta}</div>
+                    </Link>
+                  </li>
+                ))}
+                {items.length > 4 && <li><Link to={to} className="px-2 text-xs font-medium text-primary hover:underline">+{items.length - 4} more</Link></li>}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
+  )
+}

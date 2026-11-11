@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, ArchiveRestore, CalendarDays, Copy, FolderCog, List, Plus, Search } from 'lucide-react'
+import { Archive, ArchiveRestore, CalendarDays, Copy, Table2, FolderCog, List, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { archivedToast } from '@/lib/undo'
@@ -19,7 +19,9 @@ import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { ProductDialog } from '@/components/products/ProductDialog'
 import { CategoriesDialog } from '@/components/products/CategoriesDialog'
 import { cn } from '@/lib/utils'
+import { usePersistentState } from '@/lib/usePersistentState'
 import { MobileFilters } from '@/components/ui/mobile-filters'
+import { BulkPackaging } from '@/components/products/BulkPackaging'
 
 const TYPE_STYLE = {
   fresh: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900',
@@ -32,12 +34,12 @@ export function Products() {
   const canEdit = hasRole(...CATALOG_MANAGERS)
   const [data, setData] = useState<{ categories: Category[]; products: Product[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [q, setQ] = useState('')
-  const [cat, setCat] = useState('')
-  const [avail, setAvail] = useState('')
-  const [setup, setSetup] = useState('')
-  const [showArchived, setShowArchived] = useState(false)
-  const [view, setView] = useState<'list' | 'season'>('list')
+  const [q, setQ] = usePersistentState('products.q', '')
+  const [cat, setCat] = usePersistentState('products.cat', '')
+  const [avail, setAvail] = usePersistentState('products.avail', '')
+  const [setup, setSetup] = usePersistentState('products.setup', '')
+  const [showArchived, setShowArchived] = usePersistentState('products.archived', false)
+  const [view, setView] = usePersistentState<'list' | 'season' | 'quick'>('products.view', 'list')
   const [editing, setEditing] = useState<Product | null>(null)
   const [dupOf, setDupOf] = useState<Product | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -114,6 +116,7 @@ export function Products() {
         <div className="ml-auto flex rounded-md border border-border p-0.5">
           <Button variant={view === 'list' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('list')}><List />List</Button>
           <Button variant={view === 'season' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('season')}><CalendarDays />Seasons</Button>
+          {canEdit && <Button variant={view === 'quick' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('quick')}><Table2 />Quick edit</Button>}
         </div>
       </div>
 
@@ -121,6 +124,7 @@ export function Products() {
         <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" role="status">
           <span className="flex-1"><b>{needSetup} products</b> still need packaging weight or cartons per pallet. The planner and quotations need these to work out tons.</span>
           <Button size="sm" variant="outline" onClick={() => setSetup('missing')}>Show them</Button>
+          {canEdit && <Button size="sm" onClick={() => { setSetup('missing'); setView('quick') }}>Fill them in</Button>}
         </div>
       )}
       <Card>
@@ -210,6 +214,8 @@ export function Products() {
                 </tbody>
               </table>
               </>
+            ) : view === 'quick' ? (
+              <BulkPackaging rows={rows.filter((p) => !p.archived_at)} onSaved={load} />
             ) : (
               <SeasonCalendar rows={rows} onOpen={open} />
             )}

@@ -13,6 +13,7 @@ import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { CompanyForm } from '@/components/crm/CompanyForm'
 import { ImportDialog } from '@/components/crm/ImportDialog'
 import { cn } from '@/lib/utils'
+import { usePersistentState } from '@/lib/usePersistentState'
 import { MobileFilters } from '@/components/ui/mobile-filters'
 
 const FOLLOW = { overdue: 'text-destructive font-medium', today: 'text-amber-700 dark:text-amber-300 font-medium', soon: 'text-foreground' }
@@ -24,7 +25,7 @@ export function Companies() {
   const [rows, setRows] = useState<Company[] | null>(null)
   const [team, setTeam] = useState<TeamMember[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [f, setF] = useState({ q: '', status: '', country: '', owner: '', priority: '', follow: '', archived: false })
+  const [f, setF] = usePersistentState('crm.filters', { q: '', status: '', country: '', owner: '', priority: '', follow: '', archived: false })
   const [addOpen, setAddOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
 

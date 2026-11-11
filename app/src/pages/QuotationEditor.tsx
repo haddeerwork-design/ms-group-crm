@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, FileText, History, Loader2, Pencil, Plus, Printer, RotateCcw, Save, Send, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Copy, FileText, History, Loader2, Pencil, Plus, Printer, RotateCcw, Save, Send, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { StickyActions } from '@/components/ui/sticky-actions'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
+import { AWAIT_DAYS } from '@/lib/analytics'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +69,39 @@ function parseShrink(packing: string): { k: number; jar: string } | null {
 
 const Step = ({ n }: { n: number }) => <span className="mr-2 inline-grid size-6 place-items-center rounded-full bg-primary/10 align-[2px] text-xs font-semibold text-primary">{n}</span>
 
+function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Line[] } {
+        const form: Form = {
+          customer_name: q.customer_name ?? '', customer_company: q.customer_company ?? '', customer_country: q.customer_country ?? '',
+          customer_email: q.customer_email ?? '', customer_phone: q.customer_phone ?? '', destination: q.destination ?? '',
+          incoterm: q.incoterm ?? 'CIF', currency: q.currency, payment_terms: q.payment_terms ?? '', issue_date: q.issue_date,
+          validity_days: s(q.validity_days), production_time: q.production_time ?? '', policy: q.policy_lines.join('\n'),
+          show_quantities: q.show_quantities, notes: q.notes ?? '', plan_id: q.plan_id, company_id: (q as Quotation & { company_id?: string | null }).company_id ?? '',
+          brand: q.brand ?? 'ms_elbrancy', language: (q as Quotation & { language?: QuoteLang }).language ?? 'en',
+        }
+        const lines: Line[] = (q.quotation_items ?? []).map((i) => ({
+          key: ++seq, product_id: i.product_id ?? '', packaging_id: i.packaging_id ?? '', description: i.description, packing: i.packing ?? '',
+          product_type_label: i.product_type_label ?? '', quantity: s(i.quantity), quantity_unit: i.quantity_unit ?? 'tons',
+          net: s(i.net_weight_kg), cpp: s(i.cartons_per_pallet), price: s(i.price_per_ton), price_id: i.price_id, priceNote: '',
+          basis: i.price_basis ?? 'ton', unit_label: i.unit_label ?? '',
+          // show the price as it was typed, in its own currency, with the rate that was saved
+          ...((x) => x.input_price && x.input_currency && x.input_currency !== q.currency
+            ? { in_ccy: x.input_currency, fx: s(x.fx_rate), fxNote: x.fx_source ? `saved rate · ${x.fx_source}` : 'saved rate',
+                price: i.price_basis === 'unit' ? s(i.price_per_ton) : s(x.input_price), unit_price: i.price_basis === 'unit' ? s(x.input_price) : s(i.unit_price) }
+            : { in_ccy: q.currency, fx: '', fxNote: '', unit_price: s(i.unit_price) })(i as typeof i & { input_price?: number | null; input_currency?: string | null; fx_rate?: number | null; fx_source?: string | null }),
+        })).map((l, idx) => {
+          // jam lines: back to "price per jar" (+ jars per shrink)
+          const pr = products.find((x) => x.id === l.product_id)
+          if (pr?.product_type !== 'jam' || l.basis !== 'unit') return l
+          const it = (q.quotation_items ?? [])[idx] as QuoteItemRow
+          const sh = l.unit_label === 'shrink' ? parseShrink(l.packing) : null
+          const k = sh?.k ?? 1
+          const jarPrice = it.input_price ?? (it.unit_price != null ? it.unit_price / k : null)
+          return { ...l, sell: sh ? 'shrink' as const : 'jar' as const, per_shrink: sh ? String(k) : '', packing: sh?.jar ?? l.packing,
+            net: l.net && sh ? s(+(n(l.net)! / k).toFixed(4)) : l.net, unit_label: 'jar', unit_price: s(jarPrice) }
+        })
+        return { form, lines }
+}
+
 export function QuotationEditor() {
   const { id } = useParams()
   const isNew = !id || id === 'new'
@@ -81,6 +115,15 @@ export function QuotationEditor() {
   const [lines, setLines] = useState<Line[]>([])
   const [dirty, setDirty] = useState(false)
   const [more, setMore] = useState(false)
+  // Draft safety net: unsaved edits are kept in this browser and offered back after a crash or a closed tab.
+  const draftKey = `ms_qdraft:${isNew ? 'new' : id}`
+  const [draft, setDraft] = useState<{ at: string; form: Form; lines: Line[] } | null>(null)
+  const dropDraft = useCallback(() => { try { localStorage.removeItem(draftKey) } catch { /* ignore */ } setDraft(null) }, [draftKey])
+  useEffect(() => {
+    if (!dirty || !form) return
+    const h = setTimeout(() => { try { localStorage.setItem(draftKey, JSON.stringify({ at: new Date().toISOString(), form, lines })) } catch { /* ignore */ } }, 800)
+    return () => clearTimeout(h)
+  }, [dirty, form, lines, draftKey])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -136,44 +179,47 @@ export function QuotationEditor() {
         }
         if (f.brand === 'prime_roots' && settings.prime_roots_validity_days) f.validity_days = s(settings.prime_roots_validity_days)
         f.policy = policyFrom(settings, f)
-        setForm(f); setLines(ls); setDirty(!!planId)
+        const fromId = params.get('from')
+        if (fromId) {
+          // Duplicate: same products, prices and terms; buyer cleared so it isn't sent to the wrong company by mistake
+          const { quote: src } = await fetchQuotation(fromId)
+          const r = quoteToForm(src, cat.products)
+          Object.assign(f, r.form, {
+            customer_name: '', customer_company: '', customer_country: '', customer_email: '', customer_phone: '', destination: '',
+            company_id: '', issue_date: today(), notes: '', plan_id: null,
+          })
+          ls = r.lines.map((l) => ({ ...l, key: ++seq }))
+          if (co) Object.assign(f, companyFields(co))
+          toast.success(`Copied from ${src.number}. Choose the buyer, and check the prices are still current.`)
+        }
+        setForm(f); setLines(ls); setDirty(!!planId || !!fromId)
       } else {
         const { quote: q, versions: vs } = await fetchQuotation(id!)
         setQuote(q); setVersions(vs)
-        setForm({
-          customer_name: q.customer_name ?? '', customer_company: q.customer_company ?? '', customer_country: q.customer_country ?? '',
-          customer_email: q.customer_email ?? '', customer_phone: q.customer_phone ?? '', destination: q.destination ?? '',
-          incoterm: q.incoterm ?? 'CIF', currency: q.currency, payment_terms: q.payment_terms ?? '', issue_date: q.issue_date,
-          validity_days: s(q.validity_days), production_time: q.production_time ?? '', policy: q.policy_lines.join('\n'),
-          show_quantities: q.show_quantities, notes: q.notes ?? '', plan_id: q.plan_id, company_id: (q as Quotation & { company_id?: string | null }).company_id ?? '',
-          brand: q.brand ?? 'ms_elbrancy', language: (q as Quotation & { language?: QuoteLang }).language ?? 'en',
-        })
-        setLines((q.quotation_items ?? []).map((i) => ({
-          key: ++seq, product_id: i.product_id ?? '', packaging_id: i.packaging_id ?? '', description: i.description, packing: i.packing ?? '',
-          product_type_label: i.product_type_label ?? '', quantity: s(i.quantity), quantity_unit: i.quantity_unit ?? 'tons',
-          net: s(i.net_weight_kg), cpp: s(i.cartons_per_pallet), price: s(i.price_per_ton), price_id: i.price_id, priceNote: '',
-          basis: i.price_basis ?? 'ton', unit_label: i.unit_label ?? '',
-          // show the price as it was typed, in its own currency, with the rate that was saved
-          ...((x) => x.input_price && x.input_currency && x.input_currency !== q.currency
-            ? { in_ccy: x.input_currency, fx: s(x.fx_rate), fxNote: x.fx_source ? `saved rate · ${x.fx_source}` : 'saved rate',
-                price: i.price_basis === 'unit' ? s(i.price_per_ton) : s(x.input_price), unit_price: i.price_basis === 'unit' ? s(x.input_price) : s(i.unit_price) }
-            : { in_ccy: q.currency, fx: '', fxNote: '', unit_price: s(i.unit_price) })(i as typeof i & { input_price?: number | null; input_currency?: string | null; fx_rate?: number | null; fx_source?: string | null }),
-        })).map((l, idx) => {
-          // jam lines: back to "price per jar" (+ jars per shrink)
-          const pr = cat.products.find((x) => x.id === l.product_id)
-          if (pr?.product_type !== 'jam' || l.basis !== 'unit') return l
-          const it = (q.quotation_items ?? [])[idx] as QuoteItemRow
-          const sh = l.unit_label === 'shrink' ? parseShrink(l.packing) : null
-          const k = sh?.k ?? 1
-          const jarPrice = it.input_price ?? (it.unit_price != null ? it.unit_price / k : null)
-          return { ...l, sell: sh ? 'shrink' as const : 'jar' as const, per_shrink: sh ? String(k) : '', packing: sh?.jar ?? l.packing,
-            net: l.net && sh ? s(+(n(l.net)! / k).toFixed(4)) : l.net, unit_label: 'jar', unit_price: s(jarPrice) }
-        }))
+        const r = quoteToForm(q, cat.products)
+        setForm(r.form); setLines(r.lines)
         setDirty(false)
       }
     } catch (e) { setError((e as Error).message) }
   }, [id, isNew, params, policyFrom])
   useEffect(() => { load() }, [load])
+  const offered = useRef(false)
+  useEffect(() => {
+    if (offered.current || !form || (!isNew && !quote)) return
+    offered.current = true
+    try {
+      const raw = localStorage.getItem(draftKey); if (!raw) return
+      const d = JSON.parse(raw) as { at: string; form: Form; lines: Line[] }
+      // only if the draft is newer than the saved quotation
+      if (quote && Date.parse(quote.updated_at) >= Date.parse(d.at)) { localStorage.removeItem(draftKey); return }
+      if (d.form && Array.isArray(d.lines)) setDraft(d)
+    } catch { /* ignore */ }
+  }, [form, quote, isNew, draftKey])
+  function restoreDraft() {
+    if (!draft) return
+    setForm(draft.form); setLines(draft.lines.map((l) => ({ ...l, key: ++seq }))); setDirty(true); setDraft(null)
+    toast.success('Unsaved changes restored. Click Save to keep them.')
+  }
 
   const upd = (patch: Partial<Form>) => { setForm((f) => f && ({ ...f, ...patch })); setDirty(true) }
   const updLine = (key: number, patch: Partial<Line>) => { setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l))); setDirty(true) }
@@ -355,7 +401,7 @@ export function QuotationEditor() {
     const r = await supabase.from('quotation_items').insert(items)
     setBusy(null)
     if (r.error) { toast.error('Saved, but the products failed: ' + r.error.message); return qid }
-    setDirty(false)
+    setDirty(false); dropDraft()
     toast.success('Quotation saved')
     if (isNew) nav(`/quotations/${qid}`, { replace: true })
     else load()
@@ -381,7 +427,23 @@ export function QuotationEditor() {
       await supabase.from('activities').insert({ company_id: form.company_id, kind: 'quotation', summary: `Quotation ${quote?.number ?? ''} ${STATUS_LABEL[st].toLowerCase()}`, created_by: session?.user.id })
       if (st === 'sent') await supabase.from('companies').update({ lead_status: 'quotation_sent', last_contact_date: today() }).eq('id', form.company_id).in('lead_status', ['new_lead', 'contacted', 'interested'])
     }
+    if (st === 'sent' && session) await addFollowUp(quote?.number ?? '', form?.customer_company || form?.customer_name || '')
     load()
+  }
+
+  /** After sending: a follow-up task in AWAIT_DAYS days, with Undo. */
+  async function addFollowUp(number: string, who: string) {
+    const d = new Date(); d.setDate(d.getDate() + AWAIT_DAYS)
+    const due = d.toISOString().slice(0, 10)
+    const { data, error } = await supabase.from('tasks').insert({
+      title: `Follow up on quotation ${number}${who ? ` · ${who}` : ''}`, company_id: form?.company_id || null,
+      assignee_id: session!.user.id, created_by: session!.user.id, due_date: due, priority: 'medium', status: 'open',
+    }).select('id').single()
+    if (error || !data) return
+    toast.message(`Follow-up task added for ${fmtDateDMY(due)}`, {
+      duration: 8000,
+      action: { label: 'Undo', onClick: async () => { await supabase.from('tasks').delete().eq('id', data.id); toast.success('Follow-up removed') } },
+    })
   }
 
   async function remove() {
@@ -421,6 +483,7 @@ export function QuotationEditor() {
         <div className="flex flex-wrap gap-2">
           {/* Save and Preview sit in the bar at the bottom while editing */}
           {!canEdit && <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>}
+          {quote && hasRole(...QUOTE_WRITERS) && <Button variant="outline" onClick={() => (!dirty || window.confirm('You have unsaved changes. Leave without saving?')) && nav(`/quotations/new?from=${quote.id}`)} data-tip="New quotation with the same products and terms"><Copy />Duplicate</Button>}
           {canWrite && editableStatus && <Button onClick={() => setStatus('sent')} disabled={!!busy}>{busy === 'sent' ? <Loader2 className="animate-spin" /> : <Send />}Mark as sent</Button>}
           {canWrite && status === 'sent' && <>
             <Button onClick={() => setStatus('accepted')} disabled={!!busy}><Check />Accepted</Button>
@@ -435,6 +498,14 @@ export function QuotationEditor() {
       {!editableStatus && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">This quotation is <b>{STATUS_LABEL[status].toLowerCase()}</b> and locked. Use <b>Revise</b> to make a new version; the current one stays saved.</p>}
       {!canWrite && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">Read-only for your role.</p>}
 
+      {draft && canEdit && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100" role="status">
+          <History className="size-4 shrink-0" />
+          <span className="flex-1">You have unsaved changes from {new Date(draft.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} on this device.</span>
+          <Button size="sm" onClick={restoreDraft}>Restore them</Button>
+          <Button size="sm" variant="ghost" onClick={dropDraft}>Discard</Button>
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card>

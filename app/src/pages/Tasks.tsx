@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { TaskDialog } from '@/components/sales/TaskDialog'
 import { cn } from '@/lib/utils'
+import { usePersistentState } from '@/lib/usePersistentState'
 
 const TABS: { k: Bucket | 'all_open'; label: string }[] = [
   { k: 'today', label: 'Today' }, { k: 'overdue', label: 'Overdue' }, { k: 'upcoming', label: 'Upcoming' },
@@ -27,8 +28,8 @@ export function Tasks() {
   const [d, setD] = useState<{ tasks: Task[]; companies: Company[]; opps: Opportunity[]; team: TeamMember[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Bucket | 'all_open'>('today')
-  const [view, setView] = useState<'list' | 'calendar'>('list')
-  const [who, setWho] = useState('me')
+  const [view, setView] = usePersistentState<'list' | 'calendar'>('tasks.view', 'list')
+  const [who, setWho] = usePersistentState('tasks.who', 'me')
   const [month, setMonth] = useState(() => todayISO().slice(0, 7))
   const [editing, setEditing] = useState<Task | null>(null)
   const [open, setOpen] = useState(false)

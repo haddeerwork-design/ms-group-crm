@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/select'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { SimpleFormDialog, fromRow, toRow, type FieldSpec } from '@/components/ui/simple-form'
 import { cn } from '@/lib/utils'
+import { usePersistentState } from '@/lib/usePersistentState'
 
 export const VERIFY = { unverified: 'Unverified lead', potential_buyer: 'Potential buyer', verified_importer: 'Verified importer' } as const
 type Verify = keyof typeof VERIFY
@@ -49,10 +50,10 @@ export function MarketResearch() {
   const [rows, setRows] = useState<Lead[] | null>(null)
   const [team, setTeam] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
-  const [q, setQ] = useState('')
-  const [country, setCountry] = useState('')
-  const [status, setStatus] = useState('')
-  const [only, setOnly] = useState<'' | 'short' | 'mine' | 'open' | 'archived'>('open')
+  const [q, setQ] = usePersistentState('research.q', '')
+  const [country, setCountry] = usePersistentState('research.country', '')
+  const [status, setStatus] = usePersistentState('research.status', '')
+  const [only, setOnly] = usePersistentState<'' | 'short' | 'mine' | 'open' | 'archived'>('research.only', 'open')
   const [edit, setEdit] = useState<Lead | 'new' | null>(null)
 
   const load = useCallback(() => Promise.all([

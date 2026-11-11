@@ -109,3 +109,19 @@ describe('comparison period', () => {
     expect(deltaPct(120, 100)).toBe(20); expect(deltaPct(5, 0)).toBeNull()
   })
 })
+
+describe('my day', () => {
+  it('only my open items that need action today', async () => {
+    const { myDay } = await import('./analytics')
+    const t = (p: object) => ({ id: Math.random().toString(), title: 't', assignee_id: 'me', status: 'open', due_date: '2026-11-11', ...p }) as never
+    const c = (p: object) => ({ id: 'c', name: 'C', owner_id: 'me', lead_status: 'interested', archived_at: null, next_follow_up_date: '2026-11-10', ...p }) as never
+    const q = (p: object) => ({ id: 'q', number: 'Q', created_by: 'me', status: 'sent', sent_at: '2026-11-05T10:00:00Z', valid_until: '2026-11-30', ...p }) as never
+    const r = myDay({
+      tasks: [t({}), t({ due_date: '2026-11-12' }), t({ status: 'done' }), t({ assignee_id: 'x' })],
+      companies: [c({}), c({ lead_status: 'lost' }), c({ next_follow_up_date: '2026-11-20' })],
+      quotes: [q({}), q({ sent_at: '2026-11-10T10:00:00Z' }), q({ status: 'draft', sent_at: null, valid_until: '2026-11-13' }), q({ created_by: 'x' })],
+      orders: [order({ stage: 'shipped', eta: '2026-11-15' }), order({ stage: 'shipped', eta: '2026-12-01' })],
+    }, 'me', '2026-11-11')
+    expect([r.tasks.length, r.followUps.length, r.awaiting.length, r.expiring.length, r.arriving.length]).toEqual([1, 1, 1, 1, 1])
+  })
+})
