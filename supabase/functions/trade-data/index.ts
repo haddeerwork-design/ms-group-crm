@@ -31,7 +31,7 @@ export type Query = {
 }
 export type Row = { reporter: string; reporterCode: number; partner: string; partnerCode: number; cmd: string; cmdDesc: string; value: number | null; kg: number | null; year: number }
 
-const CODE = /^[0-9]{2,6}(,[0-9]{2,6}){0,19}$/
+const CODE = /^[0-9]{2,6}(,[0-9]{2,6}){0,39}$/
 /** Checks the request and builds the Comtrade URL (public preview, or the full API with a key). */
 export function buildUrl(q: Query, key?: string): string {
   const flow = q.flow === 'X' ? 'X' : 'M'

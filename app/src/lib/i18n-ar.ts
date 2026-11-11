@@ -1424,4 +1424,5 @@ export const AR: Record<string, string> = {
   'Other vegetables (frozen, e.g. okra, molokhia)': 'خضار فروزن تاني (زي البامية والملوخية)',
   'Mixed vegetables (frozen)': 'خضار مشكل (فروزن)',
   'Jams & fruit jellies': 'مربى وجيلي فواكه',
+  'Type to search…': 'اكتب علشان تدوّر…',
 }
