@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from 'lucide-react'
@@ -75,7 +76,7 @@ export function StatCard({ icon: Icon, tone, label, value, delta, deltaInvert, d
       <div className="flex items-start gap-3">
         <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', TONES[tone])}><Icon className="size-5" /></span>
         <div className="min-w-0">
-          <div className="truncate text-xs font-medium text-muted-foreground">{label}</div>
+          <div className="truncate text-xs font-medium text-muted-foreground"><T>{label}</T></div>
           <div className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight tabular-nums">{value}</div>
         </div>
       </div>

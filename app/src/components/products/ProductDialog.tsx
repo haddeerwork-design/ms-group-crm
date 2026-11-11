@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -181,7 +182,7 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
                 </Field>
                 <Field label="Type" htmlFor="product_type">
                   <Select id="product_type" {...register('product_type')}>
-                    {Object.entries(PRODUCT_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    {Object.entries(PRODUCT_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}
                   </Select>
                 </Field>
                 <Field label="Varieties" htmlFor="varieties" hint="Separate with commas, e.g. Hass, Fuerte"><Input id="varieties" {...register('varieties')} /></Field>
@@ -189,7 +190,7 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
                 <Field label="Availability" htmlFor="availability">
                   <Select id="availability" {...register('availability')}>
                     <option value="">Not set</option>
-                    {Object.entries(AVAILABILITY_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    {Object.entries(AVAILABILITY_LABEL).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}
                   </Select>
                 </Field>
                 <Field label="Season starts" htmlFor="season_start_month">
@@ -216,12 +217,12 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
               <section>
                 <div className="mb-3 flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-semibold">Packaging</h4>
-                    <p className="text-xs text-muted-foreground">The ★ default is used by pricing and the container planner.</p>
+                    <h4 className="text-sm font-semibold"><T>Packaging</T></h4>
+                    <p className="text-xs text-muted-foreground"><T>The ★ default is used by pricing and the container planner.</T></p>
                   </div>
                   {canEdit && <Button type="button" variant="outline" size="sm" onClick={() => packs.append(emptyPack)}><Plus />Add packaging</Button>}
                 </div>
-                {!packs.fields.length && <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No packaging yet.</p>}
+                {!packs.fields.length && <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground"><T>No packaging yet.</T></p>}
                 <div className="space-y-3">
                   {packs.fields.map((f, i) => {
                     const e = errors.packaging?.[i]

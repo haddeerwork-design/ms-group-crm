@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Download, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -86,15 +87,15 @@ export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
         <CardContent className="overflow-x-auto">
           {!latest.length ? <Empty title="No exchange rates saved yet" hint={canEdit ? 'Fetch live rates or enter one manually.' : 'Ask Finance or the Sales Manager to add rates.'} /> : (
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="py-2 font-medium">Pair</th><th className="py-2 text-right font-medium">Rate</th><th className="py-2 pl-4 font-medium">Source</th><th className="py-2 font-medium">Age</th>
+              <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="py-2 font-medium"><T>Pair</T></th><th className="py-2 text-end font-medium"><T>Rate</T></th><th className="py-2 ps-4 font-medium"><T>Source</T></th><th className="py-2 font-medium"><T>Age</T></th>
               </tr></thead>
               <tbody>
                 {latest.sort((a, b) => (a.base_currency + a.quote_currency).localeCompare(b.base_currency + b.quote_currency)).map((r) => (
                   <tr key={r.id} className="border-b border-border last:border-0">
                     <td className="py-2 font-medium">1 {r.base_currency} = {r.quote_currency}</td>
-                    <td className="py-2 text-right tabular-nums">{Number(r.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
-                    <td className="py-2 pl-4 text-muted-foreground">{r.source}</td>
+                    <td className="py-2 text-end tabular-nums">{Number(r.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                    <td className="py-2 ps-4 text-muted-foreground">{r.source}</td>
                     <td className="py-2"><StaleBadge at={r.rate_at} /></td>
                   </tr>
                 ))}
@@ -123,7 +124,7 @@ export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
                   </div>
                 </>
               )}
-              <p className="text-xs text-muted-foreground"><a className="underline" href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates By Exchange Rate API</a></p>
+              <p className="text-xs text-muted-foreground"><a className="underline" href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer"><T>Rates By Exchange Rate API</T></a></p>
             </CardContent>
           </Card>
         )}
@@ -147,7 +148,7 @@ export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
       <Card className="lg:col-span-5">
         <CardHeader><CardTitle>History</CardTitle><CardDescription>Rates are never edited or deleted.</CardDescription></CardHeader>
         <CardContent className="overflow-x-auto">
-          {!history.length ? <p className="text-sm text-muted-foreground">Nothing yet.</p> : (
+          {!history.length ? <p className="text-sm text-muted-foreground"><T>Nothing yet.</T></p> : (
             <table className="w-full min-w-[560px] text-sm">
               <tbody>
                 {history.map((r) => (

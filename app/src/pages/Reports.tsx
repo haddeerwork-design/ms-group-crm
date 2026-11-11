@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { Download, Printer } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
@@ -131,7 +132,7 @@ export function Reports() {
             <option value="">Whole team</option>{raw.team.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
           </Select>
         )}
-        <div className="ml-auto flex gap-2">
+        <div className="ms-auto flex gap-2">
           <Button variant="outline" onClick={csv} disabled={!out.rows.length}><Download />CSV</Button>
           <Button variant="outline" onClick={() => window.print()}><Printer />Print</Button>
         </div>
@@ -149,18 +150,18 @@ export function Reports() {
       )}
       {out.note && <p className="mb-2 text-xs text-muted-foreground">{out.note}</p>}
       <Card className="overflow-x-auto">
-        {out.rows.length === 0 ? <p className="p-8 text-center text-sm text-muted-foreground">No data for this report and period.</p> : (
+        {out.rows.length === 0 ? <p className="p-8 text-center text-sm text-muted-foreground"><T>No data for this report and period.</T></p> : (
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-              <tr>{out.cols.map((c) => <th key={c.key} className={`px-3 py-2 font-medium ${c.num ? 'text-right' : ''}`}>{c.label}</th>)}</tr>
+            <thead className="border-b border-border bg-muted/40 text-start text-xs text-muted-foreground">
+              <tr>{out.cols.map((c) => <th key={c.key} className={`px-3 py-2 font-medium ${c.num ? 'text-end' : ''}`}>{c.label}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-border">
               {out.rows.map((x, i) => (
-                <tr key={i}>{out.cols.map((c) => <td key={c.key} className={`px-3 py-2 ${c.num ? 'text-right tabular-nums' : ''}`}>{typeof x[c.key] === 'number' ? (x[c.key] as number).toLocaleString('en-US', { maximumFractionDigits: 2 }) : x[c.key] || '—'}</td>)}</tr>
+                <tr key={i}>{out.cols.map((c) => <td key={c.key} className={`px-3 py-2 ${c.num ? 'text-end tabular-nums' : ''}`}>{typeof x[c.key] === 'number' ? (x[c.key] as number).toLocaleString('en-US', { maximumFractionDigits: 2 }) : x[c.key] || '—'}</td>)}</tr>
               ))}
             </tbody>
             {total != null && (
-              <tfoot className="border-t-2 border-border font-medium"><tr><td className="px-3 py-2">Total</td><td className="px-3 py-2 text-right tabular-nums">{cur} {total.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td></tr></tfoot>
+              <tfoot className="border-t-2 border-border font-medium"><tr><td className="px-3 py-2"><T>Total</T></td><td className="px-3 py-2 text-end tabular-nums">{cur} {total.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td></tr></tfoot>
             )}
           </table>
         )}

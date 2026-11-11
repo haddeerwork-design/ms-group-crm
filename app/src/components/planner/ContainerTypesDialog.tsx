@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useState } from 'react'
 import { Archive, ArchiveRestore, Loader2, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -67,7 +68,7 @@ export function ContainerTypesDialog({ open, onOpenChange, types, canEdit, onSav
               </div>
             </form>
           ) : canEdit && <Button variant="outline" onClick={() => setF(blank)}><Plus />Add container type</Button>}
-          {!types.length ? <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No container types yet.</p> : (
+          {!types.length ? <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground"><T>No container types yet.</T></p> : (
             <ul className="divide-y divide-border rounded-md border border-border text-sm">
               {types.map((t) => (
                 <li key={t.id} className={'flex items-center gap-3 p-3 ' + (t.archived_at ? 'opacity-50' : '')}>

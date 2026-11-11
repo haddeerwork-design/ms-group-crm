@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Ban, FileText, Loader2, Pencil, Plus, Printer, Save, Stamp, Trash2 } from 'lucide-react'
@@ -213,7 +214,7 @@ export function ProformaEditor() {
                     <Select className="w-[96px]" value={l.unit} onChange={(e) => updLine(l.key, { unit: e.target.value as QtyUnitPI })} aria-label="Unit"><option value="tons">tons</option><option value="cartons">cartons</option><option value="kg">kg</option><option value="pieces">pieces</option></Select></div></Field>
                   <Field label={`Unit price (${h.currency})`} className="sm:col-span-4"><div className="flex gap-1"><Input inputMode="decimal" value={l.price} onChange={(e) => updLine(l.key, { price: e.target.value })} />
                     <Select className="w-[96px]" value={l.price_unit} onChange={(e) => updLine(l.key, { price_unit: e.target.value as PriceUnit })} aria-label="Per"><option value="ton">/ ton</option><option value="kg">/ kg</option><option value="carton">/ carton</option><option value="piece">/ piece</option></Select></div></Field>
-                  <div className="flex items-end justify-end pb-2 text-sm sm:col-span-4">{l.amount != null ? <b className="tabular-nums">{money(l.amount, h.currency)}</b> : <span className="text-xs text-amber-700 dark:text-amber-300">needs quantity / price / net kg</span>}</div>
+                  <div className="flex items-end justify-end pb-2 text-sm sm:col-span-4">{l.amount != null ? <b className="tabular-nums">{money(l.amount, h.currency)}</b> : <span className="text-xs text-amber-700 dark:text-amber-300"><T>needs quantity / price / net kg</T></span>}</div>
                 </fieldset>
               ))}
               <div className="grid gap-2 sm:grid-cols-3">
@@ -234,7 +235,7 @@ export function ProformaEditor() {
             </fieldset>
           </CardContent></Card>
           {pi && <Card><CardHeader><CardTitle>Issued versions</CardTitle></CardHeader><CardContent>
-            {!versions.length ? <p className="text-sm text-muted-foreground">Not issued yet.</p> : <ul className="divide-y divide-border text-sm">{versions.map((v) => <li key={v.id} className="flex items-center justify-between py-2"><span>Version {v.version} <span className="text-muted-foreground">· {new Date(v.created_at).toLocaleString()}</span></span><Button variant="ghost" size="sm" onClick={() => printIt(v.version)}><FileText />PDF</Button></li>)}</ul>}
+            {!versions.length ? <p className="text-sm text-muted-foreground"><T>Not issued yet.</T></p> : <ul className="divide-y divide-border text-sm">{versions.map((v) => <li key={v.id} className="flex items-center justify-between py-2"><span>Version {v.version} <span className="text-muted-foreground">· {new Date(v.created_at).toLocaleString()}</span></span><Button variant="ghost" size="sm" onClick={() => printIt(v.version)}><FileText />PDF</Button></li>)}</ul>}
           </CardContent></Card>}
           {canWrite && pi?.status === 'draft' && pi.version === 1 && <Button variant="ghost" className="w-full text-destructive" onClick={remove}><Trash2 />Delete draft</Button>}
         </div>

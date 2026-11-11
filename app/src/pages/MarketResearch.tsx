@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRightCircle, ExternalLink, Plus, Search, Star } from 'lucide-react'
@@ -127,20 +128,20 @@ export function MarketResearch() {
       <PageHeader title="Market Research" summary="Potential buyers you found, each with its source. Only companies with evidence are marked “Verified importer”."
         action={<div className="flex gap-2"><Button variant="outline" onClick={csv} disabled={!list.length}>CSV</Button><Button onClick={() => setEdit('new')}><Plus />Add research lead</Button></div>} />
       <div className="mb-3 flex flex-wrap gap-2">
-        <div className="relative w-64"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><Input className="pl-8" placeholder="Search company, product, origin…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="relative w-64"><Search className="absolute start-2.5 top-2.5 size-4 text-muted-foreground" /><Input className="ps-8" placeholder="Search company, product, origin…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select aria-label="Country" value={country} onChange={(e) => setCountry(e.target.value)} className="w-40"><option value="">All countries</option>{countries.map((c) => <option key={c}>{c}</option>)}</Select>
         <Select aria-label="Verification" value={status} onChange={(e) => setStatus(e.target.value)} className="w-44"><option value="">Any verification</option>{Object.entries(VERIFY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
         <Select aria-label="Show" value={only} onChange={(e) => setOnly(e.target.value as typeof only)} className="w-44">
           <option value="open">Not yet in CRM</option><option value="">All</option><option value="short">Shortlisted</option><option value="mine">Added by me</option><option value="archived">Archived</option>
         </Select>
-        <span className="ml-auto self-center text-sm text-muted-foreground">{list.length} of {rows.filter((r) => !r.archived_at).length}</span>
+        <span className="ms-auto self-center text-sm text-muted-foreground">{list.length} of {rows.filter((r) => !r.archived_at).length}</span>
       </div>
       {list.length === 0 ? <Empty title="No research leads here" hint="Add companies you find on trade directories, LinkedIn or import records — with the link where you found them."
         action={<Button onClick={() => setEdit('new')}><Plus />Add research lead</Button>} /> : (
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-              <tr><th className="w-8 px-3 py-2" /><th className="px-3 py-2">Company</th><th className="px-3 py-2">Imports</th><th className="px-3 py-2">Verification</th><th className="px-3 py-2">Researcher</th><th className="px-3 py-2">Date</th><th className="px-3 py-2" /></tr>
+            <thead className="border-b border-border bg-muted/40 text-start text-xs text-muted-foreground">
+              <tr><th className="w-8 px-3 py-2" /><th className="px-3 py-2"><T>Company</T></th><th className="px-3 py-2"><T>Imports</T></th><th className="px-3 py-2"><T>Verification</T></th><th className="px-3 py-2"><T>Researcher</T></th><th className="px-3 py-2"><T>Date</T></th><th className="px-3 py-2" /></tr>
             </thead>
             <tbody className="divide-y divide-border">
               {list.map((r) => (
@@ -151,17 +152,17 @@ export function MarketResearch() {
                     </button>
                   </td>
                   <td className="px-3 py-2">
-                    <button className="text-left font-medium hover:underline" onClick={() => setEdit(r)}>{r.company_name}</button>
+                    <button className="text-start font-medium hover:underline" onClick={() => setEdit(r)}>{r.company_name}</button>
                     <div className="text-xs text-muted-foreground">{[r.country, r.market].filter(Boolean).join(' · ')}</div>
                   </td>
                   <td className="px-3 py-2"><div>{r.products_imported || '—'}</div>{r.product_origin && <div className="text-xs text-muted-foreground">from {r.product_origin}</div>}</td>
                   <td className="px-3 py-2">
                     <Badge className={VERIFY_TONE[r.verification_status]}>{VERIFY[r.verification_status]}</Badge>
-                    {r.source_url && <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink className="size-3" />Source</a>}
+                    {r.source_url && <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink className="size-3" /><T>Source</T></a>}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{team[r.researcher_id ?? ''] ?? '—'}</td>
                   <td className="px-3 py-2 tabular-nums text-muted-foreground">{r.research_date}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     {r.converted_company_id ? <Link to={`/crm/${r.converted_company_id}`} className="text-xs text-primary hover:underline">Open in CRM</Link>
                       : canEdit(r) && !r.archived_at && <Button size="sm" variant="outline" onClick={() => convert(r)}><ArrowRightCircle />Add to CRM</Button>}
                   </td>

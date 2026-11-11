@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -60,7 +61,7 @@ export function Settings() {
   return (
     <>
       <PageHeader title="Company Settings" summary="Only the Super Admin can change these." />
-      <p className="mb-4 text-sm text-muted-foreground">Quotations print on the El Brancy letterhead image, which already contains its own WhatsApp, email and address. The company name and slogan below are printed in the text.</p>
+      <p className="mb-4 text-sm text-muted-foreground"><T>Quotations print on the El Brancy letterhead image, which already contains its own WhatsApp, email and address. The company name and slogan below are printed in the text.</T></p>
       <Card>
         <CardContent className="pt-5">
           {state === 'loading' ? <Loading /> : state !== 'ready' ? <ErrorState message={state} /> : (
@@ -76,7 +77,7 @@ export function Settings() {
                 <span className="text-xs text-muted-foreground">{updatedAt && `Last updated ${new Date(updatedAt).toLocaleString()}`}</span>
                 {canEdit
                   ? <Button type="submit" disabled={isSubmitting || !isDirty}>{isSubmitting && <Loader2 className="animate-spin" />}Save changes</Button>
-                  : <span className="text-xs text-muted-foreground">Read-only for your role</span>}
+                  : <span className="text-xs text-muted-foreground"><T>Read-only for your role</T></span>}
               </div>
             </form>
           )}
@@ -153,7 +154,7 @@ function QuotationDefaults({ canEdit }: { canEdit: boolean }) {
             {v.hasPR && (
               <>
                 <div className="space-y-1 border-t border-border pt-4 sm:col-span-2">
-                  <div className="text-sm font-medium">Prime Roots quotations</div>
+                  <div className="text-sm font-medium"><T>Prime Roots quotations</T></div>
                   <p className="text-xs text-muted-foreground">Start a line with <b>## </b> to make it a heading (e.g. “## Special Offer”). You can use {'{currency}'} and {'{validity_days}'}.</p>
                 </div>
                 <div className="space-y-2"><Label htmlFor="prterms">Terms (English)</Label><Textarea id="prterms" className="min-h-[220px]" disabled={!canEdit} value={v.prTerms} onChange={(e) => setV({ ...v, prTerms: e.target.value })} /></div>

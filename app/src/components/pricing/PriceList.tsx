@@ -1,3 +1,5 @@
+import { TV } from '@/lib/i18n'
+import { T } from '@/lib/i18n'
 import { useMemo, useState } from 'react'
 import { Calculator, Pencil, Plus, Search } from 'lucide-react'
 import { QuickPriceDialog } from './QuickPriceDialog'
@@ -34,8 +36,8 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-8" placeholder="Search product, variety or category" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="ps-8" placeholder="Search product, variety or category" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="w-40"><Select value={inc} onChange={(e) => setInc(e.target.value)} aria-label="Incoterm">
           <option value="">All Incoterms</option>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}<option value="none">Not set (imported)</option>
@@ -43,7 +45,7 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
         {canEdit && <Button onClick={() => setEditing('new')}><Plus />Add price</Button>}
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
           <input type="checkbox" className="size-4 accent-[#23856B]" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
-          Show products without a price ({unpriced.length})
+          <TV k="Show products without a price ({n})" v={{ n: unpriced.length }} />
         </label>
       </div>
       <Card>
@@ -62,14 +64,14 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
           ) : !list.length ? <div className="p-5"><Empty title="No prices yet" hint={canCalc ? 'Open the calculator, choose a product and save a price.' : 'Prices appear here once the Sales Manager saves them.'} /></div> : (
             <table className="w-full min-w-[820px] text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-5 py-3 font-medium">Product</th>
-                  <th className="px-3 py-3 font-medium">Packaging</th>
-                  <th className="px-3 py-3 font-medium">Terms</th>
-                  <th className="px-3 py-3 text-right font-medium">Per ton</th>
-                  <th className="px-3 py-3 text-right font-medium">Per kg</th>
-                  <th className="px-3 py-3 text-right font-medium">Per carton</th>
-                  <th className="px-3 py-3 font-medium">Valid</th>
+                <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-5 py-3 font-medium"><T>Product</T></th>
+                  <th className="px-3 py-3 font-medium"><T>Packaging</T></th>
+                  <th className="px-3 py-3 font-medium"><T>Terms</T></th>
+                  <th className="px-3 py-3 text-end font-medium"><T>Per ton</T></th>
+                  <th className="px-3 py-3 text-end font-medium"><T>Per kg</T></th>
+                  <th className="px-3 py-3 text-end font-medium"><T>Per carton</T></th>
+                  <th className="px-3 py-3 font-medium"><T>Valid</T></th>
                   {(canEdit || canCalc) && <th className="px-3 py-3" />}
                 </tr>
               </thead>
@@ -90,16 +92,16 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
                         {r.incoterm ? <span className="font-medium">{r.incoterm}</span> : <Badge className="border-amber-200 bg-amber-50 text-amber-800">Imported — no Incoterm</Badge>}
                         {r.destination && <div className="text-xs text-muted-foreground">{r.destination}</div>}
                       </td>
-                      <td className="px-3 py-3 text-right font-medium tabular-nums">{money(r.price_per_ton, r.sell_currency)}
+                      <td className="px-3 py-3 text-end font-medium tabular-nums">{money(r.price_per_ton, r.sell_currency)}
                         {r.price_basis === 'unit' && r.unit_price ? <div className="text-xs font-normal text-muted-foreground">{money(r.unit_price, r.sell_currency)} / {r.unit_label || 'unit'}</div> : null}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{money(r.price_per_ton / 1000, undefined, 3)}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{r.net_weight_kg && r.unit_label !== 'kg' ? money((r.price_per_ton * r.net_weight_kg) / 1000) : '—'}</td>
+                      <td className="px-3 py-3 text-end tabular-nums text-muted-foreground">{money(r.price_per_ton / 1000, undefined, 3)}</td>
+                      <td className="px-3 py-3 text-end tabular-nums text-muted-foreground">{r.net_weight_kg && r.unit_label !== 'kg' ? money((r.price_per_ton * r.net_weight_kg) / 1000) : '—'}</td>
                       <td className="px-3 py-3 text-xs">
                         {expired ? <Badge className="border-red-200 bg-red-50 text-red-800">Expired {r.valid_until}</Badge>
                           : <span className="text-muted-foreground">from {r.valid_from}{r.valid_until ? ` to ${r.valid_until}` : ''}</span>}
                       </td>
                       {(canEdit || canCalc) && (
-                        <td className="whitespace-nowrap px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="whitespace-nowrap px-3 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                           {canEdit && <Button variant="ghost" size="sm" onClick={() => setEditing(r)}><Pencil />Edit</Button>}
                           {canCalc && <Button variant="ghost" size="icon" title="Open in calculator (build from costs)" aria-label="Open in calculator" onClick={() => onOpen(r.product_id, r.packaging_id, r.incoterm)}><Calculator /></Button>}
                         </td>

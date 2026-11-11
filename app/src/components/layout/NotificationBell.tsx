@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, CheckCheck } from 'lucide-react'
@@ -49,33 +50,34 @@ export function NotificationBell() {
     load()
   }
 
+  const { t } = useT()
   return (
     <div className="relative" ref={ref}>
-      <Button variant="ghost" size="icon" aria-label={`Notifications (${badge})`} data-tip="Notifications" onClick={() => { setOpen((o) => !o); if (!open) load() }}>
+      <Button variant="ghost" size="icon" aria-label={`${t('Notifications')} (${badge})`} data-tip={t('Notifications')} onClick={() => { setOpen((o) => !o); if (!open) load() }}>
         <Bell />
-        {badge > 0 && <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-white">{badge > 99 ? '99+' : badge}</span>}
+        {badge > 0 && <span className="absolute end-1 top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-white">{badge > 99 ? '99+' : badge}</span>}
       </Button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-[340px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="absolute end-0 z-50 mt-2 w-[340px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-card shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
-            <span className="text-sm font-semibold">Notifications</span>
-            {unread > 0 && <button className="flex items-center gap-1 text-xs text-primary hover:underline" onClick={markAll}><CheckCheck className="size-3.5" />Mark all read</button>}
+            <span className="text-sm font-semibold">{t('Notifications')}</span>
+            {unread > 0 && <button className="flex items-center gap-1 text-xs text-primary hover:underline" onClick={markAll}><CheckCheck className="size-3.5" />{t('Mark all read')}</button>}
           </div>
           <div className="max-h-[420px] overflow-y-auto">
             {reminders.length > 0 && (
               <div className="border-b border-border py-1">
-                <div className="px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Needs attention</div>
+                <div className="px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t('Needs attention')}</div>
                 {reminders.map((r) => (
-                  <button key={r.key} onClick={() => go(r.link)} className="flex w-full gap-2 px-3 py-2 text-left hover:bg-accent">
+                  <button key={r.key} onClick={() => go(r.link)} className="flex w-full gap-2 px-3 py-2 text-start hover:bg-accent">
                     <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', r.tone === 'red' ? 'bg-destructive' : 'bg-amber-400')} />
-                    <span><span className="block text-sm font-medium">{r.title}</span><span className="block text-xs text-muted-foreground">{r.body}</span></span>
+                    <span><span className="block text-sm font-medium">{t(r.title)}</span><span className="block text-xs text-muted-foreground">{r.body}</span></span>
                   </button>
                 ))}
               </div>
             )}
-            {!items.length && !reminders.length && <p className="px-3 py-8 text-center text-sm text-muted-foreground">You’re all caught up.</p>}
+            {!items.length && !reminders.length && <p className="px-3 py-8 text-center text-sm text-muted-foreground">{t('You’re all caught up.')}</p>}
             {items.map((n) => (
-              <button key={n.id} onClick={() => go(n.link, n.id)} className={cn('flex w-full gap-2 px-3 py-2 text-left hover:bg-accent', !n.read_at && 'bg-accent/50')}>
+              <button key={n.id} onClick={() => go(n.link, n.id)} className={cn('flex w-full gap-2 px-3 py-2 text-start hover:bg-accent', !n.read_at && 'bg-accent/50')}>
                 <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', n.read_at ? 'bg-transparent' : 'bg-primary')} />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{n.title}</span>

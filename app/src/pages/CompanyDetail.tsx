@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Archive, ArchiveRestore, ArrowLeft, FileText, Globe, Loader2, Mail, MessageCircle, Pencil, Phone, Plus, Star, Trash2 } from 'lucide-react'
@@ -60,8 +61,8 @@ export function CompanyDetail() {
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
             {c.name}
-            <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', STATUS_TONE[c.lead_status])}>{LEAD_STATUS[c.lead_status]}</span>
-            {c.archived_at && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">Archived</span>}
+            <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', STATUS_TONE[c.lead_status])}><T>{LEAD_STATUS[c.lead_status]}</T></span>
+            {c.archived_at && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"><T>Archived</T></span>}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {[c.company_type && COMPANY_TYPE[c.company_type], [c.city, c.country].filter(Boolean).join(', '), `Owner: ${c.owner_id ? owner[c.owner_id] ?? '—' : 'Unassigned'}`, `${PRIORITY[c.priority]} priority`].filter(Boolean).join(' · ')}
@@ -69,8 +70,8 @@ export function CompanyDetail() {
           <div className="mt-2 flex flex-wrap gap-3 text-sm">
             {c.email && <a className="inline-flex items-center gap-1 text-primary hover:underline" href={`mailto:${c.email}`}><Mail className="size-3.5" />{c.email}</a>}
             {c.phone && <a className="inline-flex items-center gap-1 text-primary hover:underline" href={`tel:${c.phone}`}><Phone className="size-3.5" />{c.phone}</a>}
-            {c.whatsapp && <a className="inline-flex items-center gap-1 text-primary hover:underline" target="_blank" rel="noreferrer" href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`}><MessageCircle className="size-3.5" />WhatsApp</a>}
-            {c.website && <a className="inline-flex items-center gap-1 text-primary hover:underline" target="_blank" rel="noreferrer" href={/^https?:\/\//.test(c.website) ? c.website : `https://${c.website}`}><Globe className="size-3.5" />Website</a>}
+            {c.whatsapp && <a className="inline-flex items-center gap-1 text-primary hover:underline" target="_blank" rel="noreferrer" href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`}><MessageCircle className="size-3.5" /><T>WhatsApp</T></a>}
+            {c.website && <a className="inline-flex items-center gap-1 text-primary hover:underline" target="_blank" rel="noreferrer" href={/^https?:\/\//.test(c.website) ? c.website : `https://${c.website}`}><Globe className="size-3.5" /><T>Website</T></a>}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -84,28 +85,28 @@ export function CompanyDetail() {
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Card><CardContent className="pt-4">
-          <div className="text-xs text-muted-foreground">Status</div>
+          <div className="text-xs text-muted-foreground"><T>Status</T></div>
           <Select className="mt-1" value={c.lead_status} disabled={!canEdit} onChange={async (e) => {
             const v = e.target.value as Company['lead_status']
             await patch({ lead_status: v }, 'Status updated')
             await supabase.from('activities').insert({ company_id: c.id, kind: 'status', summary: `Status changed from ${LEAD_STATUS[c.lead_status]} to ${LEAD_STATUS[v]}`, created_by: session?.user.id })
             load()
-          }}>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select>
+          }}>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select>
         </CardContent></Card>
         <Card><CardContent className="pt-4">
-          <div className="text-xs text-muted-foreground">Next follow-up</div>
+          <div className="text-xs text-muted-foreground"><T>Next follow-up</T></div>
           <Input type="date" className={cn('mt-1', fu === 'overdue' && 'border-destructive text-destructive')} value={c.next_follow_up_date ?? ''} disabled={!canEdit}
             onChange={(e) => patch({ next_follow_up_date: e.target.value || null }, 'Follow-up date saved')} />
         </CardContent></Card>
         <Card><CardContent className="pt-4">
-          <div className="text-xs text-muted-foreground">Last contact</div>
+          <div className="text-xs text-muted-foreground"><T>Last contact</T></div>
           <div className="mt-2 text-sm font-medium">{c.last_contact_date ? fmtDateDMY(c.last_contact_date) : '—'}</div>
         </CardContent></Card>
       </div>
 
       <div className="mb-4 flex gap-1 border-b border-border">
         {([['timeline', `Timeline (${d.activities.length})`], ['deals', 'Deals & tasks'], ['contacts', `Contacts (${d.contacts.length})`], ['profile', 'Profile'], ['quotes', `Quotations (${d.quotations.length})`]] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}><T>{l}</T></button>
         ))}
       </div>
 
@@ -120,7 +121,7 @@ export function CompanyDetail() {
               {d.quotations.map((q) => (
                 <li key={q.id}><Link to={`/quotations/${q.id}`} className="flex items-center justify-between px-5 py-3 text-sm hover:bg-accent/50">
                   <span className="font-medium">{q.number}{q.version > 1 ? ` rev. ${q.version}` : ''} <span className="font-normal text-muted-foreground">· {fmtDateDMY(q.issue_date)} · {q.incoterm ?? ''} {q.currency}</span></span>
-                  <span className={cn('rounded-full border px-2 py-0.5 text-xs', Q_STYLE[q.status as QuoteStatus])}>{Q_LABEL[q.status as QuoteStatus]}</span>
+                  <span className={cn('rounded-full border px-2 py-0.5 text-xs', Q_STYLE[q.status as QuoteStatus])}><T>{Q_LABEL[q.status as QuoteStatus]}</T></span>
                 </Link></li>
               ))}
             </ul>
@@ -162,13 +163,13 @@ function Timeline({ company, activities, canEdit, owner, onChange }: { company: 
           <CardContent>
             <form onSubmit={add} className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
-                <Field label="Type"><Select value={kind} onChange={(e) => setKind(e.target.value as Activity['kind'])}>{Object.entries(ACTIVITY_KIND).filter(([k]) => k !== 'status').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+                <Field label="Type"><Select value={kind} onChange={(e) => setKind(e.target.value as Activity['kind'])}>{Object.entries(ACTIVITY_KIND).filter(([k]) => k !== 'status').map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
                 <Field label="When"><Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} /></Field>
               </div>
               <Field label="What happened"><Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Sent price list, asked for samples of IQF mango" /></Field>
               <Field label="Next follow-up (optional)"><Input type="date" value={next} onChange={(e) => setNext(e.target.value)} /></Field>
               <Button type="submit" disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <Plus />}Add</Button>
-              <p className="text-xs text-muted-foreground">Entries cannot be edited or deleted later.</p>
+              <p className="text-xs text-muted-foreground"><T>Entries cannot be edited or deleted later.</T></p>
             </form>
           </CardContent>
         </Card>
@@ -176,10 +177,10 @@ function Timeline({ company, activities, canEdit, owner, onChange }: { company: 
       <Card className={canEdit ? 'lg:col-span-3' : 'lg:col-span-5'}>
         <CardContent className="pt-5">
           {!activities.length ? <Empty title="Nothing logged yet" /> : (
-            <ol className="relative space-y-4 border-l border-border pl-5">
+            <ol className="relative space-y-4 border-s border-border ps-5">
               {activities.map((a) => (
                 <li key={a.id}>
-                  <span className="absolute -left-[5px] mt-1.5 size-2.5 rounded-full bg-primary" />
+                  <span className="absolute -start-[5px] mt-1.5 size-2.5 rounded-full bg-primary" />
                   <div className="text-xs text-muted-foreground">{ACTIVITY_KIND[a.kind]} · {new Date(a.happened_at).toLocaleString()} · {a.created_by ? owner[a.created_by] ?? 'Employee' : 'System'}</div>
                   <p className="mt-0.5 whitespace-pre-wrap text-sm">{a.summary}</p>
                 </li>
@@ -236,7 +237,7 @@ function Contacts({ companyId, contacts, canEdit, onChange }: { companyId: strin
           {contacts.map((c) => (
             <Card key={c.id}><CardContent className="space-y-1 pt-4 text-sm">
               <div className="flex items-start justify-between gap-2">
-                <div><div className="font-medium">{c.name} {c.is_primary && <span className="ml-1 text-xs text-amber-600">★ primary</span>}</div><div className="text-xs text-muted-foreground">{c.job_title}</div></div>
+                <div><div className="font-medium">{c.name} {c.is_primary && <span className="ms-1 text-xs text-amber-600">★ primary</span>}</div><div className="text-xs text-muted-foreground">{c.job_title}</div></div>
                 {canEdit && <div className="flex">
                   {!c.is_primary && <Button variant="ghost" size="icon" title="Make primary" aria-label="Make primary" onClick={() => makePrimary(c.id)}><Star /></Button>}
                   <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setF({ id: c.id, name: c.name, job_title: c.job_title ?? '', email: c.email ?? '', phone: c.phone ?? '', whatsapp: c.whatsapp ?? '', linkedin: c.linkedin ?? '', notes: c.notes ?? '' })}><Pencil /></Button>
@@ -295,10 +296,10 @@ function DealsAndTasks({ company, team, canEdit }: { company: Company; team: Tea
         <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Deals</CardTitle>
           {canEdit && <Button variant="outline" size="sm" onClick={() => { setOpp(null); setOppOpen(true) }}><Plus />New deal</Button>}</CardHeader>
         <CardContent>
-          {!x.opps.filter((o) => !o.archived_at).length ? <p className="text-sm text-muted-foreground">No deals yet.</p> : (
+          {!x.opps.filter((o) => !o.archived_at).length ? <p className="text-sm text-muted-foreground"><T>No deals yet.</T></p> : (
             <ul className="divide-y divide-border text-sm">
               {x.opps.filter((o) => !o.archived_at).map((o) => (
-                <li key={o.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-primary" onClick={() => { setOpp(o); setOppOpen(true) }}>
+                <li key={o.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-start hover:text-primary" onClick={() => { setOpp(o); setOppOpen(true) }}>
                   <span><span className="font-medium">{o.title}</span><span className="block text-xs text-muted-foreground">{stage[o.stage_id]?.name}{o.probability != null ? ` · ${o.probability}%` : ''}{o.expected_close_date ? ` · close ${o.expected_close_date}` : ''}</span></span>
                   <span className="tabular-nums">{o.expected_revenue != null ? money(o.expected_revenue, o.currency, 0) : ''}</span>
                 </button></li>
@@ -311,10 +312,10 @@ function DealsAndTasks({ company, team, canEdit }: { company: Company; team: Tea
         <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Tasks</CardTitle>
           <Button variant="outline" size="sm" onClick={() => { setTask(null); setTaskOpen(true) }}><Plus />New task</Button></CardHeader>
         <CardContent>
-          {!x.tasks.length ? <p className="text-sm text-muted-foreground">No tasks yet.</p> : (
+          {!x.tasks.length ? <p className="text-sm text-muted-foreground"><T>No tasks yet.</T></p> : (
             <ul className="divide-y divide-border text-sm">
               {x.tasks.map((t) => (
-                <li key={t.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-primary" onClick={() => { setTask(t); setTaskOpen(true) }}>
+                <li key={t.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-start hover:text-primary" onClick={() => { setTask(t); setTaskOpen(true) }}>
                   <span className={cn(t.status === 'done' && 'text-muted-foreground line-through')}>{t.title}</span>
                   <span className={cn('text-xs text-muted-foreground', taskBucket(t, today) === 'overdue' && 'text-destructive')}>{t.status === 'done' ? TASK_STATUS.done : t.due_date ?? 'No date'}</span>
                 </button></li>

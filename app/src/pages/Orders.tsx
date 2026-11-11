@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
@@ -32,8 +33,8 @@ export function Orders() {
       <PageHeader title="Orders & Shipments" summary="From confirmed order to delivery: stage, shipment, documents and payments."
         action={hasRole(...QUOTE_WRITERS) && <Button onClick={() => nav('/orders/new')}><Plus />New order</Button>} />
       <div className="mb-4 flex flex-wrap gap-2">
-        <div className="relative min-w-52 flex-1"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-8" placeholder="Search order, buyer, B/L, container…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <div className="w-48"><Select value={st} onChange={(e) => setSt(e.target.value)} aria-label="Stage"><option value="active">Active orders</option><option value="">All</option>{[...STAGES, 'cancelled' as const].map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}</Select></div>
+        <div className="relative min-w-52 flex-1"><Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="ps-8" placeholder="Search order, buyer, B/L, container…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="w-48"><Select value={st} onChange={(e) => setSt(e.target.value)} aria-label="Stage"><option value="active">Active orders</option><option value="">All</option>{[...STAGES, 'cancelled' as const].map((s) => <option key={s} value={s}><T>{STAGE_LABEL[s]}</T></option>)}</Select></div>
       </div>
       <Card><CardContent className="overflow-x-auto p-0">
         {error ? <div className="p-5"><ErrorState message={error} /></div> : !rows ? <Loading /> : !list.length ? (
@@ -41,15 +42,15 @@ export function Orders() {
             action={hasRole(...QUOTE_WRITERS) && <><Button onClick={() => nav('/orders/new')}><Plus />New order</Button><Button variant="outline" onClick={() => nav('/quotations')}>Go to quotations</Button></>} /></div>
         ) : (
           <table className="w-full min-w-[760px] text-sm">
-            <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Order</th><th className="px-3 py-3 font-medium">Buyer</th><th className="px-3 py-3 font-medium">Shipment</th><th className="px-3 py-3 text-right font-medium">Total</th><th className="px-3 py-3 font-medium">Stage</th></tr></thead>
+            <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium"><T>Order</T></th><th className="px-3 py-3 font-medium"><T>Buyer</T></th><th className="px-3 py-3 font-medium"><T>Shipment</T></th><th className="px-3 py-3 text-end font-medium"><T>Total</T></th><th className="px-3 py-3 font-medium"><T>Stage</T></th></tr></thead>
             <tbody>{list.map((r) => (
               <tr key={r.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50" onClick={() => nav(`/orders/${r.id}`)}>
                 <td className="px-5 py-3"><div className="font-medium">{r.number}</div><div className="text-xs text-muted-foreground">{fmtDateDMY(r.order_date)}</div></td>
                 <td className="px-3 py-3">{r.customer_company ?? r.customer_name ?? '—'}<div className="text-xs text-muted-foreground">{r.customer_country}</div></td>
                 <td className="px-3 py-3 text-muted-foreground">{[r.shipping_method?.toUpperCase(), r.port_of_discharge ?? r.destination].filter(Boolean).join(' · ') || '—'}
                   {r.eta && <div className={cn('text-xs', r.eta < today && !['arrived', 'completed'].includes(r.stage) && 'text-destructive')}>ETA {fmtDateDMY(r.eta)}</div>}</td>
-                <td className="px-3 py-3 text-right tabular-nums">{money(orderTotal(r), r.currency)}</td>
-                <td className="px-3 py-3"><span className={cn('rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium', TONE[r.stage])}>{STAGE_LABEL[r.stage]}</span></td>
+                <td className="px-3 py-3 text-end tabular-nums">{money(orderTotal(r), r.currency)}</td>
+                <td className="px-3 py-3"><span className={cn('rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium', TONE[r.stage])}><T>{STAGE_LABEL[r.stage]}</T></span></td>
               </tr>
             ))}</tbody>
           </table>

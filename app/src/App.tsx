@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
 import { AuthProvider, useAuth } from '@/lib/auth'
+import { LangProvider, tr, useT } from '@/lib/i18n'
 import { canAccess, type ModuleKey } from '@/lib/roles'
 import { AppShell } from '@/components/layout/AppShell'
 import { ErrorState, Loading } from '@/components/ui/states'
@@ -85,11 +86,29 @@ function Root() {
   )
 }
 
+// Toasts and confirm boxes follow the interface language (English text is the key).
+for (const k of ['success', 'error', 'message', 'warning', 'info'] as const) {
+  const orig = toast[k]
+  toast[k] = ((m: unknown, o?: { action?: { label: unknown } }) => {
+    if (o?.action && typeof o.action.label === 'string') o = { ...o, action: { ...o.action, label: tr(o.action.label) } }
+    return orig(typeof m === 'string' ? tr(m) : (m as string), o as never)
+  }) as typeof orig
+}
+const nativeConfirm = window.confirm.bind(window)
+window.confirm = (m?: string) => nativeConfirm(m ? tr(m) : m)
+
+function AppToaster() {
+  const { rtl } = useT()
+  return <Toaster richColors position={rtl ? 'top-left' : 'top-right'} dir={rtl ? 'rtl' : 'ltr'} />
+}
+
 export default function App() {
   return (
-    <AuthProvider>
-      <HashRouter><Root /></HashRouter>
-      <Toaster richColors position="top-right" />
-    </AuthProvider>
+    <LangProvider>
+      <AuthProvider>
+        <HashRouter><Root /></HashRouter>
+        <AppToaster />
+      </AuthProvider>
+    </LangProvider>
   )
 }

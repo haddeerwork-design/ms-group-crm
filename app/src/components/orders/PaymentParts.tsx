@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -45,7 +46,7 @@ export function RecordPaymentDialog({ payment, onClose, onSaved }: { payment: Pa
         <DialogBody className="grid gap-3 sm:grid-cols-2">
           <Field label={`Amount (${payment?.currency ?? ''})`}><Input inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} /></Field>
           <Field label="Date"><Input type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} /></Field>
-          <Field label="Method"><Select value={v.method} onChange={(e) => setV({ ...v, method: e.target.value })}>{Object.entries(PAY_METHOD).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+          <Field label="Method"><Select value={v.method} onChange={(e) => setV({ ...v, method: e.target.value })}>{Object.entries(PAY_METHOD).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
           <Field label="Reference *" hint="Bank / SWIFT / L/C number"><Input value={v.reference} onChange={(e) => setV({ ...v, reference: e.target.value })} /></Field>
           <Field label="Notes" className="sm:col-span-2"><Input value={v.notes} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field>
         </DialogBody>

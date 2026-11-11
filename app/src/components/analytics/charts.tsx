@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,8 +56,8 @@ export function RankBars({ data, unit, empty = 'No data in this period.' }: { da
       {data.map((d) => (
         <li key={d.label} className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm" title={`${d.label}: ${d.value.toLocaleString('en-US')}`}>
           <span className="truncate text-muted-foreground">{d.label}</span>
-          <span className="h-2.5 rounded-r bg-muted">
-            <span className="block h-full rounded-r bg-[#1baf7a] dark:bg-[#199e70]" style={{ width: `${Math.max(2, (d.value / max) * 100)}%` }} />
+          <span className="h-2.5 rounded-e bg-muted">
+            <span className="block h-full rounded-e bg-[#1baf7a] dark:bg-[#199e70]" style={{ width: `${Math.max(2, (d.value / max) * 100)}%` }} />
           </span>
           <span className="tabular-nums">{unit ? compactMoney(d.value) : d.value.toLocaleString('en-US')}</span>
         </li>
@@ -81,7 +82,7 @@ export function ChartCard({ title, description, children, className, action }: {
 export function Kpi({ label, value, hint, tone, to }: { label: string; value: React.ReactNode; hint?: React.ReactNode; tone?: 'warn' | 'bad'; to?: string }) {
   const body = (
     <Card className={cn('h-full p-4 transition-colors', to && 'hover:border-primary/40')}>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+      <div className="text-xs font-medium text-muted-foreground"><T>{label}</T></div>
       <div className={cn('mt-1 text-2xl font-semibold tabular-nums tracking-tight', tone === 'bad' && 'text-destructive', tone === 'warn' && 'text-amber-700 dark:text-amber-400')}>{value}</div>
       {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
     </Card>

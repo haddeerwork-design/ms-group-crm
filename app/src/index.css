@@ -45,4 +45,4 @@ body { @apply bg-background text-foreground antialiased; font-feature-settings: 
     font-size: 12px; font-weight: 500; line-height: 1.2; background: hsl(var(--foreground)); color: hsl(var(--background));
   }
 }
-@media (hover: hover) { [data-tip-end]:hover::after, [data-tip-end]:focus-visible::after { left: auto; right: 0; transform: none; } }
+@media (hover: hover) { [data-tip-end]:hover::after, [data-tip-end]:focus-visible::after { left: auto; right: auto; inset-inline-end: 0; transform: none; } }

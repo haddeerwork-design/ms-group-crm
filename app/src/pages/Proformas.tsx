@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
@@ -27,14 +28,14 @@ export function Proformas() {
             action={<Button variant="outline" onClick={() => nav('/quotations')}>Go to quotations</Button>} /></div>
         ) : (
           <table className="w-full min-w-[640px] text-sm">
-            <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Number</th><th className="px-3 py-3 font-medium">Buyer</th><th className="px-3 py-3 font-medium">Date</th><th className="px-3 py-3 text-right font-medium">Total</th><th className="px-3 py-3 font-medium">Status</th></tr></thead>
+            <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium"><T>Number</T></th><th className="px-3 py-3 font-medium"><T>Buyer</T></th><th className="px-3 py-3 font-medium"><T>Date</T></th><th className="px-3 py-3 text-end font-medium"><T>Total</T></th><th className="px-3 py-3 font-medium"><T>Status</T></th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50" onClick={() => nav(`/proformas/${r.id}`)}>
-                  <td className="px-5 py-3 font-medium">{r.number}{r.version > 1 && <span className="ml-1 text-xs font-normal text-muted-foreground">rev. {r.version}</span>}</td>
+                  <td className="px-5 py-3 font-medium">{r.number}{r.version > 1 && <span className="ms-1 text-xs font-normal text-muted-foreground">rev. {r.version}</span>}</td>
                   <td className="px-3 py-3">{r.customer_company || r.customer_name || '—'}</td>
                   <td className="px-3 py-3 text-muted-foreground">{fmtDateDMY(r.issue_date)}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{money(r.proforma_items.reduce((s, i) => s + Number(i.line_total), 0) + (r.other_charges ?? 0), r.currency)}</td>
+                  <td className="px-3 py-3 text-end tabular-nums">{money(r.proforma_items.reduce((s, i) => s + Number(i.line_total), 0) + (r.other_charges ?? 0), r.currency)}</td>
                   <td className="px-3 py-3"><span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', PI_STYLE[r.status])}>{PI_STATUS[r.status]}</span></td>
                 </tr>
               ))}

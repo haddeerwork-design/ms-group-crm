@@ -1,3 +1,5 @@
+import { useT } from '@/lib/i18n'
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { Archive, ArchiveRestore, CalendarDays, Copy, Table2, FolderCog, List, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
@@ -30,6 +32,7 @@ const TYPE_STYLE = {
 }
 
 export function Products() {
+  const { t: tl } = useT()
   const { hasRole } = useAuth()
   const canEdit = hasRole(...CATALOG_MANAGERS)
   const [data, setData] = useState<{ categories: Category[]; products: Product[] } | null>(null)
@@ -83,7 +86,7 @@ export function Products() {
   return (
     <>
       <PageHeader title="Products"
-        summary={data ? `${activeCount} products · ${needSetup} still need packaging weight or cartons per pallet` : 'Central product catalog'}
+        summary={data ? tl('{n} products · {m} still need packaging weight or cartons per pallet', { n: activeCount, m: needSetup }) : 'Central product catalog'}
         action={canEdit && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setCatsOpen(true)}><FolderCog />Categories</Button>
@@ -93,8 +96,8 @@ export function Products() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-8" placeholder="Search product, variety or category" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="ps-8" placeholder="Search product, variety or category" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <MobileFilters active={[cat, avail, setup].filter(Boolean).length + (showArchived ? 1 : 0)}>
         <div className="w-full sm:w-48"><Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
@@ -103,7 +106,7 @@ export function Products() {
         </Select></div>
         <div className="w-full sm:w-44"><Select value={avail} onChange={(e) => setAvail(e.target.value)} aria-label="Availability">
           <option value="">Any availability</option>
-          {Object.entries(AVAILABILITY_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          {Object.entries(AVAILABILITY_LABEL).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}
           <option value="unset">Not set</option>
         </Select></div>
         <div className="w-full sm:w-40"><Select value={setup} onChange={(e) => setSetup(e.target.value)} aria-label="Setup">
@@ -113,7 +116,7 @@ export function Products() {
           <input type="checkbox" className="size-4 accent-[#23856B]" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />Archived
         </label>
         </MobileFilters>
-        <div className="ml-auto flex rounded-md border border-border p-0.5">
+        <div className="ms-auto flex rounded-md border border-border p-0.5">
           <Button variant={view === 'list' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('list')}><List />List</Button>
           <Button variant={view === 'season' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('season')}><CalendarDays />Seasons</Button>
           {canEdit && <Button variant={view === 'quick' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('quick')}><Table2 />Quick edit</Button>}
@@ -122,7 +125,7 @@ export function Products() {
 
       {data && needSetup > 0 && setup !== 'missing' && (
         <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" role="status">
-          <span className="flex-1"><b>{needSetup} products</b> still need packaging weight or cartons per pallet. The planner and quotations need these to work out tons.</span>
+          <span className="flex-1">{tl('{n} products still need packaging weight or cartons per pallet. The planner and quotations need these to work out tons.', { n: needSetup })}</span>
           <Button size="sm" variant="outline" onClick={() => setSetup('missing')}>Show them</Button>
           {canEdit && <Button size="sm" onClick={() => { setSetup('missing'); setView('quick') }}>Fill them in</Button>}
         </div>
@@ -141,10 +144,10 @@ export function Products() {
                   const miss = missingSetup(p)
                   return (
                     <li key={p.id} className="flex items-start gap-2 px-4 py-3">
-                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => open(p)}>
+                      <button type="button" className="min-w-0 flex-1 text-start" onClick={() => open(p)}>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{p.name}</span>
-                          <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}>{PRODUCT_TYPE_LABEL[p.product_type]}</span>
+                          <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}><T>{PRODUCT_TYPE_LABEL[p.product_type]}</T></span>
                         </div>
                         <div className="mt-0.5 text-xs text-muted-foreground">{catById[p.category_id]?.name}{pk ? ` · ${pk.label}` : ''}{seasonLabel(p) ? ` · ${seasonLabel(p)}` : ''}</div>
                         {miss.length > 0 && <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-amber-500" />{setup === 'missing' ? `Missing ${miss.join(', ')}` : 'Needs setup'}</div>}
@@ -157,12 +160,12 @@ export function Products() {
               </ul>
               <table className="hidden w-full min-w-[760px] text-sm md:table">
                 <thead>
-                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="px-5 py-3 font-medium">Product</th>
-                    <th className="px-3 py-3 font-medium">Category</th>
-                    <th className="px-3 py-3 font-medium">Default packaging</th>
-                    <th className="px-3 py-3 font-medium">Season</th>
-                    <th className="px-3 py-3 font-medium">Availability</th>
+                  <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 font-medium"><T>Product</T></th>
+                    <th className="px-3 py-3 font-medium"><T>Category</T></th>
+                    <th className="px-3 py-3 font-medium"><T>Default packaging</T></th>
+                    <th className="px-3 py-3 font-medium"><T>Season</T></th>
+                    <th className="px-3 py-3 font-medium"><T>Availability</T></th>
                     <th className="px-3 py-3" />
                   </tr>
                 </thead>
@@ -175,7 +178,7 @@ export function Products() {
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{p.name}</span>
-                            <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}>{PRODUCT_TYPE_LABEL[p.product_type]}</span>
+                            <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}><T>{PRODUCT_TYPE_LABEL[p.product_type]}</T></span>
                           </div>
                           {p.varieties.length > 0 && <div className="text-xs text-muted-foreground">{p.varieties.join(' · ')}</div>}
                         </td>
@@ -192,11 +195,11 @@ export function Products() {
                           ) : null}
                           {miss.length > 0 && (setup === 'missing'
                             ? <Badge className={cn(pk && 'mt-1', 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200')}>Missing {miss.join(', ')}</Badge>
-                            : <span className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', pk && 'mt-0.5')} title={`Missing ${miss.join(', ')}`}><span className="size-1.5 rounded-full bg-amber-500" />Needs setup</span>)}
+                            : <span className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', pk && 'mt-0.5')} title={`Missing ${miss.join(', ')}`}><span className="size-1.5 rounded-full bg-amber-500" /><T>Needs setup</T></span>)}
                         </td>
                         <td className="px-3 py-3 text-muted-foreground">{seasonLabel(p) ?? '—'}</td>
                         <td className="px-3 py-3 text-muted-foreground">{p.availability ? AVAILABILITY_LABEL[p.availability] : '—'}</td>
-                        <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-3 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                           {canEdit && !p.archived_at && (
                             <Button variant="ghost" size="icon" onClick={() => { setEditing(null); setDupOf(p); setDialogOpen(true) }} title="Duplicate" aria-label={`Duplicate ${p.name}`}>
                               <Copy />
@@ -242,7 +245,7 @@ function SeasonCalendar({ rows, onOpen }: { rows: Product[]; onOpen: (p: Product
         <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="text-xs text-muted-foreground">
-              <th className="py-2 pr-3 text-left font-medium">Product</th>
+              <th className="py-2 pe-3 text-start font-medium"><T>Product</T></th>
               {MONTHS.map((m, i) => <th key={m} className={cn('w-[6.5%] py-2 text-center font-medium', i + 1 === now && 'text-foreground')}>{m}</th>)}
             </tr>
           </thead>
@@ -251,7 +254,7 @@ function SeasonCalendar({ rows, onOpen }: { rows: Product[]; onOpen: (p: Product
               const months = seasonMonths(p.season_start_month, p.season_end_month)
               return (
                 <tr key={p.id} className="cursor-pointer hover:bg-accent/50" onClick={() => onOpen(p)}>
-                  <td className="py-1.5 pr-3">{p.name} <span className="text-xs text-muted-foreground">{PRODUCT_TYPE_LABEL[p.product_type]}</span></td>
+                  <td className="py-1.5 pe-3">{p.name} <span className="text-xs text-muted-foreground"><T>{PRODUCT_TYPE_LABEL[p.product_type]}</T></span></td>
                   {MONTHS.map((m, i) => (
                     <td key={m} className="px-0.5 py-1.5">
                       <div className={cn('h-5 rounded-sm', months.has(i + 1) ? 'bg-primary/80' : 'bg-muted', i + 1 === now && 'ring-1 ring-foreground/30')} />

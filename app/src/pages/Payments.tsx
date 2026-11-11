@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Wallet } from 'lucide-react'
@@ -77,20 +78,20 @@ export function Payments() {
             <div className="text-lg font-semibold tabular-nums">{money(t.outstanding, t.currency, 0)}</div>
             <div className={cn('text-xs', t.overdue ? 'text-destructive' : 'text-muted-foreground')}>{t.overdue ? `${money(t.overdue, t.currency, 0)} overdue` : 'nothing overdue'} · {t.count} lines</div>
           </div>
-        )) : <div className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground">Nothing outstanding</div>}
+        )) : <div className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground"><T>Nothing outstanding</T></div>}
       </div>
       <Card><CardContent className="overflow-x-auto p-0">
         {!list.length ? <div className="p-5"><Empty title="No payment lines" /></div> : (
           <table className="w-full min-w-[760px] text-sm">
-            <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">What</th><th className="px-3 py-3 font-medium">Due date</th><th className="px-3 py-3 text-right font-medium">Due</th><th className="px-3 py-3 text-right font-medium">Paid</th><th className="px-3 py-3 font-medium">Status</th><th /></tr></thead>
+            <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium"><T>What</T></th><th className="px-3 py-3 font-medium"><T>Due date</T></th><th className="px-3 py-3 text-end font-medium"><T>Due</T></th><th className="px-3 py-3 text-end font-medium"><T>Paid</T></th><th className="px-3 py-3 font-medium"><T>Status</T></th><th /></tr></thead>
             <tbody>{list.map((p) => (
               <tr key={p.id} className="border-b border-border last:border-0">
                 <td className="px-5 py-3"><div className="font-medium">{PAY_KIND[p.kind as keyof typeof PAY_KIND] ?? p.kind}{p.description ? ` — ${p.description}` : ''}</div>
                   <div className="text-xs text-muted-foreground">{p.order_id && ord[p.order_id] ? <Link className="hover:underline" to={`/orders/${p.order_id}`}>{ord[p.order_id].number}</Link> : null}{(p.supplier_id || p.forwarder_id) && ` · ${sup[p.supplier_id ?? p.forwarder_id!] ?? ''}`}{p.reference ? ` · ref ${p.reference}` : ''}</div></td>
                 <td className="px-3 py-3">{p.due_date ?? '—'}</td>
-                <td className="px-3 py-3 text-right tabular-nums">{money(p.amount_due, p.currency)}</td><td className="px-3 py-3 text-right tabular-nums">{money(p.amount_paid, p.currency)}</td>
+                <td className="px-3 py-3 text-end tabular-nums">{money(p.amount_due, p.currency)}</td><td className="px-3 py-3 text-end tabular-nums">{money(p.amount_paid, p.currency)}</td>
                 <td className="px-3 py-3"><PaymentStatusBadge s={paymentStatus(p, today)} /></td>
-                <td className="px-3 py-3 text-right">{canEdit && !p.cancelled_at && <Button variant="outline" size="sm" onClick={() => setRecording(p)}><Wallet />Record</Button>}</td>
+                <td className="px-3 py-3 text-end">{canEdit && !p.cancelled_at && <Button variant="outline" size="sm" onClick={() => setRecording(p)}><Wallet />Record</Button>}</td>
               </tr>
             ))}</tbody>
           </table>

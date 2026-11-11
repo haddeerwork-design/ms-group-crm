@@ -1,3 +1,4 @@
+import { tr } from './i18n'
 import { useEffect, useRef } from 'react'
 
 /**
@@ -14,7 +15,7 @@ export function useLeaveGuard(dirty: boolean, onSave?: () => unknown) {
     const onClick = (e: MouseEvent) => {
       const a = (e.target as HTMLElement | null)?.closest?.('a[href^="#/"], a[href="#"]')
       if (!a || a.getAttribute('target') === '_blank' || e.ctrlKey || e.metaKey) return
-      if (!window.confirm('You have unsaved changes. Leave without saving?')) { e.preventDefault(); e.stopPropagation() }
+      if (!window.confirm(tr('You have unsaved changes. Leave without saving?'))) { e.preventDefault(); e.stopPropagation() }
     }
     window.addEventListener('beforeunload', beforeUnload)
     document.addEventListener('click', onClick, true)
