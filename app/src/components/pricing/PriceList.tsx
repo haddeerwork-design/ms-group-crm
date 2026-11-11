@@ -30,7 +30,7 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
     .filter((r) => prod[r.product_id] && !prod[r.product_id].archived_at)
     .filter((r) => !inc || (inc === 'none' ? !r.incoterm : r.incoterm === inc))
     .filter((r) => { const t = q.trim().toLowerCase(); const p = prod[r.product_id]; return !t || p.name.toLowerCase().includes(t) || (r.variety ?? '').toLowerCase().includes(t) || (cat[p.category_id]?.name ?? '').toLowerCase().includes(t) })
-    .sort((a, b) => prod[a.product_id].name.localeCompare(prod[b.product_id].name) || String(a.incoterm).localeCompare(String(b.incoterm)))
+    .sort((a, b) => prod[a.product_id].name.localeCompare(prod[b.product_id].name) || (a.variety ?? '').localeCompare(b.variety ?? '') || String(a.packaging_id).localeCompare(String(b.packaging_id)))
 
   return (
     <>
@@ -76,20 +76,23 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
                 </tr>
               </thead>
               <tbody>
-                {list.map((r) => {
+                {list.map((r, i) => {
                   const p = prod[r.product_id]
+                  const sameAsAbove = i > 0 && list[i - 1].product_id === r.product_id
                   const pk = p.product_packaging.find((x) => x.id === r.packaging_id)
                   const expired = isExpired(r)
                   return (
-                    <tr key={r.id} className={'border-b border-border last:border-0 ' + (canEdit ? 'cursor-pointer hover:bg-accent/50' : '')}
+                    <tr key={r.id} className={'border-border last:border-0 ' + (i + 1 < list.length && list[i + 1].product_id === r.product_id ? '' : 'border-b ') + (canEdit ? 'cursor-pointer hover:bg-accent/50' : '')}
                       onClick={() => canEdit && setEditing(r)}>
                       <td className="px-5 py-3">
-                        <div className="font-medium">{p.name}{r.variety ? <span className="font-normal text-muted-foreground"> · {r.variety}</span> : null}</div>
-                        <div className="text-xs text-muted-foreground">{cat[p.category_id]?.name}</div>
+                        {/* the product name once; its varieties / packings listed under it */}
+                        {!sameAsAbove && <div className="font-medium">{p.name}</div>}
+                        {r.variety ? <div className={sameAsAbove ? 'ps-3 text-sm' : 'text-sm'}>{r.variety}</div> : sameAsAbove ? <div className="ps-3 text-sm text-muted-foreground"><T>All varieties</T></div> : null}
+                        {!sameAsAbove && <div className="text-xs text-muted-foreground">{cat[p.category_id]?.name}</div>}
                       </td>
-                      <td className="px-3 py-3 text-muted-foreground">{pk?.label ?? (r.net_weight_kg ? `${r.net_weight_kg} kg` : '—')}</td>
+                      <td className="px-3 py-3 text-muted-foreground">{pk?.label ?? (r.price_basis === 'unit' && r.unit_label === 'kg' ? <T>Any packing (price per kg)</T> : <T>Any packing</T>)}</td>
                       <td className="px-3 py-3">
-                        {r.incoterm ? <span className="font-medium">{r.incoterm}</span> : <Badge className="border-amber-200 bg-amber-50 text-amber-800">Imported — no Incoterm</Badge>}
+                        {r.incoterm ? <span className="font-medium">{r.incoterm}</span> : r.source === 'imported' ? <Badge className="border-amber-200 bg-amber-50 text-amber-800">Old CRM price</Badge> : <span className="text-muted-foreground"><T>No Incoterm</T></span>}
                         {r.destination && <div className="text-xs text-muted-foreground">{r.destination}</div>}
                       </td>
                       <td className="px-3 py-3 text-end font-medium tabular-nums">{money(r.price_per_ton, r.sell_currency)}
