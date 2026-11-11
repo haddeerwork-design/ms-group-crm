@@ -1,3 +1,4 @@
+import { useTx } from '@/lib/i18n'
 import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -23,7 +24,9 @@ export function useDark() {
 }
 const compact = (v: number) => Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(v)
 
-export function Panel({ title, sub, action, children, className, bodyClass }: { title?: React.ReactNode; sub?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode; className?: string; bodyClass?: string }) {
+export function Panel({ title: t0, sub: s0, action, children, className, bodyClass }: { title?: React.ReactNode; sub?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode; className?: string; bodyClass?: string }) {
+  const tx = useTx()
+  const title = tx(t0); const sub = tx(s0)
   return (
     <section className={cn('rounded-2xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.04)]', className)}>
       {(title || action) && (
@@ -71,6 +74,7 @@ export function StatCard({ icon: Icon, tone, label, value, delta, deltaInvert, d
   icon: LucideIcon; tone: Tone; label: string; value: React.ReactNode; delta?: number | null; deltaInvert?: boolean; deltaSuffix?: string
   foot?: React.ReactNode; progress?: { pct: number | null; label?: string }; to?: string
 }) {
+  const tx = useTx()
   const body = (
     <div className={cn('flex h-full flex-col rounded-2xl border border-border/70 bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.04)] transition-colors', to && 'hover:border-primary/40')}>
       <div className="flex items-start gap-3">
@@ -81,7 +85,7 @@ export function StatCard({ icon: Icon, tone, label, value, delta, deltaInvert, d
         </div>
       </div>
       <div className="mt-2 min-h-[18px]">{delta !== undefined && <DeltaPill value={delta} invert={deltaInvert} suffix={deltaSuffix} />}</div>
-      {foot && <div className="mt-1 text-xs text-muted-foreground">{foot}</div>}
+      {foot && <div className="mt-1 text-xs text-muted-foreground">{tx(foot)}</div>}
       {progress && (
         <div className="mt-auto pt-3">
           <div className="flex items-center gap-2">

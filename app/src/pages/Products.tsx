@@ -1,3 +1,5 @@
+import { AlertTriangle, Leaf, Package } from 'lucide-react'
+import { StatCard } from '@/components/analytics/dash'
 import { useT } from '@/lib/i18n'
 import { T, TV } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
@@ -100,6 +102,19 @@ export function Products() {
           </div>
         )} />
 
+      {data && (() => {
+        const m = new Date().getMonth() + 1
+        const live = data.products.filter((p) => !p.archived_at)
+        const inSeasonNow = live.filter((p) => p.season_start_month && p.season_end_month && (p.season_start_month <= p.season_end_month ? m >= p.season_start_month && m <= p.season_end_month : m >= p.season_start_month || m <= p.season_end_month)).length
+        return (
+          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard icon={Package} tone="emerald" label="Products" value={live.length} foot="In the catalog" />
+            <StatCard icon={AlertTriangle} tone="amber" label="Need setup" value={needSetup} foot="Packing weight or pallet · bar = ready" progress={{ pct: live.length ? ((live.length - needSetup) / live.length) * 100 : null }} />
+            <StatCard icon={Leaf} tone="teal" label="In season now" value={inSeasonNow} foot="Season covers this month" />
+            <StatCard icon={Merge} tone="violet" label="Possible duplicates" value={dupGroups.length} foot={dupGroups.length ? 'Review them' : 'None found'} />
+          </div>
+        )
+      })()}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
