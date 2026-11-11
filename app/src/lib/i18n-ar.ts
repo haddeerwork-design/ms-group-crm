@@ -1354,4 +1354,7 @@ export const AR: Record<string, string> = {
   'Review them': 'راجعهم',
   'None found': 'مفيش',
   'Packing weight or pallet · bar = ready': 'وزن التعبئة أو البالتة · الشريط = الجاهز',
+  'Any packing (price per kg)': 'أي تعبئة (السعر بالكيلو)',
+  'Old CRM price': 'سعر من الـ CRM القديم',
+  'Clean price list': 'قايمة أسعار نظيفة',
 }
