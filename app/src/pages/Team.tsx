@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -63,8 +64,8 @@ export function Team() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-5 py-3 font-medium">Employee</th>
-                  {ROLES.map((r) => <th key={r} className="px-2 py-3 text-center font-medium">{ROLE_LABEL[r]}</th>)}
+                  <th className="px-5 py-3 font-medium"><T>Employee</T></th>
+                  {ROLES.map((r) => <th key={r} className="px-2 py-3 text-center font-medium"><T>{ROLE_LABEL[r]}</T></th>)}
                   {isSuper && <th className="px-2 py-3" />}
                 </tr>
               </thead>
@@ -74,8 +75,8 @@ export function Team() {
                     <td className="px-5 py-3">
                       <div className="font-medium">{p.full_name || '—'}</div>
                       <div className="text-xs text-muted-foreground">{p.email}</div>
-                      {off[p.id] ? <div className="mt-1 inline-block rounded border border-border bg-muted px-1.5 text-[11px] text-muted-foreground">Deactivated · cannot log in</div>
-                        : !roles.some((x) => x.user_id === p.id) && <div className="mt-1 inline-block rounded border border-amber-300 bg-amber-50 px-1.5 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Waiting for role</div>}
+                      {off[p.id] ? <div className="mt-1 inline-block rounded border border-border bg-muted px-1.5 text-[11px] text-muted-foreground"><T>Deactivated · cannot log in</T></div>
+                        : !roles.some((x) => x.user_id === p.id) && <div className="mt-1 inline-block rounded border border-amber-300 bg-amber-50 px-1.5 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"><T>Waiting for role</T></div>}
                     </td>
                     {ROLES.map((r) => {
                       const has = roles.find((x) => x.user_id === p.id && x.role === r)
@@ -85,7 +86,7 @@ export function Team() {
                             disabled={!isSuper || busy === p.id + r}
                             onChange={(e) => toggle(p.id, r, e.target.checked)}
                             aria-label={`${ROLE_LABEL[r]} for ${p.email}`} />
-                          {has?.source === 'legacy' && <div className="text-[10px] text-muted-foreground">from CRM</div>}
+                          {has?.source === 'legacy' && <div className="text-[10px] text-muted-foreground"><T>from CRM</T></div>}
                         </td>
                       )
                     })}
@@ -104,7 +105,7 @@ export function Team() {
       <AddEmployeeDialog open={adding} onOpenChange={setAdding} onCreated={load} />
       <ResetPasswordDialog person={resetting} onOpenChange={(o) => !o && setResetting(null)} />
       <AccessDialog person={managing} deactivated={!!managing && !!off[managing.id]} onOpenChange={(o) => !o && setManaging(null)} onChanged={load} onReset={(p) => setResetting(p as Row)} />
-      <p className="mt-3 text-xs text-muted-foreground">New employee: “Add employee” gives you a temporary password to send them; they choose their own at first login. “Manage” next to a name: reset password, deactivate (when someone leaves — their history stays) or delete (test accounts only).</p>
+      <p className="mt-3 text-xs text-muted-foreground"><T>New employee: “Add employee” gives you a temporary password to send them; they choose their own at first login. “Manage” next to a name: reset password, deactivate (when someone leaves — their history stays) or delete (test accounts only).</T></p>
     </>
   )
 }

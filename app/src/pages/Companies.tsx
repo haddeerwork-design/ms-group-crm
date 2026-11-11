@@ -1,3 +1,5 @@
+import { useT } from '@/lib/i18n'
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, FileUp, Plus, Search } from 'lucide-react'
@@ -19,6 +21,7 @@ import { MobileFilters } from '@/components/ui/mobile-filters'
 const FOLLOW = { overdue: 'text-destructive font-medium', today: 'text-amber-700 dark:text-amber-300 font-medium', soon: 'text-foreground' }
 
 export function Companies() {
+  const { t: tl } = useT()
   const nav = useNavigate()
   const { hasRole } = useAuth()
   const canWrite = hasRole(...CRM_WRITERS)
@@ -57,7 +60,7 @@ export function Companies() {
 
   return (
     <>
-      <PageHeader title="CRM & Importers" summary={rows ? `${rows.filter((r) => !r.archived_at).length} companies · ${due} follow-ups due today or overdue` : 'Customers, importers and leads'}
+      <PageHeader title="CRM & Importers" summary={rows ? tl('{n} companies · {m} follow-ups due today or overdue', { n: rows.filter((r) => !r.archived_at).length, m: due }) : 'Customers, importers and leads'}
         action={<div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={exportCSV} disabled={!list.length}><Download />Export</Button>
           {canWrite && <Button variant="outline" onClick={() => setImportOpen(true)}><FileUp />Import</Button>}
@@ -69,10 +72,10 @@ export function Companies() {
           <Input className="ps-8" placeholder="Search name, country, email, product, tag…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
         </div>
         <MobileFilters active={[f.status, f.country, f.owner, f.priority, f.follow].filter(Boolean).length + (f.archived ? 1 : 0)}>
-        <div className="w-full sm:w-40"><Select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} aria-label="Status"><option value="">All statuses</option>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
+        <div className="w-full sm:w-40"><Select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} aria-label="Status"><option value="">All statuses</option>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></div>
         <div className="w-full sm:w-36"><Select value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} aria-label="Country"><option value="">All countries</option>{countries.map((c) => <option key={c}>{c}</option>)}</Select></div>
         {team.length > 1 && <div className="w-full sm:w-40"><Select value={f.owner} onChange={(e) => setF({ ...f, owner: e.target.value })} aria-label="Owner"><option value="">All owners</option>{team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}<option value="none">Unassigned</option></Select></div>}
-        <div className="w-full sm:w-32"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} aria-label="Priority"><option value="">Any priority</option>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
+        <div className="w-full sm:w-32"><Select value={f.priority} onChange={(e) => setF({ ...f, priority: e.target.value })} aria-label="Priority"><option value="">Any priority</option>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></div>
         <div className="w-full sm:w-40"><Select value={f.follow} onChange={(e) => setF({ ...f, follow: e.target.value })} aria-label="Follow-up"><option value="">Any follow-up</option><option value="due">Due / overdue</option><option value="soon">Next 7 days</option></Select></div>
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground"><input type="checkbox" className="size-4 accent-[#23856B]" checked={f.archived} onChange={(e) => setF({ ...f, archived: e.target.checked })} />Archived</label>
         </MobileFilters>
@@ -87,8 +90,8 @@ export function Companies() {
           ) : (
             <table className="w-full min-w-[860px] text-sm">
               <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-5 py-3 font-medium">Company</th><th className="px-3 py-3 font-medium">Country</th><th className="px-3 py-3 font-medium">Interested in</th>
-                <th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Owner</th><th className="px-3 py-3 font-medium">Next follow-up</th>
+                <th className="px-5 py-3 font-medium"><T>Company</T></th><th className="px-3 py-3 font-medium"><T>Country</T></th><th className="px-3 py-3 font-medium"><T>Interested in</T></th>
+                <th className="px-3 py-3 font-medium"><T>Status</T></th><th className="px-3 py-3 font-medium"><T>Owner</T></th><th className="px-3 py-3 font-medium"><T>Next follow-up</T></th>
               </tr></thead>
               <tbody>
                 {list.map((r) => {
@@ -101,7 +104,7 @@ export function Companies() {
                       </td>
                       <td className="px-3 py-3 text-muted-foreground">{[r.city, r.country].filter(Boolean).join(', ') || '—'}</td>
                       <td className="max-w-[220px] truncate px-3 py-3 text-muted-foreground">{r.products_interested || '—'}</td>
-                      <td className="px-3 py-3"><span className={cn('whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium', STATUS_TONE[r.lead_status])}>{LEAD_STATUS[r.lead_status]}</span></td>
+                      <td className="px-3 py-3"><span className={cn('whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium', STATUS_TONE[r.lead_status])}><T>{LEAD_STATUS[r.lead_status]}</T></span></td>
                       <td className="px-3 py-3 text-muted-foreground">{r.owner_id ? owner[r.owner_id] ?? '—' : 'Unassigned'}</td>
                       <td className={cn('px-3 py-3 text-muted-foreground', fu && FOLLOW[fu])}>{r.next_follow_up_date ?? '—'}{fu === 'overdue' && ' · overdue'}</td>
                     </tr>

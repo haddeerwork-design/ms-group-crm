@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { tr } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Archive, Plus, Search } from 'lucide-react'
@@ -105,7 +106,7 @@ export function Logistics() {
         action={canEdit && tab !== 'calc' && <Button onClick={() => tab === 'rates' ? (setRateEdit(null), setRateOpen(true)) : (setFwdEdit(null), setFwdOpen(true))}><Plus />{tab === 'rates' ? 'Add rate' : 'Add forwarder'}</Button>} />
       <div className="mb-4 flex gap-1 border-b border-border">
         {([['rates', 'Shipping rates'], ['forwarders', 'Forwarders & carriers'], ['calc', 'Freight calculator']] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}><T>{l}</T></button>
         ))}
       </div>
 
@@ -121,7 +122,7 @@ export function Logistics() {
               action={canEdit && <Button onClick={() => { setRateEdit(null); setRateOpen(true) }}><Plus />Add rate</Button>} /></div> : (
               <table className="w-full min-w-[860px] text-sm">
                 <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-5 py-3 font-medium">Route</th><th className="px-3 py-3 font-medium">Mode</th><th className="px-3 py-3 text-end font-medium">Rate</th><th className="px-3 py-3 font-medium">Transit</th><th className="px-3 py-3 font-medium">By</th><th className="px-3 py-3 font-medium">Validity</th><th className="px-3 py-3" />
+                  <th className="px-5 py-3 font-medium"><T>Route</T></th><th className="px-3 py-3 font-medium"><T>Mode</T></th><th className="px-3 py-3 text-end font-medium"><T>Rate</T></th><th className="px-3 py-3 font-medium"><T>Transit</T></th><th className="px-3 py-3 font-medium"><T>By</T></th><th className="px-3 py-3 font-medium"><T>Validity</T></th><th className="px-3 py-3" />
                 </tr></thead>
                 <tbody>
                   {visible.map((r) => {
@@ -222,24 +223,24 @@ function FreightCalculator({ rates, products, fwdName }: { rates: Rate[]; produc
         <CardHeader><CardTitle>Estimated freight</CardTitle><CardDescription>{r ? `${r.currency} · ${r.source ?? 'source not recorded'}` : 'Choose a rate'}</CardDescription></CardHeader>
         <CardContent className="space-y-3 text-sm">
           {valid === 'expired' && <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-200">This rate expired on {r!.valid_until}. Ask for a new quote before using it.</p>}
-          {valid === 'no_date' && <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">This rate has no valid-until date. Confirm it is still current.</p>}
+          {valid === 'no_date' && <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100"><T>This rate has no valid-until date. Confirm it is still current.</T></p>}
           {res && (
             <>
               {res.problems.map((p) => <p key={p} className="text-xs text-amber-700 dark:text-amber-300">{p}</p>)}
               {r!.mode === 'air' && (
                 <dl className="grid grid-cols-2 gap-y-1">
-                  <dt className="text-muted-foreground">Actual weight</dt><dd className="text-end tabular-nums">{res.actualKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
-                  <dt className="text-muted-foreground">Volumetric weight</dt><dd className="text-end tabular-nums">{res.volumetricKg != null ? res.volumetricKg.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kg' : '—'}</dd>
-                  <dt className="font-medium">Chargeable weight</dt><dd className="text-end font-medium tabular-nums">{res.chargeableKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
+                  <dt className="text-muted-foreground"><T>Actual weight</T></dt><dd className="text-end tabular-nums">{res.actualKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
+                  <dt className="text-muted-foreground"><T>Volumetric weight</T></dt><dd className="text-end tabular-nums">{res.volumetricKg != null ? res.volumetricKg.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kg' : '—'}</dd>
+                  <dt className="font-medium"><T>Chargeable weight</T></dt><dd className="text-end font-medium tabular-nums">{res.chargeableKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
                 </dl>
               )}
               <dl className="grid grid-cols-2 gap-y-1 border-t border-border pt-2">
                 <dt className="text-muted-foreground">Freight{res.minApplied ? ' (minimum charge)' : ''}</dt><dd className="text-end tabular-nums">{money(res.base, res.currency)}</dd>
-                <dt className="text-muted-foreground">Extra fees</dt><dd className="text-end tabular-nums">{money(res.fees, res.currency)}</dd>
-                <dt className="text-base font-semibold">Total</dt><dd className="text-end text-base font-semibold tabular-nums text-primary">{money(res.total, res.currency)}</dd>
-                <dt className="text-muted-foreground">Per net ton</dt><dd className="text-end tabular-nums">{res.perNetTon != null ? money(res.perNetTon, res.currency) : '—'}</dd>
+                <dt className="text-muted-foreground"><T>Extra fees</T></dt><dd className="text-end tabular-nums">{money(res.fees, res.currency)}</dd>
+                <dt className="text-base font-semibold"><T>Total</T></dt><dd className="text-end text-base font-semibold tabular-nums text-primary">{money(res.total, res.currency)}</dd>
+                <dt className="text-muted-foreground"><T>Per net ton</T></dt><dd className="text-end tabular-nums">{res.perNetTon != null ? money(res.perNetTon, res.currency) : '—'}</dd>
               </dl>
-              <p className="text-xs text-muted-foreground">Use “per net ton” as the Freight cost in Pricing → Calculator for CFR / CIF prices. This is an estimate from a saved rate, not a booking.</p>
+              <p className="text-xs text-muted-foreground"><T>Use “per net ton” as the Freight cost in Pricing → Calculator for CFR / CIF prices. This is an estimate from a saved rate, not a booking.</T></p>
             </>
           )}
         </CardContent>

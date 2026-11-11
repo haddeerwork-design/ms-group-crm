@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -240,7 +241,7 @@ const ROW_TONE = {
 function ListPanel({ icon: Icon, title, to, rows, empty }: { icon: React.ComponentType<{ className?: string }>; title: string; to: string; empty: string; rows: { key: string; main: string; side: string; to?: string; tone: keyof typeof ROW_TONE }[] }) {
   const { t } = useT()
   return (
-    <Panel title={<span className="flex items-center gap-2"><Icon className="size-4 text-muted-foreground" />{title}</span>} action={<Link to={to} className="text-xs font-medium text-primary hover:underline">{t('View all')}</Link>} bodyClass="pt-3">
+    <Panel title={<span className="flex items-center gap-2"><Icon className="size-4 text-muted-foreground" /><T>{title}</T></span>} action={<Link to={to} className="text-xs font-medium text-primary hover:underline">{t('View all')}</Link>} bodyClass="pt-3">
       {rows.length === 0 ? <p className="py-4 text-sm text-muted-foreground">{empty}</p> : (
         <ul className="space-y-1">
           {rows.map((x) => (

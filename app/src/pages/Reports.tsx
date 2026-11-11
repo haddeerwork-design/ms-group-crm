@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { Download, Printer } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
@@ -149,7 +150,7 @@ export function Reports() {
       )}
       {out.note && <p className="mb-2 text-xs text-muted-foreground">{out.note}</p>}
       <Card className="overflow-x-auto">
-        {out.rows.length === 0 ? <p className="p-8 text-center text-sm text-muted-foreground">No data for this report and period.</p> : (
+        {out.rows.length === 0 ? <p className="p-8 text-center text-sm text-muted-foreground"><T>No data for this report and period.</T></p> : (
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-start text-xs text-muted-foreground">
               <tr>{out.cols.map((c) => <th key={c.key} className={`px-3 py-2 font-medium ${c.num ? 'text-end' : ''}`}>{c.label}</th>)}</tr>
@@ -160,7 +161,7 @@ export function Reports() {
               ))}
             </tbody>
             {total != null && (
-              <tfoot className="border-t-2 border-border font-medium"><tr><td className="px-3 py-2">Total</td><td className="px-3 py-2 text-end tabular-nums">{cur} {total.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td></tr></tfoot>
+              <tfoot className="border-t-2 border-border font-medium"><tr><td className="px-3 py-2"><T>Total</T></td><td className="px-3 py-2 text-end tabular-nums">{cur} {total.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td></tr></tfoot>
             )}
           </table>
         )}

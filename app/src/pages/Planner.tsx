@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Copy, FileText, Loader2, Maximize2, Plus, Save, Search, Settings2, Trash2, Truck } from 'lucide-react'
@@ -214,7 +215,7 @@ export function Planner() {
           <CardHeader className="pb-2"><CardTitle className="text-sm">Saved plans</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <div className="relative"><Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="ps-8" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-            {!visiblePlans.length ? <p className="py-3 text-center text-xs text-muted-foreground">No saved plans.</p> : (
+            {!visiblePlans.length ? <p className="py-3 text-center text-xs text-muted-foreground"><T>No saved plans.</T></p> : (
               <ul className="max-h-[60vh] space-y-0.5 overflow-y-auto">
                 {visiblePlans.map((p) => (
                   <li key={p.id}>
@@ -250,7 +251,7 @@ export function Planner() {
                 </Field>
               </fieldset>
               {type && <p className="mt-3 text-xs text-muted-foreground">{type.name}: {type.max_pallets} pallets{type.pallet_type ? ` (${type.pallet_type})` : ''} · {Number(type.max_payload_kg).toLocaleString()} kg payload · empty pallet {type.empty_pallet_kg} kg{type.is_reefer ? '' : ' · dry'}</p>}
-              {!canEdit && meta.id && <p className="mt-3 text-xs text-muted-foreground">Read-only: this plan belongs to another employee.</p>}
+              {!canEdit && meta.id && <p className="mt-3 text-xs text-muted-foreground"><T>Read-only: this plan belongs to another employee.</T></p>}
             </CardContent>
           </Card>
 
@@ -370,7 +371,7 @@ function Bar({ label, used, cap, unit, usage, segments }: { label: string; used:
   return (
     <div>
       <div className="mb-1 flex justify-between text-sm">
-        <span className="font-medium">{label}</span>
+        <span className="font-medium"><T>{label}</T></span>
         <span className={cn('tabular-nums', usage > 1 ? 'font-semibold text-destructive' : 'text-muted-foreground')}>
           {Math.round(used).toLocaleString()}{unit} / {cap ? Math.round(cap).toLocaleString() + unit : '—'}{cap ? ` · ${Math.round(usage * 100)}%` : ''}
         </span>
@@ -383,5 +384,5 @@ function Bar({ label, used, cap, unit, usage, segments }: { label: string; used:
   )
 }
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-md bg-muted px-3 py-2"><div className="text-[11px] text-muted-foreground">{label}</div><div className="text-sm font-semibold tabular-nums">{value}</div></div>
+  return <div className="rounded-md bg-muted px-3 py-2"><div className="text-[11px] text-muted-foreground"><T>{label}</T></div><div className="text-sm font-semibold tabular-nums">{value}</div></div>
 }

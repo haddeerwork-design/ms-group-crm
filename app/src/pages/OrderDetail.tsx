@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, Download, FileUp, Loader2, Plus, Save, Trash2, Wallet } from 'lucide-react'
@@ -81,7 +82,7 @@ export function OrderDetail() {
               className={cn('flex min-w-[96px] flex-1 flex-col items-center gap-1 rounded-md px-1 py-2 text-[11px] font-medium transition-colors enabled:hover:bg-accent',
                 o.stage === 'cancelled' ? 'text-muted-foreground' : i < idx ? 'text-primary' : i === idx ? 'bg-accent text-foreground' : 'text-muted-foreground')}>
               <span className={cn('grid size-6 place-items-center rounded-full border text-[10px]', i <= idx && o.stage !== 'cancelled' ? 'border-primary bg-primary text-white' : 'border-border')}>{i < idx ? <Check className="size-3" /> : i + 1}</span>
-              {STAGE_LABEL[s]}
+              <T>{STAGE_LABEL[s]}</T>
             </button>
           ))}
         </div>
@@ -94,7 +95,7 @@ export function OrderDetail() {
 
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
         {([['overview', 'Products'], ['shipment', 'Shipment'], ['documents', `Documents (${d.docs.length})`], ['payments', `Payments (${d.payments.length})`], ['history', 'History']] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}><T>{l}</T></button>
         ))}
       </div>
       {tab === 'overview' && <Items order={o} canEdit={canEditCommercial} onSaved={load} />}
@@ -103,7 +104,7 @@ export function OrderDetail() {
       {tab === 'payments' && <OrderPayments order={o} total={total} payments={d.payments} onChange={load} />}
       {tab === 'history' && (
         <Card><CardContent className="pt-5"><ol className="space-y-2 text-sm">
-          {d.history.map((h) => <li key={h.id}><span className="text-muted-foreground">{new Date(h.changed_at).toLocaleString()}</span> — {h.from_stage ? `${STAGE_LABEL[h.from_stage]} → ` : ''}<b>{STAGE_LABEL[h.to_stage]}</b></li>)}
+          {d.history.map((h) => <li key={h.id}><span className="text-muted-foreground">{new Date(h.changed_at).toLocaleString()}</span> — {h.from_stage ? `${STAGE_LABEL[h.from_stage]} → ` : ''}<b><T>{STAGE_LABEL[h.to_stage]}</T></b></li>)}
         </ol></CardContent></Card>
       )}
     </>
@@ -150,7 +151,7 @@ function Items({ order, canEdit, onSaved }: { order: Order; canEdit: boolean; on
             <div className="flex items-center justify-end gap-1 pb-1 text-sm sm:col-span-1"><b className="tabular-nums">{l.amount != null ? money(l.amount, undefined, 0) : '—'}</b>{canEdit && <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}><Trash2 /></Button>}</div>
           </fieldset>
         ))}
-        {!lines.length && <p className="text-sm text-muted-foreground">No lines yet.</p>}
+        {!lines.length && <p className="text-sm text-muted-foreground"><T>No lines yet.</T></p>}
         <div className="flex flex-wrap items-end justify-end gap-3 pt-2">
           <Field label="Other charges" className="w-40"><Input inputMode="decimal" disabled={!canEdit} value={other} onChange={(e) => setOther(e.target.value)} /></Field>
           <div className="pb-2 text-base">Total <b className="tabular-nums">{money(total, order.currency)}</b></div>
@@ -217,7 +218,7 @@ function Documents({ order, docs, canUpload, canDelete, onChange }: { order: Ord
         return (
           <Card key={t}><CardContent className="pt-4">
             <div className="mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm font-medium">{list.length ? <Check className="size-4 text-primary" /> : <span className="size-4 rounded-full border border-border" />}{DOC_TYPES[t]}</span>
+              <span className="flex items-center gap-2 text-sm font-medium">{list.length ? <Check className="size-4 text-primary" /> : <span className="size-4 rounded-full border border-border" />}<T>{DOC_TYPES[t]}</T></span>
               {canUpload && (
                 <label className={cn('inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent', busy === t && 'pointer-events-none opacity-50')}>
                   {busy === t ? <Loader2 className="size-3.5 animate-spin" /> : <FileUp className="size-3.5" />}Upload
@@ -264,7 +265,7 @@ function OrderPayments({ order, total, payments, onChange }: { order: Order; tot
         {!incoming.length ? (
           canEdit ? (
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">No payment schedule yet. Split the total:</p>
+              <p className="text-sm text-muted-foreground"><T>No payment schedule yet. Split the total:</T></p>
               {parts.map((p, i) => (
                 <div key={i} className="flex flex-wrap items-end gap-2">
                   <Field label="Part" className="w-36"><Select value={p.kind} onChange={(e) => setParts(parts.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x)))}>{['advance', 'installment', 'balance', 'full'].map((k) => <option key={k} value={k}>{PAY_KIND[k as keyof typeof PAY_KIND]}</option>)}</Select></Field>
@@ -276,10 +277,10 @@ function OrderPayments({ order, total, payments, onChange }: { order: Order; tot
               ))}
               <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setParts([...parts, { kind: 'installment', percent: '', due_date: '' }])}><Plus />Add part</Button><Button size="sm" onClick={createSchedule} disabled={!total}>Create schedule</Button></div>
             </div>
-          ) : <p className="text-sm text-muted-foreground">Finance has not added a payment schedule yet.</p>
+          ) : <p className="text-sm text-muted-foreground"><T>Finance has not added a payment schedule yet.</T></p>
         ) : (
           <table className="w-full text-sm">
-            <thead><tr className="text-start text-xs text-muted-foreground"><th className="py-1">Part</th><th className="py-1 text-end">Due</th><th className="py-1 text-end">Paid</th><th className="py-1">Due date</th><th className="py-1">Status</th><th /></tr></thead>
+            <thead><tr className="text-start text-xs text-muted-foreground"><th className="py-1"><T>Part</T></th><th className="py-1 text-end"><T>Due</T></th><th className="py-1 text-end"><T>Paid</T></th><th className="py-1"><T>Due date</T></th><th className="py-1"><T>Status</T></th><th /></tr></thead>
             <tbody>{incoming.map((p) => (
               <tr key={p.id} className="border-t border-border">
                 <td className="py-2">{PAY_KIND[p.kind as keyof typeof PAY_KIND] ?? p.kind}{p.reference && <div className="text-xs text-muted-foreground">{PAY_METHOD[p.method as keyof typeof PAY_METHOD]} · {p.reference} · {p.paid_date}</div>}</td>
@@ -291,7 +292,7 @@ function OrderPayments({ order, total, payments, onChange }: { order: Order; tot
           </table>
         )}
       </CardContent></Card>
-      <p className="text-xs text-muted-foreground">Supplier, freight and other costs for this order are recorded on the Payments page (money out).</p>
+      <p className="text-xs text-muted-foreground"><T>Supplier, freight and other costs for this order are recorded on the Payments page (money out).</T></p>
       <RecordPaymentDialog payment={recording} onClose={() => setRecording(null)} onSaved={onChange} />
     </div>
   )

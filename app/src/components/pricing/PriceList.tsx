@@ -1,3 +1,5 @@
+import { TV } from '@/lib/i18n'
+import { T } from '@/lib/i18n'
 import { useMemo, useState } from 'react'
 import { Calculator, Pencil, Plus, Search } from 'lucide-react'
 import { QuickPriceDialog } from './QuickPriceDialog'
@@ -43,7 +45,7 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
         {canEdit && <Button onClick={() => setEditing('new')}><Plus />Add price</Button>}
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
           <input type="checkbox" className="size-4 accent-[#23856B]" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
-          Show products without a price ({unpriced.length})
+          <TV k="Show products without a price ({n})" v={{ n: unpriced.length }} />
         </label>
       </div>
       <Card>
@@ -63,13 +65,13 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
             <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-5 py-3 font-medium">Product</th>
-                  <th className="px-3 py-3 font-medium">Packaging</th>
-                  <th className="px-3 py-3 font-medium">Terms</th>
-                  <th className="px-3 py-3 text-end font-medium">Per ton</th>
-                  <th className="px-3 py-3 text-end font-medium">Per kg</th>
-                  <th className="px-3 py-3 text-end font-medium">Per carton</th>
-                  <th className="px-3 py-3 font-medium">Valid</th>
+                  <th className="px-5 py-3 font-medium"><T>Product</T></th>
+                  <th className="px-3 py-3 font-medium"><T>Packaging</T></th>
+                  <th className="px-3 py-3 font-medium"><T>Terms</T></th>
+                  <th className="px-3 py-3 text-end font-medium"><T>Per ton</T></th>
+                  <th className="px-3 py-3 text-end font-medium"><T>Per kg</T></th>
+                  <th className="px-3 py-3 text-end font-medium"><T>Per carton</T></th>
+                  <th className="px-3 py-3 font-medium"><T>Valid</T></th>
                   {(canEdit || canCalc) && <th className="px-3 py-3" />}
                 </tr>
               </thead>

@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useT } from '@/lib/i18n'
 import { useState } from 'react'
 import { KeyRound, Loader2 } from 'lucide-react'
@@ -31,7 +32,7 @@ function Form({ onDone }: { onDone?: () => void }) {
     <form onSubmit={save} className="space-y-4">
       <div className="space-y-2"><Label htmlFor="np">New password</Label><PasswordInput id="np" autoComplete="new-password" value={p} onChange={(e) => setP(e.target.value)} /></div>
       <div className="space-y-2"><Label htmlFor="np2">Repeat new password</Label><PasswordInput id="np2" autoComplete="new-password" value={c} onChange={(e) => setC(e.target.value)} /></div>
-      <p className="text-xs text-muted-foreground">At least 10 characters, with letters and numbers.</p>
+      <p className="text-xs text-muted-foreground"><T>At least 10 characters, with letters and numbers.</T></p>
       <Button type="submit" disabled={busy} className="w-full">{busy && <Loader2 className="animate-spin" />}Save new password</Button>
     </form>
   )
@@ -43,8 +44,8 @@ export function ForcedPasswordChange({ onSignOut }: { onSignOut: () => void }) {
     <div className="grid min-h-screen place-items-center p-4">
       <div className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="space-y-1">
-          <h1 className="text-lg font-semibold">Choose your own password</h1>
-          <p className="text-sm text-muted-foreground">You logged in with a temporary password. Set a new one to continue.</p>
+          <h1 className="text-lg font-semibold"><T>Choose your own password</T></h1>
+          <p className="text-sm text-muted-foreground"><T>You logged in with a temporary password. Set a new one to continue.</T></p>
         </div>
         <Form />
         <button onClick={onSignOut} className="w-full text-center text-xs text-muted-foreground hover:underline">Sign out</button>

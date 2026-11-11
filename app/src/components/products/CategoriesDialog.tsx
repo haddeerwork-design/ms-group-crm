@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useState } from 'react'
 import { Archive, ArchiveRestore, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -41,7 +42,7 @@ export function CategoriesDialog({ open, onOpenChange, categories, counts, onSav
           }}>
             <Input className="min-w-40 flex-1" placeholder="New category name" value={name} onChange={(e) => setName(e.target.value)} />
             <div className="w-32"><Select value={type} onChange={(e) => setType(e.target.value as ProductType)}>
-              {Object.entries(PRODUCT_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              {Object.entries(PRODUCT_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}
             </Select></div>
             <Button type="submit" disabled={busy === 'new'}>{busy === 'new' ? <Loader2 className="animate-spin" /> : <Plus />}Add</Button>
           </form>
@@ -53,7 +54,7 @@ export function CategoriesDialog({ open, onOpenChange, categories, counts, onSav
                     const v = e.target.value.trim()
                     if (v && v !== c.name) run(c.id, () => supabase.from('product_categories').update({ name: v }).eq('id', c.id), 'Category renamed')
                   }} />
-                <span className="w-16 text-xs text-muted-foreground">{PRODUCT_TYPE_LABEL[c.product_type]}</span>
+                <span className="w-16 text-xs text-muted-foreground"><T>{PRODUCT_TYPE_LABEL[c.product_type]}</T></span>
                 <span className="w-20 text-end text-xs text-muted-foreground">{counts[c.id] ?? 0} products</span>
                 <Button variant="ghost" size="icon" disabled={busy === c.id}
                   title={c.archived_at ? 'Restore' : 'Archive'} aria-label={c.archived_at ? 'Restore' : 'Archive'}

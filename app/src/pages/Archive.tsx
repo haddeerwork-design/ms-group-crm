@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { Archive as ArchiveIcon, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -62,7 +63,7 @@ export function Archive() {
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-start text-xs text-muted-foreground">
-              <tr><th className="px-3 py-2">Number</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Date</th><th className="px-3 py-2">Customer</th><th className="px-3 py-2 text-end">Total</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">By</th></tr>
+              <tr><th className="px-3 py-2"><T>Number</T></th><th className="px-3 py-2"><T>Type</T></th><th className="px-3 py-2"><T>Date</T></th><th className="px-3 py-2"><T>Customer</T></th><th className="px-3 py-2 text-end"><T>Total</T></th><th className="px-3 py-2"><T>Status</T></th><th className="px-3 py-2"><T>By</T></th></tr>
             </thead>
             <tbody className="divide-y divide-border">
               {docs.map((r) => { const d = r.data as Doc; return (
@@ -92,7 +93,7 @@ export function Archive() {
 
       {tab === 'other' && (
         <Card className="p-5">
-          <p className="mb-3 text-sm text-muted-foreground">These records were also copied. Customers, leads, products, suppliers and shipping data were already moved into the new modules.</p>
+          <p className="mb-3 text-sm text-muted-foreground"><T>These records were also copied. Customers, leads, products, suppliers and shipping data were already moved into the new modules.</T></p>
           <ul className="grid gap-2 text-sm sm:grid-cols-3">
             {Object.entries(counts).sort().map(([k, n]) => <li key={k} className="flex items-center gap-2"><ArchiveIcon className="size-4 text-muted-foreground" />{k}<span className="ms-auto tabular-nums">{n}</span></li>)}
           </ul>

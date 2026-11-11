@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useState } from 'react'
 import Papa from 'papaparse'
 import readXlsxFile from 'read-excel-file'
@@ -108,7 +109,7 @@ export function ImportDialog({ open, onOpenChange, onDone }: { open: boolean; on
           {step === 'upload' && (
             <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border p-10 text-center hover:bg-accent/40">
               <FileUp className="size-8 text-muted-foreground" />
-              <span className="text-sm font-medium">Choose a file</span>
+              <span className="text-sm font-medium"><T>Choose a file</T></span>
               <span className="text-xs text-muted-foreground">.csv or .xlsx · up to 2,000 rows</span>
               <input type="file" accept=".csv,.xlsx" className="hidden" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
             </label>
@@ -135,7 +136,7 @@ export function ImportDialog({ open, onOpenChange, onDone }: { open: boolean; on
               <div className="max-h-[50vh] overflow-auto rounded-md border border-border">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-start text-xs text-muted-foreground">
-                    <th className="p-2" /><th className="p-2">Line</th><th className="p-2">Company</th><th className="p-2">Country</th><th className="p-2">Check</th>
+                    <th className="p-2" /><th className="p-2"><T>Line</T></th><th className="p-2"><T>Company</T></th><th className="p-2"><T>Country</T></th><th className="p-2"><T>Check</T></th>
                   </tr></thead>
                   <tbody>
                     {rows.map((r, i) => (

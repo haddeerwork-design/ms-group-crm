@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -90,7 +91,7 @@ export function QuickPriceDialog({ open, onOpenChange, row, products, categories
           <Field label="Packing (optional)">
             <Select value={f.packagingId} onChange={(e) => setF({ ...f, packagingId: e.target.value, per: !e.target.value && f.per === 'pack' ? 'kg' : f.per })}>
               <option value="">Any packing</option>
-              {packs.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+              {packs.map((x) => <option key={x.id} value={x.id}><T>{x.label}</T></option>)}
             </Select>
           </Field>
           <Field label="Price" className="sm:col-span-2" hint={ton && f.per !== 'ton' ? `= ${ton.toLocaleString('en-US')} ${f.currency} per ton` : undefined}>

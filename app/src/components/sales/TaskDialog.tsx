@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -64,11 +65,11 @@ export function TaskDialog({ open, onOpenChange, task, companies, opportunities,
             <Field label="Company"><Select value={f.company_id} onChange={(e) => setF((x) => ({ ...x, company_id: e.target.value, opportunity_id: '' }))}><option value="">—</option>{companies.filter((c) => !c.archived_at || c.id === f.company_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>
             <Field label="Deal"><Select value={f.opportunity_id} onChange={set('opportunity_id')}><option value="">—</option>{opps.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}</Select></Field>
             <Field label="Due date"><Input type="date" value={f.due_date} onChange={set('due_date')} /></Field>
-            <Field label="Priority"><Select value={f.priority} onChange={set('priority')}>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+            <Field label="Priority"><Select value={f.priority} onChange={set('priority')}>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
             <Field label="Assigned to" hint={canAssign ? 'They get a notification' : 'Only managers can assign to others'}>
               <Select value={f.assignee_id} onChange={set('assignee_id')} disabled={!canAssign}>{team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
             </Field>
-            <Field label="Status"><Select value={f.status} onChange={set('status')}>{Object.entries(TASK_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+            <Field label="Status"><Select value={f.status} onChange={set('status')}>{Object.entries(TASK_STATUS).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
             <Field label="Remind me at (in the app)" className="sm:col-span-2"><Input type="datetime-local" value={f.reminder_at} onChange={set('reminder_at')} /></Field>
           </fieldset>
         </DialogBody>

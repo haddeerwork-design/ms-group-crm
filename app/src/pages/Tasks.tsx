@@ -1,3 +1,5 @@
+import { useT } from '@/lib/i18n'
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarDays, ChevronLeft, ChevronRight, List, Plus } from 'lucide-react'
@@ -23,6 +25,7 @@ const TABS: { k: Bucket | 'all_open'; label: string }[] = [
 const PRI = { high: 'bg-red-500', medium: 'bg-amber-400', low: 'bg-zinc-300 dark:bg-zinc-600' }
 
 export function Tasks() {
+  const { t: tl } = useT()
   const { hasRole, session } = useAuth()
   const isManager = hasRole(...CRM_ASSIGNERS)
   const [d, setD] = useState<{ tasks: Task[]; companies: Company[]; opps: Opportunity[]; team: TeamMember[] } | null>(null)
@@ -60,7 +63,7 @@ export function Tasks() {
 
   return (
     <>
-      <PageHeader title="Tasks & Follow-ups" summary={`${count('today')} due today · ${count('overdue')} overdue`}
+      <PageHeader title="Tasks & Follow-ups" summary={tl('{n} due today · {m} overdue', { n: count('today'), m: count('overdue') })}
         action={<Button onClick={() => openNew()}><Plus />New task</Button>} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex rounded-md border border-border p-0.5">
@@ -93,7 +96,7 @@ export function Tasks() {
                       <button className="min-w-0 flex-1 text-start" onClick={() => { setEditing(t); setOpen(true) }}>
                         <div className={cn('flex items-center gap-2 text-sm font-medium', t.status === 'done' && 'text-muted-foreground line-through')}>
                           <span className={cn('size-2 shrink-0 rounded-full', PRI[t.priority])} title={`${t.priority} priority`} />{t.title}
-                          {t.status === 'in_progress' && <span className="rounded bg-sky-100 px-1 text-[10px] text-sky-800 dark:bg-sky-950 dark:text-sky-200">in progress</span>}
+                          {t.status === 'in_progress' && <span className="rounded bg-sky-100 px-1 text-[10px] text-sky-800 dark:bg-sky-950 dark:text-sky-200"><T>in progress</T></span>}
                         </div>
                         <div className="mt-0.5 text-xs text-muted-foreground">
                           <span className={cn(b === 'overdue' && 'font-medium text-destructive')}>{t.due_date ?? 'No date'}</span>
@@ -149,7 +152,7 @@ function MonthCalendar({ month, setMonth, tasks, today, onOpen, onNew }: { month
           )
         })}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Double-click a day to add a task.</p>
+      <p className="mt-2 text-xs text-muted-foreground"><T>Double-click a day to add a task.</T></p>
     </CardContent></Card>
   )
 }

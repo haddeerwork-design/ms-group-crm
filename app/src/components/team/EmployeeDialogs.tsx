@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useState } from 'react'
 import { Copy, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,7 +16,7 @@ function TempPassword({ email, password, onClose }: { email: string; password: s
   const copy = (t: string) => navigator.clipboard.writeText(t).then(() => toast.success('Copied'), () => toast.error('Copy failed, select the text and copy it.'))
   return (
     <div className="space-y-4 text-sm">
-      <p>Send these details to the employee privately (WhatsApp or in person). <b>The password is shown only now.</b></p>
+      <p>Send these details to the employee privately (WhatsApp or in person). <b><T>The password is shown only now.</T></b></p>
       <div className="rounded-md border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed">
         <div>Email: {email}</div>
         <div className="flex items-center gap-2">Temporary password: <b className="select-all text-sm">{password}</b></div>
@@ -60,12 +61,12 @@ export function AddEmployeeDialog({ open, onOpenChange, onCreated }: { open: boo
               <div className="space-y-2"><Label htmlFor="en">Full name</Label><Input id="en" value={name} onChange={(e) => setName(e.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="ee">Work email</Label><Input id="ee" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
               <fieldset className="space-y-2">
-                <legend className="mb-1 text-sm font-medium">Roles</legend>
+                <legend className="mb-1 text-sm font-medium"><T>Roles</T></legend>
                 <div className="grid grid-cols-2 gap-2">
                   {ROLES.map((r) => (
                     <label key={r} className="flex items-center gap-2 text-sm">
                       <input type="checkbox" className="size-4 accent-[#23856B]" checked={roles.includes(r)} onChange={(e) => setRoles(e.target.checked ? [...roles, r] : roles.filter((x) => x !== r))} />
-                      {ROLE_LABEL[r]}
+                      <T>{ROLE_LABEL[r]}</T>
                     </label>
                   ))}
                 </div>
@@ -131,28 +132,28 @@ export function AccessDialog({ person, deactivated, onOpenChange, onChanged, onR
         <DialogHeader><DialogTitle>Manage access — {name}</DialogTitle><DialogDescription>{person?.email}</DialogDescription></DialogHeader>
         <DialogBody className="space-y-5 text-sm">
           <section className="space-y-2">
-            <h3 className="font-medium">Password</h3>
-            <p className="text-muted-foreground">Give a new temporary password if they forgot theirs.</p>
+            <h3 className="font-medium"><T>Password</T></h3>
+            <p className="text-muted-foreground"><T>Give a new temporary password if they forgot theirs.</T></p>
             <Button variant="outline" onClick={() => { const p = person!; close(); onReset(p) }}>Reset password…</Button>
           </section>
           <section className="space-y-2 border-t border-border pt-4">
             <h3 className="font-medium">{deactivated ? 'Deactivated' : 'Deactivate'}</h3>
             {deactivated ? (
               <>
-                <p className="text-muted-foreground">They cannot log in. Activating lets them log in again; then tick their roles in the table.</p>
+                <p className="text-muted-foreground"><T>They cannot log in. Activating lets them log in again; then tick their roles in the table.</T></p>
                 <Button variant="outline" onClick={() => setActive(true)} disabled={!!busy}>{busy === 'active' && <Loader2 className="animate-spin" />}Activate</Button>
               </>
             ) : (
               <>
-                <p className="text-muted-foreground">Recommended when someone leaves. They can no longer log in and lose all roles, but everything they did (quotations, tasks, orders, notes) stays with their name. Can be undone.</p>
+                <p className="text-muted-foreground"><T>Recommended when someone leaves. They can no longer log in and lose all roles, but everything they did (quotations, tasks, orders, notes) stays with their name. Can be undone.</T></p>
                 <Button variant="outline" onClick={() => setActive(false)} disabled={!!busy}>{busy === 'active' && <Loader2 className="animate-spin" />}Deactivate</Button>
               </>
             )}
           </section>
           <section className="space-y-2 border-t border-border pt-4">
-            <h3 className="font-medium text-destructive">Delete permanently</h3>
-            <p className="text-muted-foreground">Only for accounts made by mistake or for testing. If they already have quotations, tasks or orders, the system will refuse and ask you to deactivate instead. Cannot be undone.</p>
-            <Label htmlFor="del">Type <b>DELETE</b> to confirm</Label>
+            <h3 className="font-medium text-destructive"><T>Delete permanently</T></h3>
+            <p className="text-muted-foreground"><T>Only for accounts made by mistake or for testing. If they already have quotations, tasks or orders, the system will refuse and ask you to deactivate instead. Cannot be undone.</T></p>
+            <Label htmlFor="del">Type <b><T>DELETE</T></b> to confirm</Label>
             <div className="flex gap-2">
               <Input id="del" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="max-w-[160px]" />
               <Button variant="destructive" onClick={remove} disabled={confirm.trim().toUpperCase() !== 'DELETE' || !!busy}>{busy === 'delete' && <Loader2 className="animate-spin" />}Delete account</Button>

@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { AlertTriangle, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { DuplicateHit } from '@/lib/crm'
@@ -16,7 +17,7 @@ export function DuplicateList({ hits }: { hits: DuplicateHit[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs">Records are never merged automatically. If it is the same company, ask the owner instead of creating a new one.</p>
+      <p className="mt-2 text-xs"><T>Records are never merged automatically. If it is the same company, ask the owner instead of creating a new one.</T></p>
     </div>
   )
 }

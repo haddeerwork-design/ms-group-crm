@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarClock, Plus } from 'lucide-react'
@@ -65,9 +66,9 @@ export function Pipeline() {
             <div className="text-lg font-semibold tabular-nums">{money(t.open, t.currency, 0)}</div>
             <div className="text-xs text-muted-foreground">weighted {money(t.weighted, t.currency, 0)}{t.withoutProbability ? ` · ${t.withoutProbability} without probability` : ''}</div>
           </div>
-        )) : <div className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground">No open deals yet</div>}
+        )) : <div className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground"><T>No open deals yet</T></div>}
         <div className="rounded-lg border border-border bg-card px-4 py-2.5">
-          <div className="text-xs text-muted-foreground">Win rate</div>
+          <div className="text-xs text-muted-foreground"><T>Win rate</T></div>
           <div className="text-lg font-semibold">{sum.winRate == null ? '—' : `${sum.winRate.toFixed(0)}%`}</div>
           <div className="text-xs text-muted-foreground">{sum.won} won · {sum.lost} lost</div>
         </div>

@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRightCircle, ExternalLink, Plus, Search, Star } from 'lucide-react'
@@ -140,7 +141,7 @@ export function MarketResearch() {
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-start text-xs text-muted-foreground">
-              <tr><th className="w-8 px-3 py-2" /><th className="px-3 py-2">Company</th><th className="px-3 py-2">Imports</th><th className="px-3 py-2">Verification</th><th className="px-3 py-2">Researcher</th><th className="px-3 py-2">Date</th><th className="px-3 py-2" /></tr>
+              <tr><th className="w-8 px-3 py-2" /><th className="px-3 py-2"><T>Company</T></th><th className="px-3 py-2"><T>Imports</T></th><th className="px-3 py-2"><T>Verification</T></th><th className="px-3 py-2"><T>Researcher</T></th><th className="px-3 py-2"><T>Date</T></th><th className="px-3 py-2" /></tr>
             </thead>
             <tbody className="divide-y divide-border">
               {list.map((r) => (
@@ -157,7 +158,7 @@ export function MarketResearch() {
                   <td className="px-3 py-2"><div>{r.products_imported || '—'}</div>{r.product_origin && <div className="text-xs text-muted-foreground">from {r.product_origin}</div>}</td>
                   <td className="px-3 py-2">
                     <Badge className={VERIFY_TONE[r.verification_status]}>{VERIFY[r.verification_status]}</Badge>
-                    {r.source_url && <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink className="size-3" />Source</a>}
+                    {r.source_url && <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink className="size-3" /><T>Source</T></a>}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{team[r.researcher_id ?? ''] ?? '—'}</td>
                   <td className="px-3 py-2 tabular-nums text-muted-foreground">{r.research_date}</td>

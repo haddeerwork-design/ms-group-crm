@@ -21,9 +21,11 @@ await new Promise((r) => setTimeout(r, 2500))
 const browser = await chromium.launch()
 let failed = 0
 try {
-  for (const [role, blocked] of Object.entries(BLOCKED)) {
+  // every page for every role, in English and in Arabic (RTL)
+  for (const [roleKey, blocked] of [...Object.entries(BLOCKED), ...Object.entries(BLOCKED).map(([r, b]) => [r + ':ar', b])]) {
+    const role = roleKey.replace(':ar', '')
     const ctx = await browser.newContext()
-    await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), ['sb-dfznsxuxwwexkkghmsbz-auth-token', JSON.stringify(session)])
+    await ctx.addInitScript(([k, v, ar]) => { localStorage.setItem(k, v); localStorage.setItem('ms_lang', ar ? 'ar' : 'en') }, ['sb-dfznsxuxwwexkkghmsbz-auth-token', JSON.stringify(session), roleKey.endsWith(':ar')])
     await ctx.route('**/*supabase.co/**', (route) => {
       const req = route.request(); const u = new URL(req.url()); const t = u.pathname.split('/').pop()
       if (u.pathname.startsWith('/auth/v1/user')) return route.fulfill({ contentType: 'application/json', body: JSON.stringify(user) })
@@ -41,9 +43,9 @@ try {
       const hash = new URL(page.url()).hash
       const redirected = hash === '#/' && p !== ''
       const shouldBlock = blocked.includes(p)
-      if (errors.length) { failed++; console.log(`FAIL ${role} /${p}: ${errors[0]}`) }
-      else if (shouldBlock !== redirected) { failed++; console.log(`FAIL ${role} /${p}: ${shouldBlock ? 'opened but should be blocked' : 'was blocked'}`) }
-      else console.log(`ok   ${role} /${p}`)
+      if (errors.length) { failed++; console.log(`FAIL ${roleKey} /${p}: ${errors[0]}`) }
+      else if (shouldBlock !== redirected) { failed++; console.log(`FAIL ${roleKey} /${p}: ${shouldBlock ? 'opened but should be blocked' : 'was blocked'}`) }
+      else console.log(`ok   ${roleKey} /${p}`)
     }
     await ctx.close()
   }

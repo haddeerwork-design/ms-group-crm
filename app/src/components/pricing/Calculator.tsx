@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, History, Info, Loader2, Save } from 'lucide-react'
 import { toast } from 'sonner'
@@ -200,7 +201,7 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
                   <span className="font-medium">1 {s.costCurrency} = {fx ? fx.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '?'} {s.sellCurrency}</span>
                   {!s.useManualFx && autoFx && <span className="flex items-center gap-2 text-xs text-muted-foreground">{autoFx.source} · {autoFx.path} <StaleBadge at={autoFx.rate_at} /></span>}
                 </div>
-                {!autoFx && !s.useManualFx && <p className="text-xs text-destructive">No saved rate for this pair. Add one in “Exchange rates” or enter it below.</p>}
+                {!autoFx && !s.useManualFx && <p className="text-xs text-destructive"><T>No saved rate for this pair. Add one in “Exchange rates” or enter it below.</T></p>}
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" className="size-3.5 accent-[#23856B]" checked={s.useManualFx} onChange={(e) => set({ useManualFx: e.target.checked })} />Use a different rate for this price
                 </label>
@@ -249,12 +250,12 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
             )}
 
             <table className="w-full text-sm">
-              <thead><tr className="text-xs text-muted-foreground"><th className="py-1 text-start font-medium" /><th className="py-1 text-end font-medium">Cost</th><th className="py-1 text-end font-medium">Price</th></tr></thead>
+              <thead><tr className="text-xs text-muted-foreground"><th className="py-1 text-start font-medium" /><th className="py-1 text-end font-medium"><T>Cost</T></th><th className="py-1 text-end font-medium"><T>Price</T></th></tr></thead>
               <tbody className="tabular-nums">
-                <tr className="border-t border-border text-base font-semibold"><td className="py-2">Per ton</td><td className="py-2 text-end">{money(result.totalCostPerTon)}</td><td className="py-2 text-end text-primary">{money(result.pricePerTon)}</td></tr>
-                <tr className="border-t border-border"><td className="py-1.5">Per kg</td><td className="py-1.5 text-end">{money(result.per.cost.kg, undefined, 3)}</td><td className="py-1.5 text-end">{money(result.per.price.kg, undefined, 3)}</td></tr>
-                <tr className="border-t border-border"><td className="py-1.5">Per carton</td><td className="py-1.5 text-end">{money(result.per.cost.carton)}</td><td className="py-1.5 text-end">{money(result.per.price.carton)}</td></tr>
-                <tr className="border-t border-border"><td className="py-1.5">Per pallet</td><td className="py-1.5 text-end">{money(result.per.cost.pallet)}</td><td className="py-1.5 text-end">{money(result.per.price.pallet)}</td></tr>
+                <tr className="border-t border-border text-base font-semibold"><td className="py-2"><T>Per ton</T></td><td className="py-2 text-end">{money(result.totalCostPerTon)}</td><td className="py-2 text-end text-primary">{money(result.pricePerTon)}</td></tr>
+                <tr className="border-t border-border"><td className="py-1.5"><T>Per kg</T></td><td className="py-1.5 text-end">{money(result.per.cost.kg, undefined, 3)}</td><td className="py-1.5 text-end">{money(result.per.price.kg, undefined, 3)}</td></tr>
+                <tr className="border-t border-border"><td className="py-1.5"><T>Per carton</T></td><td className="py-1.5 text-end">{money(result.per.cost.carton)}</td><td className="py-1.5 text-end">{money(result.per.price.carton)}</td></tr>
+                <tr className="border-t border-border"><td className="py-1.5"><T>Per pallet</T></td><td className="py-1.5 text-end">{money(result.per.cost.pallet)}</td><td className="py-1.5 text-end">{money(result.per.price.pallet)}</td></tr>
               </tbody>
             </table>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -295,7 +296,7 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><History className="size-4" />Price history</CardTitle><CardDescription>Old versions are kept and never changed.</CardDescription></CardHeader>
             <CardContent>
-              {!versions.length ? <p className="text-sm text-muted-foreground">No saved prices for this product yet.</p> : (
+              {!versions.length ? <p className="text-sm text-muted-foreground"><T>No saved prices for this product yet.</T></p> : (
                 <ul className="divide-y divide-border text-sm">
                   {versions.map((v) => (
                     <li key={v.id}>
@@ -323,7 +324,7 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
 function Stat({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <div className="rounded-md bg-muted px-2 py-2">
-      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="text-[11px] text-muted-foreground"><T>{label}</T></div>
       <div className={cn('text-sm font-semibold tabular-nums', warn && 'text-destructive')}>{value}</div>
     </div>
   )

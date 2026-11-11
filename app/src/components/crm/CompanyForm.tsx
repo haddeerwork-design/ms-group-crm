@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -86,12 +87,12 @@ export function CompanyForm({ open, onOpenChange, company, team, onSaved }: {
         <DialogBody className="space-y-5">
           <section className="grid gap-3 sm:grid-cols-3">
             {inp('name', 'Company name *', {}, 'sm:col-span-2')}
-            <Field label="Company type"><Select value={f.company_type} onChange={set('company_type')}><option value="">—</option>{Object.entries(COMPANY_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+            <Field label="Company type"><Select value={f.company_type} onChange={set('company_type')}><option value="">—</option>{Object.entries(COMPANY_TYPE).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
             {inp('country', 'Country')}{inp('city', 'City')}{inp('website', 'Website', { placeholder: 'https://' })}
             {inp('address', 'Address', {}, 'sm:col-span-3')}
             {inp('email', 'Email', { type: 'email' })}{inp('phone', 'Phone')}{inp('whatsapp', 'WhatsApp')}
             {inp('linkedin', 'LinkedIn')}
-            <Field label="Preferred contact"><Select value={f.preferred_contact} onChange={set('preferred_contact')}><option value="">—</option>{Object.entries(CONTACT_METHOD).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+            <Field label="Preferred contact"><Select value={f.preferred_contact} onChange={set('preferred_contact')}><option value="">—</option>{Object.entries(CONTACT_METHOD).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
             {!company && <>{inp('contact_name', 'Contact person')}{inp('contact_job', 'Job title')}</>}
           </section>
           <section className="grid gap-3 sm:grid-cols-3">
@@ -102,8 +103,8 @@ export function CompanyForm({ open, onOpenChange, company, team, onSaved }: {
             {inp('preferred_payment_terms', 'Preferred payment terms')}{inp('lead_source', 'Lead source', { placeholder: 'Exhibition, website, referral…' })}
           </section>
           <section className="grid gap-3 sm:grid-cols-3">
-            <Field label="Status"><Select value={f.lead_status} onChange={set('lead_status')}>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
-            <Field label="Priority"><Select value={f.priority} onChange={set('priority')}>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+            <Field label="Status"><Select value={f.lead_status} onChange={set('lead_status')}>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
+            <Field label="Priority"><Select value={f.priority} onChange={set('priority')}>{Object.entries(PRIORITY).map(([k, l]) => <option key={k} value={k}><T>{l}</T></option>)}</Select></Field>
             <Field label="Owner (sales)" hint={canAssign ? undefined : 'Only managers can change the owner'}>
               <Select value={f.owner_id} onChange={set('owner_id')} disabled={!canAssign}>
                 <option value="">Unassigned</option>{team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}

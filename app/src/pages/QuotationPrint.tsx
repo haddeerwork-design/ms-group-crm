@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Printer } from 'lucide-react'
@@ -43,7 +44,7 @@ export function QuotationPrint() {
       <style>{QUOTE_PRINT_CSS}</style>
       <div className="no-print mx-auto mb-4 flex w-[210mm] max-w-full items-center justify-between gap-2 px-2">
         <Button variant="outline" onClick={() => { if (window.opener) window.close(); else history.back() }}><ArrowLeft />Back</Button>
-        <span className="text-sm text-muted-foreground">Choose “Save as PDF” as the printer to get a PDF file.</span>
+        <span className="text-sm text-muted-foreground"><T>Choose “Save as PDF” as the printer to get a PDF file.</T></span>
         <Button onClick={() => window.print()} disabled={!doc}><Printer />Print / Save as PDF</Button>
       </div>
       {error ? <div className="mx-auto max-w-md"><ErrorState message={error} /></div>

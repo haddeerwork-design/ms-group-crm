@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2, Save, Undo2 } from 'lucide-react'
@@ -82,7 +83,7 @@ export function BulkPackaging({ rows, onSaved }: { rows: Product[]; onSaved: () 
         <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-5 py-2.5 font-medium">Product</th>
+              <th className="px-5 py-2.5 font-medium"><T>Product</T></th>
               {COLS.map((c) => <th key={c.k} className={cn('px-1.5 py-2.5 font-medium', c.num && 'text-end')}>{c.label}</th>)}
             </tr>
           </thead>

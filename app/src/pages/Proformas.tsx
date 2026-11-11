@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
@@ -27,7 +28,7 @@ export function Proformas() {
             action={<Button variant="outline" onClick={() => nav('/quotations')}>Go to quotations</Button>} /></div>
         ) : (
           <table className="w-full min-w-[640px] text-sm">
-            <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Number</th><th className="px-3 py-3 font-medium">Buyer</th><th className="px-3 py-3 font-medium">Date</th><th className="px-3 py-3 text-end font-medium">Total</th><th className="px-3 py-3 font-medium">Status</th></tr></thead>
+            <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium"><T>Number</T></th><th className="px-3 py-3 font-medium"><T>Buyer</T></th><th className="px-3 py-3 font-medium"><T>Date</T></th><th className="px-3 py-3 text-end font-medium"><T>Total</T></th><th className="px-3 py-3 font-medium"><T>Status</T></th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50" onClick={() => nav(`/proformas/${r.id}`)}>

@@ -49,7 +49,9 @@ export function useTx() {
     if (isValidElement(node)) {
       const el = node as ReactElement<{ children?: ReactNode }>
       if ((el.type === 'option' || el.type === Fragment || el.type === 'optgroup') && el.props.children != null) {
-        return cloneElement(el, undefined, tx(el.props.children))
+        // an <option> without value= uses its text as the value: keep the English value
+        const keep = el.type === 'option' && (el.props as { value?: unknown }).value === undefined && typeof el.props.children === 'string'
+        return cloneElement(el as ReactElement<Record<string, unknown>>, keep ? { value: el.props.children } : undefined, tx(el.props.children))
       }
     }
     return node
@@ -60,4 +62,10 @@ export function useTx() {
 export function T({ children }: { children?: ReactNode }) {
   const tx = useTx()
   return <>{tx(children)}</>
+}
+
+/** <TV k="{n} items" v={{ n: 3 }} />: translated text with values. */
+export function TV({ k, v }: { k: string; v?: Vars }) {
+  const { t } = useT()
+  return <>{t(k, v)}</>
 }
