@@ -34,6 +34,8 @@ import { Reports } from '@/pages/Reports'
 import { MarketResearch } from '@/pages/MarketResearch'
 import { Archive } from '@/pages/Archive'
 import { Help } from '@/pages/Help'
+import { Activity } from '@/pages/Activity'
+import { CatalogPrint } from '@/pages/CatalogPrint'
 
 function Guard({ module, children }: { module: ModuleKey; children: JSX.Element }) {
   const { roles } = useAuth()
@@ -41,9 +43,10 @@ function Guard({ module, children }: { module: ModuleKey; children: JSX.Element 
 }
 
 function Root() {
-  const { loading, session, error, signOut } = useAuth()
+  const { loading, session, error, signOut, recovering, finishRecovery } = useAuth()
   if (loading) return <div className="grid min-h-screen place-items-center"><Loading /></div>
   if (!session) return <Login />
+  if (recovering) return <ForcedPasswordChange onSignOut={signOut} recovery onDone={finishRecovery} />
   if (session.user.user_metadata?.must_change_password) return <ForcedPasswordChange onSignOut={signOut} />
   if (error) return (
     <div className="mx-auto mt-24 max-w-md space-y-4 p-6">
@@ -54,6 +57,7 @@ function Root() {
   return (
     <Routes>
       <Route path="proformas/:id/print" element={<Guard module="proformas"><ProformaPrint /></Guard>} />
+      <Route path="catalog/print" element={<Guard module="products"><CatalogPrint /></Guard>} />
       <Route path="quotations/:id/print" element={<Guard module="quotations"><QuotationPrint /></Guard>} />
       <Route element={<AppShell />}>
         <Route index element={<Dashboard />} />
@@ -80,6 +84,7 @@ function Root() {
         <Route path="help" element={<Help />} />
         <Route path="team" element={<Guard module="team"><Team /></Guard>} />
         <Route path="settings" element={<Guard module="settings"><Settings /></Guard>} />
+        <Route path="activity" element={<Guard module="activity"><Activity /></Guard>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

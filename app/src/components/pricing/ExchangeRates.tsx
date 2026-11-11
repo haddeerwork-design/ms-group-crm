@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { FX_EDITORS } from '@/lib/roles'
 import { CURRENCIES } from '@/lib/pricing'
+import { FX_API_SOURCE, fetchLiveRates, type LiveRates } from '@/lib/fx'
 import { fetchLatestRates, fetchRateHistory, type SavedRate } from '@/lib/prices'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,9 +16,7 @@ import { Field } from '@/components/ui/field'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { StaleBadge } from './StaleBadge'
 
-const API_URL = 'https://open.er-api.com/v6/latest/USD'
-const API_SOURCE = 'ExchangeRate-API (open.er-api.com)'
-type Live = { at: string; rates: Record<string, number> }
+type Live = LiveRates
 
 export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
   const { hasRole, session } = useAuth()
@@ -36,12 +35,7 @@ export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
   async function fetchLive() {
     setBusy('fetch')
     try {
-      const res = await fetch(API_URL)
-      const j = await res.json()
-      if (j.result !== 'success' || !j.rates || !j.time_last_update_unix) throw new Error('Unexpected answer from the rates service')
-      const rates: Record<string, number> = {}
-      for (const c of CURRENCIES) if (c !== 'USD' && typeof j.rates[c] === 'number') rates[c] = j.rates[c]
-      setLive({ at: new Date(j.time_last_update_unix * 1000).toISOString(), rates })
+      setLive(await fetchLiveRates())
     } catch (e) {
       toast.error('Could not get live rates: ' + (e as Error).message + '. You can enter a rate manually.')
     } finally { setBusy(null) }
@@ -51,7 +45,7 @@ export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
     if (!live) return
     setBusy('save')
     const rows = Object.entries(live.rates).map(([quote, rate]) => ({
-      base_currency: 'USD', quote_currency: quote, rate, source: API_SOURCE, rate_at: live.at, created_by: session?.user.id,
+      base_currency: 'USD', quote_currency: quote, rate, source: FX_API_SOURCE, rate_at: live.at, created_by: session?.user.id,
     }))
     const { error } = await supabase.from('exchange_rates').insert(rows)
     setBusy(null)
@@ -108,7 +102,7 @@ export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
       <div className="space-y-4 lg:col-span-2">
         {canEdit && (
           <Card>
-            <CardHeader><CardTitle>Live rates</CardTitle><CardDescription>Free daily rates against USD. Check them before saving.</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Live rates</CardTitle><CardDescription>Free daily rates against USD. They are saved automatically once a day when Finance, the Sales Manager or the Admin opens the app. A manual rate (e.g. your bank’s) always wins if it is newer.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {!live ? (
                 <Button variant="outline" onClick={fetchLive} disabled={busy === 'fetch'}>{busy === 'fetch' ? <Loader2 className="animate-spin" /> : <Download />}Fetch live rates</Button>

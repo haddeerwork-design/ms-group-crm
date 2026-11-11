@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Archive, ChevronDown, LifeBuoy, BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
+import { Archive, ChevronDown, History, LifeBuoy, BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
-import { canAccess, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
+import { canAccess, FX_EDITORS, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
+import { autoDailyRates } from '@/lib/fx'
+import { toast } from 'sonner'
 import { applyTheme, getTheme } from '@/lib/theme'
 import { LEGACY_CRM_URL } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useT } from '@/lib/i18n'
+import { tr, useT } from '@/lib/i18n'
 import { NotificationBell } from './NotificationBell'
 import { WelcomeTour } from './WelcomeTour'
 import { GlobalSearch } from './GlobalSearch'
 import { ChangePasswordButton } from './ChangePassword'
+import { InstallApp } from './InstallApp'
 import { QuickAdd } from './QuickAdd'
 
 type NavItem = { to: string; label: string; icon: typeof Users; module: ModuleKey }
@@ -43,6 +46,7 @@ const NAV_GROUPS: { id: string; title: string | null; items: NavItem[] }[] = [
   { id: 'admin', title: 'Admin', items: [
     { to: '/team', label: 'Team & Roles', icon: Users, module: 'team' },
     { to: '/settings', label: 'Company Settings', icon: Settings, module: 'settings' },
+    { to: '/activity', label: 'Activity log', icon: History, module: 'activity' },
     { to: '/archive', label: 'Old CRM Archive', icon: Archive, module: 'archive' },
   ] },
 ]
@@ -50,7 +54,13 @@ const HELP: NavItem = { to: '/help', label: 'Help', icon: LifeBuoy, module: 'hel
 const isIn = (pathname: string, to: string) => (to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(to + '/'))
 
 export function AppShell() {
-  const { profile, roles, signOut } = useAuth()
+  const { profile, roles, signOut, session } = useAuth()
+  // once a day: save the newest published exchange rates (Finance / Sales Manager / Admin only)
+  const fxEditor = roles.some((r) => (FX_EDITORS as string[]).includes(r))
+  useEffect(() => {
+    if (!fxEditor || !session) return
+    autoDailyRates(session.user.id).then((n) => { if (n) toast.success(tr('Exchange rates updated for today ({n} currencies)', { n })) }).catch(() => { /* silent: rates can still be fetched by hand */ })
+  }, [fxEditor, session])
   const { t, lang, setLang, rtl } = useT()
   const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('ms_nav') === '1' } catch { return false } })
@@ -123,6 +133,7 @@ export function AppShell() {
           <div className="ms-auto flex items-center gap-2">
             <QuickAdd />
             <NotificationBell />
+            <InstallApp />
             <ChangePasswordButton />
             <Button variant="ghost" size="sm" className="px-2 font-semibold" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} lang={lang === 'ar' ? 'en' : 'ar'}
               aria-label={lang === 'ar' ? 'Switch to English' : 'التحويل للعربي'} data-tip={lang === 'ar' ? 'English' : 'عربي'}>{lang === 'ar' ? 'EN' : 'ع'}</Button>

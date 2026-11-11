@@ -29,6 +29,7 @@ export type Product = {
   storage_temperature: string | null; shelf_life: string | null; moq_quantity: number | null; moq_unit: string | null
   notes: string | null; legacy_key: string | null; archived_at: string | null; updated_at: string
   name_ar?: string | null // from 0014
+  image_path?: string | null // from 0019
   product_packaging: Packaging[]
 }
 
@@ -88,3 +89,40 @@ export function packsFor(p: Product, variety?: string | null) {
   return [...own, ...general]
 }
 export const packOptionLabel = (pk: Packaging) => `${pk.label}${pk.variety ? ` · ${pk.variety}` : ''}${pk.is_default ? ' ★' : ''}`
+
+/** Public link of a product photo (bucket "product-images", from migration 0019). */
+export const productImageUrl = (path: string | null | undefined) =>
+  path ? supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl : null
+
+/** Phone photos are big: shrink to at most `max` px on the long side before uploading. */
+export async function shrinkImage(file: File, max = 1400): Promise<Blob> {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Choose a JPG, PNG or WebP photo.')
+  const bmp = await createImageBitmap(file).catch(() => null)
+  if (!bmp) return file
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height))
+  if (k === 1 && file.size < 900_000) return file
+  const c = document.createElement('canvas')
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k)
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height) // transparent PNGs get a white background
+  ctx.drawImage(bmp, 0, 0, c.width, c.height)
+  return new Promise((res) => c.toBlob((b) => res(b ?? file), 'image/jpeg', 0.86))
+}
+
+/** Uploads a new photo for a product and removes the old one. */
+export async function saveProductPhoto(productId: string, file: File | null, oldPath: string | null | undefined): Promise<string | null> {
+  let path: string | null = null
+  if (file) {
+    const blob = await shrinkImage(file)
+    path = `${productId}/${Date.now()}.jpg`
+    const up = await supabase.storage.from('product-images').upload(path, blob, { contentType: 'image/jpeg', upsert: false })
+    if (up.error) throw new Error(/bucket not found/i.test(up.error.message) ? 'Run migration 0019_docs_samples_photos first.' : up.error.message)
+  }
+  const { error } = await supabase.from('products').update({ image_path: path }).eq('id', productId)
+  if (error) {
+    if (path) await supabase.storage.from('product-images').remove([path])
+    throw new Error(/image_path/.test(error.message) ? 'Run migration 0019_docs_samples_photos first.' : error.message)
+  }
+  if (oldPath && oldPath !== path) await supabase.storage.from('product-images').remove([oldPath])
+  return path
+}

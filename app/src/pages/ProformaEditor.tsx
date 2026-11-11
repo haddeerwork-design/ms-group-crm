@@ -1,7 +1,7 @@
 import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Ban, FileText, Loader2, Pencil, Plus, Printer, Save, Stamp, Trash2 } from 'lucide-react'
+import { ArrowLeft, Ban, FileText, Loader2, Pencil, Plus, Printer, Save, Send, Stamp, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -17,6 +17,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { StickyActions } from '@/components/ui/sticky-actions'
+import { SendDialog } from '@/components/sales/SendDialog'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
 import { ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
@@ -36,7 +37,7 @@ export function ProformaEditor() {
   const isNew = !id || id === 'new'
   const [params] = useSearchParams()
   const nav = useNavigate()
-  const { hasRole, session } = useAuth()
+  const { hasRole, session, profile } = useAuth()
   const [pi, setPi] = useState<Proforma | null>(null)
   const [versions, setVersions] = useState<{ id: number; version: number; created_at: string }[]>([])
   const [h, setH] = useState<Head | null>(null)
@@ -46,6 +47,7 @@ export function ProformaEditor() {
   const [hasBrand, setHasBrand] = useState(false)
   const [lines, setLines] = useState<Line[]>([])
   const [busy, setBusy] = useState<string | null>(null)
+  const [sendOpen, setSendOpen] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -139,12 +141,12 @@ export function ProformaEditor() {
     return pid
   }
 
-  async function setStatus(st: PIStatus) {
+  async function setStatus(st: PIStatus, confirmed = false) {
     let pid = pi?.id ?? null
     if (dirty && editable) { pid = await save(); if (!pid) return }
     if (!pid) return
     const ask: Partial<Record<PIStatus, string>> = { issued: 'Issue this proforma? It will be locked and this version kept permanently.', revised: 'Open a revision? The issued version stays saved.', cancelled: 'Cancel this proforma? It stays in the list as Cancelled.' }
-    if (ask[st] && !window.confirm(ask[st])) return
+    if (!confirmed && ask[st] && !window.confirm(ask[st])) return
     setBusy(st)
     const { error } = await supabase.rpc('set_proforma_status', { pid, new_status: st })
     setBusy(null)
@@ -182,11 +184,16 @@ export function ProformaEditor() {
         <div className="flex flex-wrap gap-2">
           {/* Save and Preview sit in the bar at the bottom while editing */}
           {!canEdit && <Button variant="outline" onClick={() => printIt()} disabled={!!busy}><Printer />Preview / PDF</Button>}
+          {pi && h && status !== 'cancelled' && <Button variant={canWrite && editable ? 'outline' : 'default'} onClick={() => setSendOpen(true)} disabled={!!busy || !lines.length}><Send />Send</Button>}
           {canWrite && editable && <Button onClick={() => setStatus('issued')} disabled={!!busy}><Stamp />Issue</Button>}
           {canWrite && status === 'issued' && pi && <Button onClick={() => nav(`/orders/new?proforma=${pi.id}`)}><Stamp />Create order</Button>}
           {canWrite && status === 'issued' && <><Button variant="outline" onClick={() => setStatus('revised')}><Pencil />Revise</Button><Button variant="outline" onClick={() => setStatus('cancelled')}><Ban />Cancel</Button></>}
         </div>
       </div>
+      {pi && h && <SendDialog open={sendOpen} onOpenChange={setSendOpen} email={h.customer_email} phone={h.customer_phone}
+        doc={{ kind: 'proforma', number: pi.number, version: pi.version, lang: 'en', contactName: h.customer_name || null, company: h.customer_company,
+          sender: profile?.full_name, brandName: brand === 'prime_roots' ? 'Prime Roots' : 'MS El-brancy Group' }}
+        onPdf={() => printIt()} onMarkSent={canWrite && editable ? () => setStatus('issued', true) : undefined} markLabel="Issue" />}
       {!editable && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">This proforma is <b>{PI_STATUS[status].toLowerCase()}</b> and locked.{status === 'issued' ? ' Use Revise to change it; the issued version stays saved.' : ''}</p>}
 
       <div className="grid gap-4 lg:grid-cols-3">

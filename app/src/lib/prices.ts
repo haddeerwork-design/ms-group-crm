@@ -57,3 +57,22 @@ export function ageLabel(iso: string, now = new Date()) {
   if (h < 48) return `${Math.round(h)} h ago`
   return `${Math.round(h / 24)} days ago`
 }
+
+/** A selling price with no end date is "old" after this many days. */
+export const OLD_PRICE_DAYS = 60
+export const EXPIRING_DAYS = 7
+export type PriceHealth = 'expired' | 'expiring' | 'old' | 'ok'
+const dayDiff = (a: string, b: string) => Math.round((new Date(`${a}T00:00:00Z`).getTime() - new Date(`${b}T00:00:00Z`).getTime()) / 864e5)
+
+/** Does this selling price need attention? Prices imported from the old CRM are flagged separately. */
+export function priceHealth(r: Pick<PriceListRow, 'valid_from' | 'valid_until' | 'source'>, today = new Date().toISOString().slice(0, 10)): { state: PriceHealth; days: number } {
+  if (r.valid_until && r.valid_until < today) return { state: 'expired', days: dayDiff(today, r.valid_until) }
+  if (r.valid_until && dayDiff(r.valid_until, today) <= EXPIRING_DAYS) return { state: 'expiring', days: dayDiff(r.valid_until, today) }
+  if (!r.valid_until && r.source !== 'imported' && dayDiff(today, r.valid_from.slice(0, 10)) >= OLD_PRICE_DAYS) return { state: 'old', days: dayDiff(today, r.valid_from.slice(0, 10)) }
+  return { state: 'ok', days: 0 }
+}
+export function priceHealthSummary(rows: Pick<PriceListRow, 'valid_from' | 'valid_until' | 'source'>[], today?: string) {
+  const s = { expired: 0, expiring: 0, old: 0 }
+  for (const r of rows) { const h = priceHealth(r, today).state; if (h !== 'ok') s[h]++ }
+  return { ...s, total: s.expired + s.expiring + s.old }
+}

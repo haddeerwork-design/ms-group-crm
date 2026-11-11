@@ -1,11 +1,10 @@
-import { TV } from '@/lib/i18n'
-import { T } from '@/lib/i18n'
+import { T, TV, useT } from '@/lib/i18n'
 import { useMemo, useState } from 'react'
-import { Calculator, Pencil, Plus, Search } from 'lucide-react'
+import { AlertTriangle, Calculator, Pencil, Plus, Search } from 'lucide-react'
 import { QuickPriceDialog } from './QuickPriceDialog'
 import type { Category, Product } from '@/lib/catalog'
 import { INCOTERMS } from '@/lib/pricing'
-import { isExpired, money, type PriceListRow } from '@/lib/prices'
+import { EXPIRING_DAYS, money, OLD_PRICE_DAYS, priceHealth, priceHealthSummary, type PriceListRow } from '@/lib/prices'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -17,10 +16,12 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
   rows: PriceListRow[]; products: Product[]; categories: Category[]
   canCalc: boolean; canEdit: boolean; onOpen: (productId: string, packagingId: string | null, incoterm: string | null) => void; onSaved: () => void
 }) {
+  const { t: tl } = useT()
   const [editing, setEditing] = useState<PriceListRow | 'new' | null>(null)
   const [q, setQ] = useState('')
   const [inc, setInc] = useState('')
   const [onlyMissing, setOnlyMissing] = useState(false)
+  const [attention, setAttention] = useState(false)
   const prod = useMemo(() => Object.fromEntries(products.map((p) => [p.id, p])), [products])
   const cat = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories])
   const priced = new Set(rows.map((r) => r.product_id))
@@ -29,11 +30,28 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
   const list = rows
     .filter((r) => prod[r.product_id] && !prod[r.product_id].archived_at)
     .filter((r) => !inc || (inc === 'none' ? !r.incoterm : r.incoterm === inc))
+    .filter((r) => !attention || priceHealth(r).state !== 'ok')
     .filter((r) => { const t = q.trim().toLowerCase(); const p = prod[r.product_id]; return !t || p.name.toLowerCase().includes(t) || (r.variety ?? '').toLowerCase().includes(t) || (cat[p.category_id]?.name ?? '').toLowerCase().includes(t) })
     .sort((a, b) => prod[a.product_id].name.localeCompare(prod[b.product_id].name) || (a.variety ?? '').localeCompare(b.variety ?? '') || String(a.packaging_id).localeCompare(String(b.packaging_id)))
 
+  const health = priceHealthSummary(rows.filter((r) => prod[r.product_id] && !prod[r.product_id].archived_at))
+
   return (
     <>
+      {health.total > 0 && (
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+          <AlertTriangle className="size-4 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="font-medium"><TV k="{n} prices need a look" v={{ n: health.total }} /></span>
+            {' · '}{[
+              health.expired ? <TV key="e" k="{n} expired" v={{ n: health.expired }} /> : null,
+              health.expiring ? <TV key="s" k="{n} end within {d} days" v={{ n: health.expiring, d: EXPIRING_DAYS }} /> : null,
+              health.old ? <TV key="o" k="{n} not updated for {d}+ days" v={{ n: health.old, d: OLD_PRICE_DAYS }} /> : null,
+            ].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]))}
+          </span>
+          <Button size="sm" variant="outline" className="bg-card" onClick={() => { setAttention(!attention); setOnlyMissing(false) }}>{attention ? 'Show all prices' : 'Show them'}</Button>
+        </div>
+      )}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -80,7 +98,7 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
                   const p = prod[r.product_id]
                   const sameAsAbove = i > 0 && list[i - 1].product_id === r.product_id
                   const pk = p.product_packaging.find((x) => x.id === r.packaging_id)
-                  const expired = isExpired(r)
+                  const h = priceHealth(r)
                   return (
                     <tr key={r.id} className={'border-border last:border-0 ' + (i + 1 < list.length && list[i + 1].product_id === r.product_id ? '' : 'border-b ') + (canEdit ? 'cursor-pointer hover:bg-accent/50' : '')}
                       onClick={() => canEdit && setEditing(r)}>
@@ -100,8 +118,10 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
                       <td className="px-3 py-3 text-end tabular-nums text-muted-foreground">{money(r.price_per_ton / 1000, undefined, 3)}</td>
                       <td className="px-3 py-3 text-end tabular-nums text-muted-foreground">{r.net_weight_kg && r.unit_label !== 'kg' ? money((r.price_per_ton * r.net_weight_kg) / 1000) : '—'}</td>
                       <td className="px-3 py-3 text-xs">
-                        {expired ? <Badge className="border-red-200 bg-red-50 text-red-800">Expired {r.valid_until}</Badge>
-                          : <span className="text-muted-foreground">from {r.valid_from}{r.valid_until ? ` to ${r.valid_until}` : ''}</span>}
+                        {h.state === 'expired' ? <Badge className="border-red-200 bg-red-50 text-red-800">{tl('Expired {date}', { date: r.valid_until ?? '' })}</Badge>
+                          : <span className="text-muted-foreground">{tl('from {date}', { date: r.valid_from })}{r.valid_until ? ` ${tl('to {date}', { date: r.valid_until })}` : ''}</span>}
+                        {h.state === 'expiring' && <div><Badge className="mt-1 border-amber-200 bg-amber-50 text-amber-800">{h.days === 0 ? tl('Ends today') : tl('Ends in {n} days', { n: h.days })}</Badge></div>}
+                        {h.state === 'old' && <div><Badge className="mt-1 border-amber-200 bg-amber-50 text-amber-800">{tl('Not updated for {n} days', { n: h.days })}</Badge></div>}
                       </td>
                       {(canEdit || canCalc) && (
                         <td className="whitespace-nowrap px-3 py-3 text-end" onClick={(e) => e.stopPropagation()}>

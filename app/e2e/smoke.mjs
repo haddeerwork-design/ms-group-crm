@@ -11,10 +11,10 @@ const now = Math.floor(Date.now() / 1000)
 const user = { id: uid, aud: 'authenticated', role: 'authenticated', email: 'smoke@test.local', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01' }
 const session = { access_token: `${b64({ alg: 'HS256' })}.${b64({ sub: uid, exp: now + 3600, role: 'authenticated' })}.sig`, token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, refresh_token: 'r', user }
 
-const PAGES = ['', 'reports', 'research', 'crm', 'pipeline', 'tasks', 'products', 'pricing', 'planner', 'quotations', 'quotations/new', 'proformas', 'orders', 'payments', 'logistics', 'suppliers', 'team', 'settings', 'archive', 'help']
+const PAGES = ['', 'reports', 'research', 'crm', 'pipeline', 'tasks', 'products', 'pricing', 'planner', 'quotations', 'quotations/new', 'proformas', 'orders', 'payments', 'logistics', 'suppliers', 'team', 'settings', 'activity', 'archive', 'help', 'catalog/print']
 // role -> pages that must redirect to the dashboard
-const BLOCKED = { super_admin: [], sales_officer: ['team'], logistics_officer: ['crm', 'pipeline', 'quotations', 'quotations/new', 'proformas', 'research', 'payments', 'team'],
-  viewer: ['crm', 'pipeline', 'quotations', 'quotations/new', 'proformas', 'orders', 'payments', 'research', 'reports', 'team', 'planner'] }
+const BLOCKED = { super_admin: [], sales_officer: ['team', 'activity'], logistics_officer: ['crm', 'pipeline', 'quotations', 'quotations/new', 'proformas', 'research', 'payments', 'team', 'activity'],
+  viewer: ['crm', 'pipeline', 'quotations', 'quotations/new', 'proformas', 'orders', 'payments', 'research', 'reports', 'team', 'planner', 'activity'] }
 
 const server = spawn('npx', ['vite', 'preview', '--port', '4174', '--strictPort'], { stdio: 'ignore' })
 await new Promise((r) => setTimeout(r, 2500))

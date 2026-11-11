@@ -1,4 +1,4 @@
-import { T } from '@/lib/i18n'
+import { T, TV, tr } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, Download, FileUp, Loader2, Plus, Save, Trash2, Wallet } from 'lucide-react'
@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { CRM_ASSIGNERS, PAYMENT_EDITORS, QUOTE_WRITERS } from '@/lib/roles'
 import {
-  DOC_TYPES, fetchOrder, orderTotal, PAY_KIND, PAY_METHOD, paymentStatus, safeFileName, splitSchedule, STAGE_LABEL, STAGES,
+  DOC_TYPES, daysToDeparture, docChecklist, fetchOrder, orderTotal, PAY_KIND, PAY_METHOD, paymentStatus, safeFileName, splitSchedule, STAGE_LABEL, STAGES,
   type DocType, type Order, type OrderDoc, type Payment, type Stage,
 } from '@/lib/orders'
 import { lineAmount, type PriceUnit, type QtyUnitPI } from '@/lib/proformas'
@@ -93,14 +93,27 @@ export function OrderDetail() {
         </div>
       </CardContent></Card>
 
+      {(() => {
+        // ship leaves soon and documents are still missing
+        const days = daysToDeparture(o, new Date().toISOString().slice(0, 10))
+        const check = docChecklist(d.docs, d.waived)
+        if (days == null || days > 10 || !check.missing.length) return null
+        return (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100" role="status">
+            <span className="flex-1"><TV k={days < 0 ? 'Departure date passed and {n} documents are missing: {list}' : 'Departs in {d} days and {n} documents are missing: {list}'} v={{ d: days, n: check.missing.length, list: check.missing.map((x) => tr(DOC_TYPES[x])).join(', ') }} /></span>
+            <Button size="sm" variant="outline" onClick={() => setTab('documents')}><T>Open documents</T></Button>
+          </div>
+        )
+      })()}
+
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
-        {([['overview', 'Products'], ['shipment', 'Shipment'], ['documents', `Documents (${d.docs.length})`], ['payments', `Payments (${d.payments.length})`], ['history', 'History']] as const).map(([k, l]) => (
+        {([['overview', 'Products'], ['shipment', 'Shipment'], ['documents', `${tr('Documents')} ${docChecklist(d.docs, d.waived).ready}/${docChecklist(d.docs, d.waived).needed}`], ['payments', `Payments (${d.payments.length})`], ['history', 'History']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={cn('-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}><T>{l}</T></button>
         ))}
       </div>
       {tab === 'overview' && <Items order={o} canEdit={canEditCommercial} onSaved={load} />}
       {tab === 'shipment' && <Shipment order={o} fwds={fwds} canEdit={canEditShipment} onSave={(p) => patch(p, 'Shipment details saved')} />}
-      {tab === 'documents' && <Documents order={o} docs={d.docs} canUpload={canEditShipment || isOwnerOrManager} canDelete={hasRole(...CRM_ASSIGNERS)} onChange={load} />}
+      {tab === 'documents' && <Documents order={o} docs={d.docs} waived={d.waived} canUpload={canEditShipment || isOwnerOrManager} canDelete={hasRole(...CRM_ASSIGNERS)} onChange={load} />}
       {tab === 'payments' && <OrderPayments order={o} total={total} payments={d.payments} onChange={load} />}
       {tab === 'history' && (
         <Card><CardContent className="pt-5"><ol className="space-y-2 text-sm">
@@ -184,8 +197,15 @@ function Shipment({ order, fwds, canEdit, onSave }: { order: Order; fwds: { id: 
   )
 }
 
-function Documents({ order, docs, canUpload, canDelete, onChange }: { order: Order; docs: OrderDoc[]; canUpload: boolean; canDelete: boolean; onChange: () => void }) {
+function Documents({ order, docs, waived, canUpload, canDelete, onChange }: { order: Order; docs: OrderDoc[]; waived: string[]; canUpload: boolean; canDelete: boolean; onChange: () => void }) {
   const { session } = useAuth()
+  const check = docChecklist(docs, waived)
+  async function setNeeded(type: DocType, needed: boolean) {
+    const r = needed ? await supabase.from('order_doc_waivers').delete().eq('order_id', order.id).eq('doc_type', type)
+      : await supabase.from('order_doc_waivers').insert({ order_id: order.id, doc_type: type, waived_by: session?.user.id })
+    if (r.error) return toast.error(/order_doc_waivers/.test(r.error.message) ? 'Run migration 0019 in Supabase first.' : r.error.message)
+    onChange()
+  }
   const [busy, setBusy] = useState<string | null>(null)
   async function upload(type: DocType, file: File) {
     if (file.size > 25 * 1024 * 1024) return toast.error('File is larger than 25 MB.')
@@ -211,20 +231,36 @@ function Documents({ order, docs, canUpload, canDelete, onChange }: { order: Ord
     if (m.error) return toast.error(m.error.message)
     toast.success('Deleted'); onChange()
   }
+  const pct = check.needed ? (check.ready / check.needed) * 100 : 100
   return (
+    <>
+    <Card className="mb-3"><CardContent className="flex flex-wrap items-center gap-4 pt-4">
+      <div className="min-w-[220px] flex-1">
+        <div className="flex items-center justify-between text-sm"><span className="font-medium"><T>Document checklist</T></span><span className="tabular-nums text-muted-foreground"><TV k="{a} of {b} ready" v={{ a: check.ready, b: check.needed }} /></span></div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className={cn('h-full rounded-full', check.missing.length ? 'bg-amber-500' : 'bg-emerald-600')} style={{ width: `${pct}%` }} /></div>
+      </div>
+      <p className="text-xs text-muted-foreground"><T>Upload a file to tick a document. If a market does not need one, mark it “Not needed”.</T></p>
+    </CardContent></Card>
     <div className="grid gap-3 md:grid-cols-2">
       {(Object.keys(DOC_TYPES) as DocType[]).map((t) => {
         const list = docs.filter((d) => d.doc_type === t)
+        const state = check.items.find((i) => i.type === t)?.state
         return (
-          <Card key={t}><CardContent className="pt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm font-medium">{list.length ? <Check className="size-4 text-primary" /> : <span className="size-4 rounded-full border border-border" />}<T>{DOC_TYPES[t]}</T></span>
+          <Card key={t} className={cn(state === 'not_needed' && 'opacity-60')}><CardContent className="pt-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2 text-sm font-medium">{list.length ? <Check className="size-4 text-primary" /> : state === 'missing' ? <span className="size-4 rounded-full border-2 border-amber-500" /> : <span className="size-4 rounded-full border border-border" />}<T>{DOC_TYPES[t]}</T>
+                {state === 'not_needed' && <span className="rounded-full bg-muted px-1.5 text-[11px] font-normal text-muted-foreground"><T>Not needed</T></span>}</span>
+              <span className="flex items-center gap-1">
+              {canUpload && t !== 'other' && !list.length && (
+                <button type="button" onClick={() => setNeeded(t, state === 'not_needed')} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"><T>{state === 'not_needed' ? 'Needed' : 'Not needed'}</T></button>
+              )}
               {canUpload && (
                 <label className={cn('inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent', busy === t && 'pointer-events-none opacity-50')}>
                   {busy === t ? <Loader2 className="size-3.5 animate-spin" /> : <FileUp className="size-3.5" />}Upload
                   <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.docx,.doc" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload(t, f) }} />
                 </label>
               )}
+              </span>
             </div>
             {list.map((d) => (
               <div key={d.id} className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-sm">
@@ -236,6 +272,7 @@ function Documents({ order, docs, canUpload, canDelete, onChange }: { order: Ord
         )
       })}
     </div>
+    </>
   )
 }
 
