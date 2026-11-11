@@ -7,6 +7,7 @@ import { applyTheme, getTheme } from '@/lib/theme'
 import { LEGACY_CRM_URL } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import { NotificationBell } from './NotificationBell'
 import { WelcomeTour } from './WelcomeTour'
 import { GlobalSearch } from './GlobalSearch'
@@ -50,6 +51,7 @@ const isIn = (pathname: string, to: string) => (to === '/' ? pathname === '/' : 
 
 export function AppShell() {
   const { profile, roles, signOut } = useAuth()
+  const { t, lang, setLang, rtl } = useT()
   const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('ms_nav') === '1' } catch { return false } })
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -81,8 +83,8 @@ export function AppShell() {
             {g.title && !collapsed && (
               <button type="button" onClick={() => toggleGroup(g.id)} aria-expanded={open} disabled={active}
                 className="flex items-center justify-between rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground disabled:cursor-default disabled:hover:text-muted-foreground/80">
-                {g.title}
-                {!active && <ChevronDown className={cn('size-3.5 transition-transform', !open && '-rotate-90')} />}
+                {t(g.title)}
+                {!active && <ChevronDown className={cn('size-3.5 transition-transform', !open && (rtl ? 'rotate-90' : '-rotate-90'))} />}
               </button>
             )}
             {open && g.items.map((n) => <NavItemLink key={n.to} item={n} collapsed={collapsed} onPick={() => setMobileOpen(false)} />)}
@@ -92,9 +94,9 @@ export function AppShell() {
       </div>
       <div className="mt-2 shrink-0 space-y-0.5 border-t border-border pt-2">
         {canAccess(roles, HELP.module) && <NavItemLink item={HELP} collapsed={collapsed} onPick={() => setMobileOpen(false)} />}
-        <a href={LEGACY_CRM_URL} title="The current CRM stays available until it is switched off"
+        <a href={LEGACY_CRM_URL} title={t('The current CRM stays available until it is switched off')}
            className={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground', collapsed && 'justify-center px-0')}>
-          <ExternalLink className="size-4 shrink-0" />{!collapsed && 'Open current CRM'}
+          <ExternalLink className="size-4 shrink-0" />{!collapsed && t('Open current CRM')}
         </a>
       </div>
     </nav>
@@ -102,37 +104,39 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen">
-      <aside className={cn('sticky top-0 hidden h-screen shrink-0 border-r border-border bg-card transition-[width] md:block', collapsed ? 'w-16' : 'w-60')}>
+      <aside className={cn('sticky top-0 hidden h-screen shrink-0 border-e border-border bg-card transition-[width] md:block', collapsed ? 'w-16' : 'w-60')}>
         {sidebar}
       </aside>
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileOpen(false)}>
           <div className="absolute inset-0 bg-black/40" />
-          <aside className="absolute inset-y-0 left-0 w-64 border-r border-border bg-card" onClick={(e) => e.stopPropagation()}>{sidebar}</aside>
+          <aside className="absolute inset-y-0 start-0 w-64 border-e border-border bg-card" onClick={(e) => e.stopPropagation()}>{sidebar}</aside>
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu /></Button>
-          <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => setCollapsed((c) => !c)} aria-label="Toggle sidebar" data-tip={collapsed ? 'Show menu' : 'Hide menu'}>
-            {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label={t('Open menu')}><Menu /></Button>
+          <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => setCollapsed((c) => !c)} aria-label={t('Toggle sidebar')} data-tip={t(collapsed ? 'Show menu' : 'Hide menu')}>
+            {collapsed ? <PanelLeftOpen className="rtl:-scale-x-100" /> : <PanelLeftClose className="rtl:-scale-x-100" />}
           </Button>
           <GlobalSearch />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             <QuickAdd />
             <NotificationBell />
             <ChangePasswordButton />
-            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle dark mode" data-tip={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
+            <Button variant="ghost" size="sm" className="px-2 font-semibold" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} lang={lang === 'ar' ? 'en' : 'ar'}
+              aria-label={lang === 'ar' ? 'Switch to English' : 'التحويل للعربي'} data-tip={lang === 'ar' ? 'English' : 'عربي'}>{lang === 'ar' ? 'EN' : 'ع'}</Button>
+            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={t('Toggle dark mode')} data-tip={t(theme === 'dark' ? 'Light mode' : 'Dark mode')}>
               {theme === 'dark' ? <Sun /> : <Moon />}
             </Button>
-            <div className="hidden text-right sm:block">
+            <div className="hidden text-end sm:block">
               <div className="text-sm font-medium leading-tight">{name}</div>
-              <div className="text-xs text-muted-foreground">{roles.map((r) => ROLE_LABEL[r]).join(' · ') || 'No role'}</div>
+              <div className="text-xs text-muted-foreground">{roles.map((r) => t(ROLE_LABEL[r])).join(' · ') || t('No role')}</div>
             </div>
             <div className="grid size-8 place-items-center rounded-full bg-forest text-xs font-semibold text-white">
               {name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
             </div>
-            <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out" data-tip="Sign out" data-tip-end=""><LogOut /></Button>
+            <Button variant="ghost" size="icon" onClick={signOut} aria-label={t('Sign out')} data-tip={t('Sign out')} data-tip-end=""><LogOut className="rtl:-scale-x-100" /></Button>
           </div>
         </header>
         <main className={cn('mx-auto w-full flex-1 p-4 md:p-8', pathname === '/' ? 'max-w-[1440px]' : 'max-w-6xl')}><Outlet /></main>
@@ -142,7 +146,9 @@ export function AppShell() {
   )
 }
 
-function NavItemLink({ item: { to, label, icon: Icon }, collapsed, onPick }: { item: NavItem; collapsed: boolean; onPick: () => void }) {
+function NavItemLink({ item: { to, label: en, icon: Icon }, collapsed, onPick }: { item: NavItem; collapsed: boolean; onPick: () => void }) {
+  const { t } = useT()
+  const label = t(en)
   return (
     <NavLink to={to} end={to === '/'} onClick={onPick} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined}
       className={({ isActive }) => cn(
@@ -155,7 +161,10 @@ function NavItemLink({ item: { to, label, icon: Icon }, collapsed, onPick }: { i
   )
 }
 
-export function PageHeader({ title, summary, action }: { title: string; summary?: string; action?: React.ReactNode }) {
+export function PageHeader({ title: en, summary: sumEn, action }: { title: string; summary?: string; action?: React.ReactNode }) {
+  // static titles/summaries are translated here; dynamic summaries fall back to the text given
+  const { t } = useT()
+  const title = t(en); const summary = sumEn && t(sumEn)
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>

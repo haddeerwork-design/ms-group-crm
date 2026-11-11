@@ -90,7 +90,7 @@ export function Tasks() {
                   return (
                     <li key={t.id} className="flex items-start gap-3 px-4 py-3 hover:bg-accent/40">
                       <input type="checkbox" className="mt-1 size-4 accent-[#23856B]" checked={t.status === 'done'} onChange={() => toggle(t)} aria-label={`Done: ${t.title}`} />
-                      <button className="min-w-0 flex-1 text-left" onClick={() => { setEditing(t); setOpen(true) }}>
+                      <button className="min-w-0 flex-1 text-start" onClick={() => { setEditing(t); setOpen(true) }}>
                         <div className={cn('flex items-center gap-2 text-sm font-medium', t.status === 'done' && 'text-muted-foreground line-through')}>
                           <span className={cn('size-2 shrink-0 rounded-full', PRI[t.priority])} title={`${t.priority} priority`} />{t.title}
                           {t.status === 'in_progress' && <span className="rounded bg-sky-100 px-1 text-[10px] text-sky-800 dark:bg-sky-950 dark:text-sky-200">in progress</span>}
@@ -139,9 +139,9 @@ function MonthCalendar({ month, setMonth, tasks, today, onOpen, onNew }: { month
           const items = iso ? tasks.filter((t) => t.due_date === iso) : []
           return (
             <div key={i} className={cn('min-h-[88px] bg-card p-1.5', !iso && 'bg-muted/40')} onDoubleClick={() => iso && onNew(iso)}>
-              {iso && <div className={cn('mb-1 text-right text-[11px]', iso === today && 'font-bold text-primary')}>{day}</div>}
+              {iso && <div className={cn('mb-1 text-end text-[11px]', iso === today && 'font-bold text-primary')}>{day}</div>}
               {items.slice(0, 3).map((t) => (
-                <button key={t.id} onClick={() => onOpen(t)} className={cn('mb-0.5 block w-full truncate rounded px-1 py-0.5 text-left text-[11px]',
+                <button key={t.id} onClick={() => onOpen(t)} className={cn('mb-0.5 block w-full truncate rounded px-1 py-0.5 text-start text-[11px]',
                   t.status === 'done' ? 'bg-muted text-muted-foreground line-through' : iso! < today ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200' : 'bg-accent text-accent-foreground')}>{t.title}</button>
               ))}
               {items.length > 3 && <div className="text-[10px] text-muted-foreground">+{items.length - 3} more</div>}

@@ -45,9 +45,9 @@ export function OrderDetail() {
   const canEditCommercial = isOwnerOrManager && (!closed || hasRole(...CRM_ASSIGNERS))
   const canEditShipment = (isOwnerOrManager || isLogistics) && (!closed || hasRole(...CRM_ASSIGNERS))
   const total = orderTotal(o)
-  const paidIn = d.payments.filter((p) => p.direction === 'in' && !p.cancelled_at).reduce((s, p) => s + Number(p.amount_paid), 0)
+  const paidIn = d.payments.filter((p) => p.direction === 'in' && !p.cancelled_at).reduce((s, p) => <T>s + Number(p.amount_paid), 0)
 
-  async function patch(p: Partial<Order>, msg: string) {
+  async function patch(p: Partial</T><Order>, msg: string) {
     const { error, data } = await supabase.from('sales_orders').update(p).eq('id', o.id).select('id')
     if (error || !data?.length) return toast.error(error?.message ?? 'Not allowed.')
     toast.success(msg); load()
@@ -133,9 +133,9 @@ function Items({ order, canEdit, onSaved }: { order: Order; canEdit: boolean; on
     await supabase.from('sales_orders').update({ other_charges: n(other) ?? 0 }).eq('id', order.id)
     setBusy(false); toast.success('Products saved'); onSaved()
   }
-  const total = comp.reduce((s, l) => s + (l.amount ?? 0), 0) + (n(other) ?? 0)
+  const total = comp.reduce((s, l) => <T>s + (l.amount ?? 0), 0) + (n(other) ?? 0)
   return (
-    <Card>
+</T>    <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Products</CardTitle>
         {canEdit && <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setLines((ls) => [...ls, { key: ++seq, product_id: null, description: '', packing: '', quantity: '', unit: 'tons', net: '', price: '', price_unit: 'ton' }])}><Plus />Add line</Button>
           <Button size="sm" onClick={save} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <Save />}Save</Button></div>}</CardHeader>
@@ -227,7 +227,7 @@ function Documents({ order, docs, canUpload, canDelete, onChange }: { order: Ord
             </div>
             {list.map((d) => (
               <div key={d.id} className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-sm">
-                <button className="flex min-w-0 items-center gap-1 text-left text-primary hover:underline" onClick={() => open(d)}><Download className="size-3.5 shrink-0" /><span className="truncate">{d.file_name}</span></button>
+                <button className="flex min-w-0 items-center gap-1 text-start text-primary hover:underline" onClick={() => open(d)}><Download className="size-3.5 shrink-0" /><span className="truncate">{d.file_name}</span></button>
                 <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">{new Date(d.uploaded_at).toLocaleDateString()}{canDelete && <Button variant="ghost" size="icon" className="size-7" aria-label="Delete" onClick={() => remove(d)}><Trash2 /></Button>}</span>
               </div>
             ))}
@@ -279,13 +279,13 @@ function OrderPayments({ order, total, payments, onChange }: { order: Order; tot
           ) : <p className="text-sm text-muted-foreground">Finance has not added a payment schedule yet.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-xs text-muted-foreground"><th className="py-1">Part</th><th className="py-1 text-right">Due</th><th className="py-1 text-right">Paid</th><th className="py-1">Due date</th><th className="py-1">Status</th><th /></tr></thead>
+            <thead><tr className="text-start text-xs text-muted-foreground"><th className="py-1">Part</th><th className="py-1 text-end">Due</th><th className="py-1 text-end">Paid</th><th className="py-1">Due date</th><th className="py-1">Status</th><th /></tr></thead>
             <tbody>{incoming.map((p) => (
               <tr key={p.id} className="border-t border-border">
                 <td className="py-2">{PAY_KIND[p.kind as keyof typeof PAY_KIND] ?? p.kind}{p.reference && <div className="text-xs text-muted-foreground">{PAY_METHOD[p.method as keyof typeof PAY_METHOD]} · {p.reference} · {p.paid_date}</div>}</td>
-                <td className="py-2 text-right tabular-nums">{money(p.amount_due, p.currency)}</td><td className="py-2 text-right tabular-nums">{money(p.amount_paid, p.currency)}</td>
+                <td className="py-2 text-end tabular-nums">{money(p.amount_due, p.currency)}</td><td className="py-2 text-end tabular-nums">{money(p.amount_paid, p.currency)}</td>
                 <td className="py-2">{p.due_date ?? '—'}</td><td className="py-2"><PaymentStatusBadge s={paymentStatus(p, t)} /></td>
-                <td className="py-2 text-right">{canEdit && !p.cancelled_at && <><Button variant="outline" size="sm" onClick={() => setRecording(p)}><Wallet />Record</Button><Button variant="ghost" size="sm" onClick={() => cancel(p)}>Cancel</Button></>}</td>
+                <td className="py-2 text-end">{canEdit && !p.cancelled_at && <><Button variant="outline" size="sm" onClick={() => setRecording(p)}><Wallet />Record</Button><Button variant="ghost" size="sm" onClick={() => cancel(p)}>Cancel</Button></>}</td>
               </tr>
             ))}</tbody>
           </table>

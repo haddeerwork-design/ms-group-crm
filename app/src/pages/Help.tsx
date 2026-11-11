@@ -75,7 +75,7 @@ export function Help() {
           <Card key={s.title}>
             <CardHeader><CardTitle>{s.title}</CardTitle></CardHeader>
             <CardContent>
-              <ul className="list-disc space-y-1.5 pr-5 text-sm leading-relaxed">{s.items.map((i) => <li key={i}>{i}</li>)}</ul>
+              <ul className="list-disc space-y-1.5 ps-5 text-sm leading-relaxed">{s.items.map((i) => <li key={i}>{i}</li>)}</ul>
             </CardContent>
           </Card>
         ))}

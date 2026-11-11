@@ -134,7 +134,7 @@ export function ImportDialog({ open, onOpenChange, onDone }: { open: boolean; on
               <p className="text-sm"><b>{counts.selected}</b> of {counts.total} rows will be imported · {counts.errors} with errors · {counts.dups} possible duplicates (not selected — tick to import anyway).</p>
               <div className="max-h-[50vh] overflow-auto rounded-md border border-border">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <thead className="sticky top-0 bg-card"><tr className="border-b border-border text-start text-xs text-muted-foreground">
                     <th className="p-2" /><th className="p-2">Line</th><th className="p-2">Company</th><th className="p-2">Country</th><th className="p-2">Check</th>
                   </tr></thead>
                   <tbody>
@@ -168,7 +168,7 @@ export function ImportDialog({ open, onOpenChange, onDone }: { open: boolean; on
           )}
         </DialogBody>
         <DialogFooter>
-          {(step === 'review' || step === 'done') && <Button variant="ghost" className="mr-auto" onClick={errorReport}><Download />Download report</Button>}
+          {(step === 'review' || step === 'done') && <Button variant="ghost" className="me-auto" onClick={errorReport}><Download />Download report</Button>}
           {step === 'map' && <Button onClick={review} disabled={busy}>{busy && <Loader2 className="animate-spin" />}Check rows</Button>}
           {step === 'review' && <><Button variant="outline" onClick={() => setStep('map')}>Back</Button><Button onClick={runImport} disabled={busy || !counts.selected}>{busy && <Loader2 className="animate-spin" />}Import {counts.selected}</Button></>}
           {step === 'done' && <Button onClick={() => onOpenChange(false)}>Close</Button>}

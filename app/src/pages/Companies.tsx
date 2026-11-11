@@ -65,8 +65,8 @@ export function Companies() {
         </div>} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-8" placeholder="Search name, country, email, product, tag…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
+          <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="ps-8" placeholder="Search name, country, email, product, tag…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
         </div>
         <MobileFilters active={[f.status, f.country, f.owner, f.priority, f.follow].filter(Boolean).length + (f.archived ? 1 : 0)}>
         <div className="w-full sm:w-40"><Select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} aria-label="Status"><option value="">All statuses</option>{Object.entries(LEAD_STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
@@ -86,7 +86,7 @@ export function Companies() {
                 : canWrite && <><Button onClick={() => setAddOpen(true)}><Plus />Add company</Button><Button variant="outline" onClick={() => setImportOpen(true)}><FileUp />Import Excel / CSV</Button></>} /></div>
           ) : (
             <table className="w-full min-w-[860px] text-sm">
-              <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-5 py-3 font-medium">Company</th><th className="px-3 py-3 font-medium">Country</th><th className="px-3 py-3 font-medium">Interested in</th>
                 <th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Owner</th><th className="px-3 py-3 font-medium">Next follow-up</th>
               </tr></thead>

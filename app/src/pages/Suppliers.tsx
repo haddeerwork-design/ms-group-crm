@@ -108,7 +108,7 @@ export function Suppliers() {
       <PageHeader title="Suppliers" summary="Farms, packers and packaging suppliers, with their quoted prices."
         action={canEdit && <Button onClick={() => { setEditing(null); setOpen(true) }}><Plus />Add supplier</Button>} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-52 flex-1"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-8" placeholder="Search supplier, product, contact…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="relative min-w-52 flex-1"><Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="ps-8" placeholder="Search supplier, product, contact…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="w-40"><Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category"><option value="">All categories</option>{CATS.map((c) => <option key={c}>{c}</option>)}</Select></div>
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground"><input type="checkbox" className="size-4 accent-[#23856B]" checked={arch} onChange={(e) => setArch(e.target.checked)} />Archived</label>
       </div>
@@ -117,14 +117,14 @@ export function Suppliers() {
           {!list.length ? <div className="p-5"><Empty title="No suppliers" hint={canEdit ? 'Add your farms, packers and packaging suppliers.' : undefined}
             action={canEdit && <Button onClick={() => { setEditing(null); setOpen(true) }}><Plus />Add supplier</Button>} /></div> : (
             <table className="w-full min-w-[560px] text-sm">
-              <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Supplier</th><th className="px-3 py-3 font-medium">Location</th><th className="px-3 py-3 font-medium">Products</th><th className="px-3 py-3" /></tr></thead>
+              <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3 font-medium">Supplier</th><th className="px-3 py-3 font-medium">Location</th><th className="px-3 py-3 font-medium">Products</th><th className="px-3 py-3" /></tr></thead>
               <tbody>
                 {list.map((s) => (
                   <tr key={s.id} onClick={() => setSelected(s.id)} className={cn('cursor-pointer border-b border-border last:border-0 hover:bg-accent/50', selected === s.id && 'bg-accent')}>
                     <td className="px-5 py-3"><div className="font-medium">{s.name}</div><div className="text-xs text-muted-foreground">{[s.category, s.contact_name, s.phone].filter(Boolean).join(' · ')}</div></td>
                     <td className="px-3 py-3 text-muted-foreground">{[s.city, s.country].filter(Boolean).join(', ')}</td>
                     <td className="max-w-[200px] truncate px-3 py-3 text-muted-foreground">{s.products_text ?? '—'}</td>
-                    <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>{canEdit && <Button variant="ghost" size="icon" aria-label={s.archived_at ? 'Restore' : 'Archive'} onClick={() => toggleArchive(s)}>{s.archived_at ? <ArchiveRestore /> : <Archive />}</Button>}</td>
+                    <td className="px-3 py-3 text-end" onClick={(e) => e.stopPropagation()}>{canEdit && <Button variant="ghost" size="icon" aria-label={s.archived_at ? 'Restore' : 'Archive'} onClick={() => toggleArchive(s)}>{s.archived_at ? <ArchiveRestore /> : <Archive />}</Button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -167,7 +167,7 @@ export function Suppliers() {
                 {compareProduct && (!comparison.length ? <p className="text-sm text-muted-foreground">No prices for this product.</p> : (
                   <ul className="divide-y divide-border text-sm">
                     {comparison.map((p, i) => (
-                      <li key={p.id} className="flex justify-between py-2"><span>{i === 0 && <span className="mr-1 text-xs font-semibold text-primary">LOWEST</span>}{sup[p.supplier_id]?.name}<span className="block text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}{p.valid_until && p.valid_until < new Date().toISOString().slice(0, 10) ? ' · expired' : ''}</span></span><span className="tabular-nums">{money(p.price, p.currency)} / {p.unit}</span></li>
+                      <li key={p.id} className="flex justify-between py-2"><span>{i === 0 && <span className="me-1 text-xs font-semibold text-primary">LOWEST</span>}{sup[p.supplier_id]?.name}<span className="block text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}{p.valid_until && p.valid_until < new Date().toISOString().slice(0, 10) ? ' · expired' : ''}</span></span><span className="tabular-nums">{money(p.price, p.currency)} / {p.unit}</span></li>
                     ))}
                   </ul>
                 ))}

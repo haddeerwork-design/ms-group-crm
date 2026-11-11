@@ -213,12 +213,12 @@ export function Planner() {
         <Card className="h-fit">
           <CardHeader className="pb-2"><CardTitle className="text-sm">Saved plans</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-8" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+            <div className="relative"><Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="ps-8" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
             {!visiblePlans.length ? <p className="py-3 text-center text-xs text-muted-foreground">No saved plans.</p> : (
               <ul className="max-h-[60vh] space-y-0.5 overflow-y-auto">
                 {visiblePlans.map((p) => (
                   <li key={p.id}>
-                    <button onClick={() => openPlan(p.id)} className={cn('w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent', meta.id === p.id && 'bg-accent')}>
+                    <button onClick={() => openPlan(p.id)} className={cn('w-full rounded-md px-2 py-1.5 text-start text-sm hover:bg-accent', meta.id === p.id && 'bg-accent')}>
                       <div className="truncate font-medium">{p.name}</div>
                       <div className="truncate text-xs text-muted-foreground">{p.customer_name || '—'} · {new Date(p.updated_at).toLocaleDateString()}</div>
                     </button>
@@ -353,7 +353,7 @@ export function Planner() {
                 {canPlan && meta.id && (
                   <Button variant="outline" onClick={() => dirty ? toast.error('Save the plan first.') : navigate(`/quotations/new?plan=${meta.id}`)}><FileText />Create quotation</Button>
                 )}
-                {canEdit && meta.id && <Button variant="ghost" className="ml-auto text-destructive" onClick={remove}><Trash2 />Delete plan</Button>}
+                {canEdit && meta.id && <Button variant="ghost" className="ms-auto text-destructive" onClick={remove}><Trash2 />Delete plan</Button>}
               </div>
             </CardContent>
           </Card>

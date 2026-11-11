@@ -136,9 +136,9 @@ export function AreaTrend({ data, unit, height = 260 }: { data: Pt[]; unit?: str
 export function Donut({ data, centerLabel, centerValue }: { data: Pt[]; centerLabel: string; centerValue: React.ReactNode }) {
   const dark = useDark()
   const pal = dark ? CATEGORICAL.dark : CATEGORICAL.light
-  const total = data.reduce((s, d) => s + d.value, 0)
+  const total = data.reduce((s, d) => <T>s + d.value, 0)
   return (
-    <div className="flex flex-wrap items-center gap-5">
+</T>    <div className="flex flex-wrap items-center gap-5">
       <div className="relative size-[150px] shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

@@ -1,3 +1,4 @@
+import { tr } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Archive, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
@@ -92,14 +93,14 @@ export function Logistics() {
   async function archive(table: string, id: string) {
     const { error } = await supabase.from(table).update({ archived_at: new Date().toISOString() }).eq('id', id)
     if (error) return toast.error(error.message)
-    archivedToast(table === 'shipping_rates' ? 'Rate' : 'Forwarder', table, id, load); load()
+    archivedToast(tr(table === 'shipping_rates' ? 'Rate' : 'Forwarder'), table, id, load); load()
   }
 
   const visible = rates.filter((r) => !r.archived_at && (!mode || r.mode === mode) && (showExpired || rateValidity(r) !== 'expired')
-    && (!q.trim() || [r.destination_country, r.destination_port, r.origin_port, r.carrier, r.forwarder_id ? fwdName[r.forwarder_id] : ''].some((x) => (x ?? '').toLowerCase().includes(q.trim().toLowerCase()))))
+    && (!q.trim() || [r.destination_country, r.destination_port, r.origin_port, r.carrier, r.forwarder_id ? fwdName[r.forwarder_id] : ''].some((x) => <T>(x ?? '').toLowerCase().includes(q.trim().toLowerCase()))))
 
   return (
-    <>
+</T>    <>
       <PageHeader title="Shipping & Logistics" summary="Freight rates with their source and validity, forwarders, and a freight calculator."
         action={canEdit && tab !== 'calc' && <Button onClick={() => tab === 'rates' ? (setRateEdit(null), setRateOpen(true)) : (setFwdEdit(null), setFwdOpen(true))}><Plus />{tab === 'rates' ? 'Add rate' : 'Add forwarder'}</Button>} />
       <div className="mb-4 flex gap-1 border-b border-border">
@@ -111,7 +112,7 @@ export function Logistics() {
       {tab === 'rates' && (
         <>
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <div className="relative min-w-52 flex-1"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-8" placeholder="Search destination, port, carrier…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+            <div className="relative min-w-52 flex-1"><Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="ps-8" placeholder="Search destination, port, carrier…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
             <div className="w-32"><Select value={mode} onChange={(e) => setMode(e.target.value)} aria-label="Mode"><option value="">All modes</option><option value="sea">Sea</option><option value="air">Air</option><option value="inland">Inland</option></Select></div>
             <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground"><input type="checkbox" className="size-4 accent-[#23856B]" checked={showExpired} onChange={(e) => setShowExpired(e.target.checked)} />Show expired</label>
           </div>
@@ -119,8 +120,8 @@ export function Logistics() {
             {!visible.length ? <div className="p-5"><Empty title="No shipping rates" hint={canEdit ? 'Add rates exactly as your forwarders quote them, with a valid-until date.' : undefined}
               action={canEdit && <Button onClick={() => { setRateEdit(null); setRateOpen(true) }}><Plus />Add rate</Button>} /></div> : (
               <table className="w-full min-w-[860px] text-sm">
-                <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-5 py-3 font-medium">Route</th><th className="px-3 py-3 font-medium">Mode</th><th className="px-3 py-3 text-right font-medium">Rate</th><th className="px-3 py-3 font-medium">Transit</th><th className="px-3 py-3 font-medium">By</th><th className="px-3 py-3 font-medium">Validity</th><th className="px-3 py-3" />
+                <thead><tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-5 py-3 font-medium">Route</th><th className="px-3 py-3 font-medium">Mode</th><th className="px-3 py-3 text-end font-medium">Rate</th><th className="px-3 py-3 font-medium">Transit</th><th className="px-3 py-3 font-medium">By</th><th className="px-3 py-3 font-medium">Validity</th><th className="px-3 py-3" />
                 </tr></thead>
                 <tbody>
                   {visible.map((r) => {
@@ -129,7 +130,7 @@ export function Logistics() {
                       <tr key={r.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50" onClick={() => { setRateEdit(r); setRateOpen(true) }}>
                         <td className="px-5 py-3"><div className="font-medium">{r.destination_port ? `${r.destination_port}, ` : ''}{r.destination_country}</div><div className="text-xs text-muted-foreground">from {r.origin_port ?? r.origin_country}</div></td>
                         <td className="px-3 py-3 capitalize text-muted-foreground">{r.mode}{r.container_type ? ` · ${r.container_type}` : ''}</td>
-                        <td className="px-3 py-3 text-right tabular-nums">
+                        <td className="px-3 py-3 text-end tabular-nums">
                           {r.mode === 'air' ? `${money(r.rate_per_kg, r.currency)} / kg` : `${money(r.rate_per_container, r.currency, 0)} / container`}
                           {(r.min_charge || r.additional_fees) && <div className="text-xs text-muted-foreground">{r.min_charge ? `min ${money(r.min_charge, r.currency, 0)}` : ''}{r.additional_fees ? ` + fees ${money(r.additional_fees, r.currency, 0)}` : ''}</div>}
                         </td>
@@ -153,7 +154,7 @@ export function Logistics() {
             <ul className="divide-y divide-border">
               {fwds.filter((f) => !f.archived_at).map((f) => (
                 <li key={f.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-accent/50">
-                  <button className="min-w-0 flex-1 text-left" onClick={() => { setFwdEdit(f); setFwdOpen(true) }}>
+                  <button className="min-w-0 flex-1 text-start" onClick={() => { setFwdEdit(f); setFwdOpen(true) }}>
                     <div className="font-medium">{f.name} <span className="text-xs font-normal text-muted-foreground">{f.company_type}</span></div>
                     <div className="text-xs text-muted-foreground">{[f.services, f.city, f.contact_name, f.phone, f.email].filter(Boolean).join(' · ')}</div>
                   </button>
@@ -227,16 +228,16 @@ function FreightCalculator({ rates, products, fwdName }: { rates: Rate[]; produc
               {res.problems.map((p) => <p key={p} className="text-xs text-amber-700 dark:text-amber-300">{p}</p>)}
               {r!.mode === 'air' && (
                 <dl className="grid grid-cols-2 gap-y-1">
-                  <dt className="text-muted-foreground">Actual weight</dt><dd className="text-right tabular-nums">{res.actualKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
-                  <dt className="text-muted-foreground">Volumetric weight</dt><dd className="text-right tabular-nums">{res.volumetricKg != null ? res.volumetricKg.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kg' : '—'}</dd>
-                  <dt className="font-medium">Chargeable weight</dt><dd className="text-right font-medium tabular-nums">{res.chargeableKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
+                  <dt className="text-muted-foreground">Actual weight</dt><dd className="text-end tabular-nums">{res.actualKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
+                  <dt className="text-muted-foreground">Volumetric weight</dt><dd className="text-end tabular-nums">{res.volumetricKg != null ? res.volumetricKg.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kg' : '—'}</dd>
+                  <dt className="font-medium">Chargeable weight</dt><dd className="text-end font-medium tabular-nums">{res.chargeableKg?.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg</dd>
                 </dl>
               )}
               <dl className="grid grid-cols-2 gap-y-1 border-t border-border pt-2">
-                <dt className="text-muted-foreground">Freight{res.minApplied ? ' (minimum charge)' : ''}</dt><dd className="text-right tabular-nums">{money(res.base, res.currency)}</dd>
-                <dt className="text-muted-foreground">Extra fees</dt><dd className="text-right tabular-nums">{money(res.fees, res.currency)}</dd>
-                <dt className="text-base font-semibold">Total</dt><dd className="text-right text-base font-semibold tabular-nums text-primary">{money(res.total, res.currency)}</dd>
-                <dt className="text-muted-foreground">Per net ton</dt><dd className="text-right tabular-nums">{res.perNetTon != null ? money(res.perNetTon, res.currency) : '—'}</dd>
+                <dt className="text-muted-foreground">Freight{res.minApplied ? ' (minimum charge)' : ''}</dt><dd className="text-end tabular-nums">{money(res.base, res.currency)}</dd>
+                <dt className="text-muted-foreground">Extra fees</dt><dd className="text-end tabular-nums">{money(res.fees, res.currency)}</dd>
+                <dt className="text-base font-semibold">Total</dt><dd className="text-end text-base font-semibold tabular-nums text-primary">{money(res.total, res.currency)}</dd>
+                <dt className="text-muted-foreground">Per net ton</dt><dd className="text-end tabular-nums">{res.perNetTon != null ? money(res.perNetTon, res.currency) : '—'}</dd>
               </dl>
               <p className="text-xs text-muted-foreground">Use “per net ton” as the Freight cost in Pricing → Calculator for CFR / CIF prices. This is an estimate from a saved rate, not a booking.</p>
             </>

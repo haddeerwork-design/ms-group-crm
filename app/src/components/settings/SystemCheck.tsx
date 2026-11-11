@@ -51,7 +51,7 @@ export function SystemCheck() {
               {legacy.length > 0 && (
                 <details className="text-muted-foreground">
                   <summary className="cursor-pointer">{legacy.length} note(s) about the old CRM's own tables/functions (left unchanged on purpose)</summary>
-                  <ul className="mt-1 list-disc pl-5">{legacy.map((f) => <li key={f.kind + f.object}>{f.object} — {f.kind}</li>)}</ul>
+                  <ul className="mt-1 list-disc ps-5">{legacy.map((f) => <li key={f.kind + f.object}>{f.object} — {f.kind}</li>)}</ul>
                 </details>
               )}
             </div>
@@ -62,7 +62,7 @@ export function SystemCheck() {
             <Button variant="outline" onClick={archive} disabled={!!busy}>{busy === 'archive' && <Loader2 className="animate-spin" />}Refresh old-CRM archive</Button>
             <span className="text-sm text-muted-foreground">Copies the latest data from the current CRM into the read-only archive. Do this one last time before switching the old CRM off.</span>
           </div>
-          {copied && <p className="mt-2 text-sm">{copied.length ? copied.map((c) => <Badge key={c.record_type} className="mr-1">{c.record_type}: {c.copied}</Badge>) : 'Nothing changed since the last copy.'}</p>}
+          {copied && <p className="mt-2 text-sm">{copied.length ? copied.map((c) => <Badge key={c.record_type} className="me-1">{c.record_type}: {c.copied}</Badge>) : 'Nothing changed since the last copy.'}</p>}
         </div>
       </CardContent>
     </Card>

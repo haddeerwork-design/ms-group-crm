@@ -176,10 +176,10 @@ function Timeline({ company, activities, canEdit, owner, onChange }: { company: 
       <Card className={canEdit ? 'lg:col-span-3' : 'lg:col-span-5'}>
         <CardContent className="pt-5">
           {!activities.length ? <Empty title="Nothing logged yet" /> : (
-            <ol className="relative space-y-4 border-l border-border pl-5">
+            <ol className="relative space-y-4 border-s border-border ps-5">
               {activities.map((a) => (
                 <li key={a.id}>
-                  <span className="absolute -left-[5px] mt-1.5 size-2.5 rounded-full bg-primary" />
+                  <span className="absolute -start-[5px] mt-1.5 size-2.5 rounded-full bg-primary" />
                   <div className="text-xs text-muted-foreground">{ACTIVITY_KIND[a.kind]} · {new Date(a.happened_at).toLocaleString()} · {a.created_by ? owner[a.created_by] ?? 'Employee' : 'System'}</div>
                   <p className="mt-0.5 whitespace-pre-wrap text-sm">{a.summary}</p>
                 </li>
@@ -236,7 +236,7 @@ function Contacts({ companyId, contacts, canEdit, onChange }: { companyId: strin
           {contacts.map((c) => (
             <Card key={c.id}><CardContent className="space-y-1 pt-4 text-sm">
               <div className="flex items-start justify-between gap-2">
-                <div><div className="font-medium">{c.name} {c.is_primary && <span className="ml-1 text-xs text-amber-600">★ primary</span>}</div><div className="text-xs text-muted-foreground">{c.job_title}</div></div>
+                <div><div className="font-medium">{c.name} {c.is_primary && <span className="ms-1 text-xs text-amber-600">★ primary</span>}</div><div className="text-xs text-muted-foreground">{c.job_title}</div></div>
                 {canEdit && <div className="flex">
                   {!c.is_primary && <Button variant="ghost" size="icon" title="Make primary" aria-label="Make primary" onClick={() => makePrimary(c.id)}><Star /></Button>}
                   <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setF({ id: c.id, name: c.name, job_title: c.job_title ?? '', email: c.email ?? '', phone: c.phone ?? '', whatsapp: c.whatsapp ?? '', linkedin: c.linkedin ?? '', notes: c.notes ?? '' })}><Pencil /></Button>
@@ -298,7 +298,7 @@ function DealsAndTasks({ company, team, canEdit }: { company: Company; team: Tea
           {!x.opps.filter((o) => !o.archived_at).length ? <p className="text-sm text-muted-foreground">No deals yet.</p> : (
             <ul className="divide-y divide-border text-sm">
               {x.opps.filter((o) => !o.archived_at).map((o) => (
-                <li key={o.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-primary" onClick={() => { setOpp(o); setOppOpen(true) }}>
+                <li key={o.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-start hover:text-primary" onClick={() => { setOpp(o); setOppOpen(true) }}>
                   <span><span className="font-medium">{o.title}</span><span className="block text-xs text-muted-foreground">{stage[o.stage_id]?.name}{o.probability != null ? ` · ${o.probability}%` : ''}{o.expected_close_date ? ` · close ${o.expected_close_date}` : ''}</span></span>
                   <span className="tabular-nums">{o.expected_revenue != null ? money(o.expected_revenue, o.currency, 0) : ''}</span>
                 </button></li>
@@ -314,7 +314,7 @@ function DealsAndTasks({ company, team, canEdit }: { company: Company; team: Tea
           {!x.tasks.length ? <p className="text-sm text-muted-foreground">No tasks yet.</p> : (
             <ul className="divide-y divide-border text-sm">
               {x.tasks.map((t) => (
-                <li key={t.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-primary" onClick={() => { setTask(t); setTaskOpen(true) }}>
+                <li key={t.id}><button className="flex w-full items-center justify-between gap-2 py-2 text-start hover:text-primary" onClick={() => { setTask(t); setTaskOpen(true) }}>
                   <span className={cn(t.status === 'done' && 'text-muted-foreground line-through')}>{t.title}</span>
                   <span className={cn('text-xs text-muted-foreground', taskBucket(t, today) === 'overdue' && 'text-destructive')}>{t.status === 'done' ? TASK_STATUS.done : t.due_date ?? 'No date'}</span>
                 </button></li>

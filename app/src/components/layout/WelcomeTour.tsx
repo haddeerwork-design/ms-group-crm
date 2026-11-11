@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { BookOpen, Command, LayoutDashboard, PanelLeft, Plus, Search } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
@@ -22,6 +23,7 @@ export function WelcomeTour() {
   const uid = session?.user.id
   const [open, setOpen] = useState(false)
   const [i, setI] = useState(0)
+  const { t } = useT()
   useEffect(() => {
     if (!uid || !roles.length) return
     try { if (!localStorage.getItem(key(uid))) setOpen(true) } catch { /* storage blocked: skip the tour */ }
@@ -35,16 +37,16 @@ export function WelcomeTour() {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <span className="mb-2 grid size-11 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="size-5" /></span>
-          <DialogTitle>{s.title}</DialogTitle>
-          <DialogDescription>{i === 0 ? 'Welcome to the MS El-brancy export system. A 1-minute tour.' : `Step ${i + 1} of ${STEPS.length}`}</DialogDescription>
+          <DialogTitle>{t(s.title)}</DialogTitle>
+          <DialogDescription>{i === 0 ? t('Welcome to the MS El-brancy export system. A 1-minute tour.') : t('Step {n} of {total}', { n: i + 1, total: STEPS.length })}</DialogDescription>
         </DialogHeader>
-        <DialogBody><p className="text-sm leading-relaxed">{s.body}</p></DialogBody>
+        <DialogBody><p className="text-sm leading-relaxed">{t(s.body)}</p></DialogBody>
         <DialogFooter className="items-center sm:justify-between">
           <div className="flex gap-1.5" aria-hidden="true">{STEPS.map((_, j) => <span key={j} className={cn('h-1.5 rounded-full transition-all', j === i ? 'w-5 bg-primary' : 'w-1.5 bg-muted-foreground/30')} />)}</div>
           <div className="flex gap-2">
-            {!last && <Button variant="ghost" onClick={finish}>Skip</Button>}
-            {i > 0 && <Button variant="outline" onClick={() => setI(i - 1)}>Back</Button>}
-            <Button onClick={() => (last ? finish() : setI(i + 1))} autoFocus>{last ? 'Start working' : 'Next'}</Button>
+            {!last && <Button variant="ghost" onClick={finish}>{t('Skip')}</Button>}
+            {i > 0 && <Button variant="outline" onClick={() => setI(i - 1)}>{t('Back')}</Button>}
+            <Button onClick={() => (last ? finish() : setI(i + 1))} autoFocus>{t(last ? 'Start working' : 'Next')}</Button>
           </div>
         </DialogFooter>
       </DialogContent>

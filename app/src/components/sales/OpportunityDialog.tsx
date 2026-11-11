@@ -1,3 +1,4 @@
+import { tr } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -66,7 +67,7 @@ export function OpportunityDialog({ open, onOpenChange, opp, stages, companies, 
     if (!opp) return
     const { error } = await supabase.from('opportunities').update({ archived_at: new Date().toISOString() }).eq('id', opp.id)
     if (error) return toast.error(error.message)
-    archivedToast('Deal', 'opportunities', opp.id, onSaved); onOpenChange(false); onSaved()
+    archivedToast(tr('Deal'), 'opportunities', opp.id, onSaved); onOpenChange(false); onSaved()
   }
 
   return (
@@ -102,7 +103,7 @@ export function OpportunityDialog({ open, onOpenChange, opp, stages, companies, 
           <Field label="Notes" className="sm:col-span-2"><Textarea value={f.notes} onChange={set('notes')} /></Field>
         </DialogBody>
         <DialogFooter>
-          {opp && <Button variant="ghost" className="mr-auto text-destructive" onClick={archive}>Archive</Button>}
+          {opp && <Button variant="ghost" className="me-auto text-destructive" onClick={archive}>Archive</Button>}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={save} disabled={busy}>{busy && <Loader2 className="animate-spin" />}Save</Button>
         </DialogFooter>

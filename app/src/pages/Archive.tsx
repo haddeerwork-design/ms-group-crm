@@ -36,8 +36,8 @@ export function Archive() {
       setRows(all)
     })()
   }, [])
-  const last = useMemo(() => rows?.reduce((m, r) => (r.archived_at > m ? r.archived_at : m), '') ?? '', [rows])
-  if (error) return <ErrorState message={error} />
+  const last = useMemo(() => rows?.reduce((m, r) => (r.archived_at > <T>m ? r.archived_at : m), '') ?? '', [rows])
+  if (error) return</T> <ErrorState message={error} />
   if (!rows) return <Loading />
 
   const t = q.trim().toLowerCase()
@@ -55,14 +55,14 @@ export function Archive() {
             <button key={k} onClick={() => setTab(k as keyof typeof TABS)} className={cn('rounded px-3 py-1.5 text-sm', tab === k ? 'bg-accent font-medium' : 'text-muted-foreground')}>{v}</button>
           ))}
         </div>
-        {tab !== 'other' && <div className="relative w-64"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><Input className="pl-8" placeholder="Search number, customer…" value={q} onChange={(e) => setQ(e.target.value)} /></div>}
+        {tab !== 'other' && <div className="relative w-64"><Search className="absolute start-2.5 top-2.5 size-4 text-muted-foreground" /><Input className="ps-8" placeholder="Search number, customer…" value={q} onChange={(e) => setQ(e.target.value)} /></div>}
       </div>
 
       {tab === 'documents' && (docs.length === 0 ? <Empty title="No old quotations or invoices" /> : (
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-              <tr><th className="px-3 py-2">Number</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Date</th><th className="px-3 py-2">Customer</th><th className="px-3 py-2 text-right">Total</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">By</th></tr>
+            <thead className="border-b border-border bg-muted/40 text-start text-xs text-muted-foreground">
+              <tr><th className="px-3 py-2">Number</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Date</th><th className="px-3 py-2">Customer</th><th className="px-3 py-2 text-end">Total</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">By</th></tr>
             </thead>
             <tbody className="divide-y divide-border">
               {docs.map((r) => { const d = r.data as Doc; return (
@@ -71,7 +71,7 @@ export function Archive() {
                   <td className="px-3 py-2">{d.type === 'QUOTE' ? 'Quotation' : d.type === 'INVOICE' ? 'Invoice' : s(d.type)}</td>
                   <td className="px-3 py-2 tabular-nums">{s(d.date)}</td>
                   <td className="px-3 py-2">{s(d.customerName)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{Number(d.total) ? `${s(d.currency)} ${Number(d.total).toLocaleString('en-US')}` : '—'}</td>
+                  <td className="px-3 py-2 text-end tabular-nums">{Number(d.total) ? `${s(d.currency)} ${Number(d.total).toLocaleString('en-US')}` : '—'}</td>
                   <td className="px-3 py-2"><Badge>{s(d.status) || '—'}</Badge></td>
                   <td className="px-3 py-2 text-muted-foreground">{s(d.createdBy)}</td>
                 </tr>
@@ -94,7 +94,7 @@ export function Archive() {
         <Card className="p-5">
           <p className="mb-3 text-sm text-muted-foreground">These records were also copied. Customers, leads, products, suppliers and shipping data were already moved into the new modules.</p>
           <ul className="grid gap-2 text-sm sm:grid-cols-3">
-            {Object.entries(counts).sort().map(([k, n]) => <li key={k} className="flex items-center gap-2"><ArchiveIcon className="size-4 text-muted-foreground" />{k}<span className="ml-auto tabular-nums">{n}</span></li>)}
+            {Object.entries(counts).sort().map(([k, n]) => <li key={k} className="flex items-center gap-2"><ArchiveIcon className="size-4 text-muted-foreground" />{k}<span className="ms-auto tabular-nums">{n}</span></li>)}
           </ul>
         </Card>
       )}
@@ -122,7 +122,7 @@ function DocDetail({ d }: { d: Doc }) {
         {items.length > 0 && (
           <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-xs">
-              <thead className="bg-muted/40 text-left"><tr>{cols.map((c) => <th key={c} className="px-2 py-1.5 font-medium">{c}</th>)}</tr></thead>
+              <thead className="bg-muted/40 text-start"><tr>{cols.map((c) => <th key={c} className="px-2 py-1.5 font-medium">{c}</th>)}</tr></thead>
               <tbody className="divide-y divide-border">{items.map((i, n) => <tr key={n}>{cols.map((c) => <td key={c} className="px-2 py-1.5">{typeof i[c] === 'object' ? JSON.stringify(i[c]) : s(i[c])}</td>)}</tr>)}</tbody>
             </table>
           </div>

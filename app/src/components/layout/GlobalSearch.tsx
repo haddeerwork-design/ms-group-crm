@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
@@ -63,20 +64,21 @@ export function GlobalSearch() {
     return () => clearTimeout(h)
   }, [q, roles])
 
+  const { t } = useT()
   function go(h: Hit) { setOpen(false); nav(h.to) }
   let lastGroup = ''
   return (
     <>
       <Button variant="outline" className="hidden h-9 w-56 justify-start gap-2 text-muted-foreground sm:inline-flex" onClick={() => setOpen(true)}>
-        <Search className="size-4" /><span className="flex-1 text-left">Search…</span><kbd className="rounded border border-border px-1.5 text-[10px]">Ctrl K</kbd>
+        <Search className="size-4" /><span className="flex-1 text-start">{t('Search…')}</span><kbd className="rounded border border-border px-1.5 text-[10px]">Ctrl K</kbd>
       </Button>
-      <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setOpen(true)} aria-label="Search"><Search /></Button>
+      <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setOpen(true)} aria-label={t('Search')}><Search /></Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="top-[15%] max-w-xl translate-y-0 gap-0 p-0">
-          <DialogTitle className="sr-only">Search</DialogTitle>
-          <div className="flex items-center gap-2 border-b border-border pl-4 pr-12">
+          <DialogTitle className="sr-only">{t('Search')}</DialogTitle>
+          <div className="flex items-center gap-2 border-b border-border ps-4 pe-12">
             <Search className="size-4 text-muted-foreground" />
-            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Company, quotation or order number, B/L, product…"
+            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Company, quotation or order number, B/L, product…')}
               className="h-12 flex-1 bg-transparent text-sm outline-none"
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(s + 1, hits.length - 1)) }
@@ -85,17 +87,17 @@ export function GlobalSearch() {
               }} />
           </div>
           <div className="max-h-[60vh] overflow-y-auto p-2">
-            {cleanTerm(q).length < 2 ? <p className="p-4 text-center text-sm text-muted-foreground">Type at least 2 letters.</p>
-              : busy && !hits.length ? <p className="p-4 text-center text-sm text-muted-foreground">Searching…</p>
-              : !hits.length ? <p className="p-4 text-center text-sm text-muted-foreground">Nothing found.</p>
+            {cleanTerm(q).length < 2 ? <p className="p-4 text-center text-sm text-muted-foreground">{t('Type at least 2 letters.')}</p>
+              : busy && !hits.length ? <p className="p-4 text-center text-sm text-muted-foreground">{t('Searching…')}</p>
+              : !hits.length ? <p className="p-4 text-center text-sm text-muted-foreground">{t('Nothing found.')}</p>
               : hits.map((h, i) => {
                 const head = h.group !== lastGroup ? (lastGroup = h.group) : null
                 return (
                   <div key={h.group + h.id}>
-                    {head && <div className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">{head}</div>}
+                    {head && <div className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">{t(head)}</div>}
                     <button onClick={() => go(h)} onMouseEnter={() => setSel(i)}
-                      className={cn('flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm', i === sel && 'bg-accent')}>
-                      <span className="truncate font-medium">{h.title}</span><span className="ml-auto truncate text-xs text-muted-foreground">{h.sub}</span>
+                      className={cn('flex w-full items-center gap-3 rounded-md px-2 py-2 text-start text-sm', i === sel && 'bg-accent')}>
+                      <span className="truncate font-medium">{h.title}</span><span className="ms-auto truncate text-xs text-muted-foreground">{h.sub}</span>
                     </button>
                   </div>
                 )

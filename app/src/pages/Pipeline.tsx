@@ -72,7 +72,7 @@ export function Pipeline() {
           <div className="text-xs text-muted-foreground">{sum.won} won · {sum.lost} lost</div>
         </div>
         {d.team.length > 1 && editAll && (
-          <div className="ml-auto w-48 self-center"><Select value={owner} onChange={(e) => setOwner(e.target.value)} aria-label="Owner"><option value="">All owners</option>{d.team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
+          <div className="ms-auto w-48 self-center"><Select value={owner} onChange={(e) => setOwner(e.target.value)} aria-label="Owner"><option value="">All owners</option>{d.team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
         )}
       </div>
 
@@ -81,9 +81,9 @@ export function Pipeline() {
           {stages.map((s) => {
             const items = opps.filter((o) => o.stage_id === s.id)
             const total = items.reduce((a, o) => a + (o.expected_revenue ?? 0), 0)
-            const ccys = new Set(items.map((o) => o.currency))
+            const ccys = new Set(items.map((o) => <T>o.currency))
             return (
-              <div key={s.id}
+</T>              <div key={s.id}
                 onDragOver={(e) => { e.preventDefault(); setOverStage(s.id) }} onDragLeave={() => setOverStage(null)}
                 onDrop={(e) => { e.preventDefault(); setOverStage(null); const id = e.dataTransfer.getData('text/plain') || dragId; const o = d.opps.find((x) => x.id === id); if (o && canMove(o)) move(o, s.id) }}
                 className={cn('flex w-64 shrink-0 flex-col rounded-lg border border-border bg-muted/40 transition-colors', overStage === s.id && 'border-primary bg-accent',

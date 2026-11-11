@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { useState } from 'react'
 import { KeyRound, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -55,12 +56,13 @@ export function ForcedPasswordChange({ onSignOut }: { onSignOut: () => void }) {
 /** Header button: change password any time. */
 export function ChangePasswordButton() {
   const [open, setOpen] = useState(false)
+  const { t } = useT()
   return (
     <>
-      <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Change password" data-tip="Change password"><KeyRound /></Button>
+      <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label={t('Change password')} data-tip={t('Change password')}><KeyRound /></Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Change password</DialogTitle><DialogDescription>Pick a password only you know.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{t('Change password')}</DialogTitle><DialogDescription>{t('Pick a password only you know.')}</DialogDescription></DialogHeader>
           <DialogBody><Form onDone={() => setOpen(false)} /></DialogBody>
         </DialogContent>
       </Dialog>

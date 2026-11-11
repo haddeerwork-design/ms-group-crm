@@ -73,7 +73,7 @@ export function TaskDialog({ open, onOpenChange, task, companies, opportunities,
           </fieldset>
         </DialogBody>
         <DialogFooter>
-          {task && canEditTask && <Button variant="ghost" className="mr-auto text-destructive" onClick={remove}>Delete</Button>}
+          {task && canEditTask && <Button variant="ghost" className="me-auto text-destructive" onClick={remove}>Delete</Button>}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           {canEditTask && <Button onClick={save} disabled={busy}>{busy && <Loader2 className="animate-spin" />}Save</Button>}
         </DialogFooter>

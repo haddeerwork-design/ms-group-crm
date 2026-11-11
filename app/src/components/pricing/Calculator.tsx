@@ -60,9 +60,9 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
 
   const product = products.find((p) => p.id === s.productId)
   const packs = product ? activePackaging(product) : []
-  const grouped = useMemo(() => categories.map((c) => ({ c, items: products.filter((p) => p.category_id === c.id && !p.archived_at).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => g.items.length), [products, categories])
+  const grouped = useMemo(() => categories.map((c) => ({ c, items: products.filter((p) => p.category_id === c.id && !p.archived_at).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => <T>g.items.length), [products, categories])
 
-  function applyVersion(v: PriceVersion, base: Partial<State> = {}) {
+  function applyVersion(v: PriceVersion, base: Partial</T><State> = {}) {
     const costs = emptyCosts()
     for (const c of ALL_COMPONENTS) costs[c] = str(v[COST_COLUMN[c]])
     setS((x) => ({
@@ -202,8 +202,8 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
                 </div>
                 {!autoFx && !s.useManualFx && <p className="text-xs text-destructive">No saved rate for this pair. Add one in “Exchange rates” or enter it below.</p>}
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <input type="checkbox" className="size-3.5 accent-[#23856B]" checked={s.useManualFx} onChange={(e) => set({ useManualFx: e.target.checked })} />Use a different rate for this price
-                </label>
+                  <input type="checkbox" className="size-3.5 accent-[#23856B]" checked={s.useManualFx} onChange={(e) => set({ useManualFx: e.target.checked })} /><T>Use a different rate for this price
+</T>                </label>
                 {s.useManualFx && <Input inputMode="decimal" placeholder={`1 ${s.costCurrency} = ? ${s.sellCurrency}`} value={s.fxManual} onChange={(e) => set({ fxManual: e.target.value })} />}
               </div>
             )}
@@ -249,12 +249,12 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
             )}
 
             <table className="w-full text-sm">
-              <thead><tr className="text-xs text-muted-foreground"><th className="py-1 text-left font-medium" /><th className="py-1 text-right font-medium">Cost</th><th className="py-1 text-right font-medium">Price</th></tr></thead>
+              <thead><tr className="text-xs text-muted-foreground"><th className="py-1 text-start font-medium" /><th className="py-1 text-end font-medium">Cost</th><th className="py-1 text-end font-medium">Price</th></tr></thead>
               <tbody className="tabular-nums">
-                <tr className="border-t border-border text-base font-semibold"><td className="py-2">Per ton</td><td className="py-2 text-right">{money(result.totalCostPerTon)}</td><td className="py-2 text-right text-primary">{money(result.pricePerTon)}</td></tr>
-                <tr className="border-t border-border"><td className="py-1.5">Per kg</td><td className="py-1.5 text-right">{money(result.per.cost.kg, undefined, 3)}</td><td className="py-1.5 text-right">{money(result.per.price.kg, undefined, 3)}</td></tr>
-                <tr className="border-t border-border"><td className="py-1.5">Per carton</td><td className="py-1.5 text-right">{money(result.per.cost.carton)}</td><td className="py-1.5 text-right">{money(result.per.price.carton)}</td></tr>
-                <tr className="border-t border-border"><td className="py-1.5">Per pallet</td><td className="py-1.5 text-right">{money(result.per.cost.pallet)}</td><td className="py-1.5 text-right">{money(result.per.price.pallet)}</td></tr>
+                <tr className="border-t border-border text-base font-semibold"><td className="py-2">Per ton</td><td className="py-2 text-end">{money(result.totalCostPerTon)}</td><td className="py-2 text-end text-primary">{money(result.pricePerTon)}</td></tr>
+                <tr className="border-t border-border"><td className="py-1.5">Per kg</td><td className="py-1.5 text-end">{money(result.per.cost.kg, undefined, 3)}</td><td className="py-1.5 text-end">{money(result.per.price.kg, undefined, 3)}</td></tr>
+                <tr className="border-t border-border"><td className="py-1.5">Per carton</td><td className="py-1.5 text-end">{money(result.per.cost.carton)}</td><td className="py-1.5 text-end">{money(result.per.price.carton)}</td></tr>
+                <tr className="border-t border-border"><td className="py-1.5">Per pallet</td><td className="py-1.5 text-end">{money(result.per.cost.pallet)}</td><td className="py-1.5 text-end">{money(result.per.price.pallet)}</td></tr>
               </tbody>
             </table>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -299,12 +299,12 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
                 <ul className="divide-y divide-border text-sm">
                   {versions.map((v) => (
                     <li key={v.id}>
-                      <button type="button" className="flex w-full items-center justify-between gap-2 py-2 text-left hover:text-primary" onClick={() => applyVersion(v)}>
+                      <button type="button" className="flex w-full items-center justify-between gap-2 py-2 text-start hover:text-primary" onClick={() => applyVersion(v)}>
                         <span>
                           <span className="font-medium">{v.incoterm ?? 'No Incoterm'}</span>
                           <span className="text-muted-foreground"> · {new Date(v.created_at).toLocaleDateString()}{v.variety ? ` · ${v.variety}` : ''}</span>
-                          {v.source === 'imported' && <Badge className="ml-1">imported</Badge>}
-                          {isExpired(v) && <Badge className="ml-1 border-red-200 bg-red-50 text-red-800">expired</Badge>}
+                          {v.source === 'imported' && <Badge className="ms-1">imported</Badge>}
+                          {isExpired(v) && <Badge className="ms-1 border-red-200 bg-red-50 text-red-800">expired</Badge>}
                         </span>
                         <span className="tabular-nums">{money(v.price_per_ton, v.sell_currency)}</span>
                       </button>

@@ -43,7 +43,7 @@ export function ProformaDocument({ p, company }: { p: PrintablePI; company: Comp
     ['Estimated shipment', p.estimated_shipment ? fmtDateDMY(p.estimated_shipment) : null],
   ]
   return (
-    <div className="quote-doc" ref={ref}>
+    <div className="quote-doc" dir="ltr" lang="en" ref={ref}>
       {pg.map((page, pi) => (
         <div className="q-page" key={pi}>
           <img className="q-bg" src={LETTERHEAD} alt="" />

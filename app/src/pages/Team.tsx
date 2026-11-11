@@ -62,7 +62,7 @@ export function Team() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="px-5 py-3 font-medium">Employee</th>
                   {ROLES.map((r) => <th key={r} className="px-2 py-3 text-center font-medium">{ROLE_LABEL[r]}</th>)}
                   {isSuper && <th className="px-2 py-3" />}
@@ -90,7 +90,7 @@ export function Team() {
                       )
                     })}
                     {isSuper && (
-                      <td className="px-2 py-3 text-right">
+                      <td className="px-2 py-3 text-end">
                         {p.id !== session?.user.id && <Button variant="ghost" size="sm" onClick={() => setManaging(p)} title="Password, deactivate or delete"><Settings2 />Manage</Button>}
                       </td>
                     )}

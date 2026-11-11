@@ -93,8 +93,8 @@ export function Products() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-8" placeholder="Search product, variety or category" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="ps-8" placeholder="Search product, variety or category" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <MobileFilters active={[cat, avail, setup].filter(Boolean).length + (showArchived ? 1 : 0)}>
         <div className="w-full sm:w-48"><Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
@@ -110,10 +110,10 @@ export function Products() {
           <option value="">Any setup</option><option value="missing">Needs setup</option><option value="ready">Ready</option>
         </Select></div>
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-          <input type="checkbox" className="size-4 accent-[#23856B]" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />Archived
-        </label>
+          <input type="checkbox" className="size-4 accent-[#23856B]" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /><T>Archived
+</T>        </label>
         </MobileFilters>
-        <div className="ml-auto flex rounded-md border border-border p-0.5">
+        <div className="ms-auto flex rounded-md border border-border p-0.5">
           <Button variant={view === 'list' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('list')}><List />List</Button>
           <Button variant={view === 'season' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('season')}><CalendarDays />Seasons</Button>
           {canEdit && <Button variant={view === 'quick' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('quick')}><Table2 />Quick edit</Button>}
@@ -141,7 +141,7 @@ export function Products() {
                   const miss = missingSetup(p)
                   return (
                     <li key={p.id} className="flex items-start gap-2 px-4 py-3">
-                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => open(p)}>
+                      <button type="button" className="min-w-0 flex-1 text-start" onClick={() => open(p)}>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{p.name}</span>
                           <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}>{PRODUCT_TYPE_LABEL[p.product_type]}</span>
@@ -157,7 +157,7 @@ export function Products() {
               </ul>
               <table className="hidden w-full min-w-[760px] text-sm md:table">
                 <thead>
-                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-5 py-3 font-medium">Product</th>
                     <th className="px-3 py-3 font-medium">Category</th>
                     <th className="px-3 py-3 font-medium">Default packaging</th>
@@ -196,7 +196,7 @@ export function Products() {
                         </td>
                         <td className="px-3 py-3 text-muted-foreground">{seasonLabel(p) ?? '—'}</td>
                         <td className="px-3 py-3 text-muted-foreground">{p.availability ? AVAILABILITY_LABEL[p.availability] : '—'}</td>
-                        <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-3 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                           {canEdit && !p.archived_at && (
                             <Button variant="ghost" size="icon" onClick={() => { setEditing(null); setDupOf(p); setDialogOpen(true) }} title="Duplicate" aria-label={`Duplicate ${p.name}`}>
                               <Copy />
@@ -242,7 +242,7 @@ function SeasonCalendar({ rows, onOpen }: { rows: Product[]; onOpen: (p: Product
         <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="text-xs text-muted-foreground">
-              <th className="py-2 pr-3 text-left font-medium">Product</th>
+              <th className="py-2 pe-3 text-start font-medium">Product</th>
               {MONTHS.map((m, i) => <th key={m} className={cn('w-[6.5%] py-2 text-center font-medium', i + 1 === now && 'text-foreground')}>{m}</th>)}
             </tr>
           </thead>
@@ -251,7 +251,7 @@ function SeasonCalendar({ rows, onOpen }: { rows: Product[]; onOpen: (p: Product
               const months = seasonMonths(p.season_start_month, p.season_end_month)
               return (
                 <tr key={p.id} className="cursor-pointer hover:bg-accent/50" onClick={() => onOpen(p)}>
-                  <td className="py-1.5 pr-3">{p.name} <span className="text-xs text-muted-foreground">{PRODUCT_TYPE_LABEL[p.product_type]}</span></td>
+                  <td className="py-1.5 pe-3">{p.name} <span className="text-xs text-muted-foreground">{PRODUCT_TYPE_LABEL[p.product_type]}</span></td>
                   {MONTHS.map((m, i) => (
                     <td key={m} className="px-0.5 py-1.5">
                       <div className={cn('h-5 rounded-sm', months.has(i + 1) ? 'bg-primary/80' : 'bg-muted', i + 1 === now && 'ring-1 ring-foreground/30')} />

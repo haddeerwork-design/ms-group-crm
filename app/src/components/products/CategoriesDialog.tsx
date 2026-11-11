@@ -54,7 +54,7 @@ export function CategoriesDialog({ open, onOpenChange, categories, counts, onSav
                     if (v && v !== c.name) run(c.id, () => supabase.from('product_categories').update({ name: v }).eq('id', c.id), 'Category renamed')
                   }} />
                 <span className="w-16 text-xs text-muted-foreground">{PRODUCT_TYPE_LABEL[c.product_type]}</span>
-                <span className="w-20 text-right text-xs text-muted-foreground">{counts[c.id] ?? 0} products</span>
+                <span className="w-20 text-end text-xs text-muted-foreground">{counts[c.id] ?? 0} products</span>
                 <Button variant="ghost" size="icon" disabled={busy === c.id}
                   title={c.archived_at ? 'Restore' : 'Archive'} aria-label={c.archived_at ? 'Restore' : 'Archive'}
                   onClick={() => run(c.id, () => supabase.from('product_categories').update({ archived_at: c.archived_at ? null : new Date().toISOString() }).eq('id', c.id),

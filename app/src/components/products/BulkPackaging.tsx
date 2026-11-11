@@ -81,9 +81,9 @@ export function BulkPackaging({ rows, onSaved }: { rows: Product[]; onSaved: () 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[860px] text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-border text-start text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-5 py-2.5 font-medium">Product</th>
-              {COLS.map((c) => <th key={c.k} className={cn('px-1.5 py-2.5 font-medium', c.num && 'text-right')}>{c.label}</th>)}
+              {COLS.map((c) => <th key={c.k} className={cn('px-1.5 py-2.5 font-medium', c.num && 'text-end')}>{c.label}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -102,7 +102,7 @@ export function BulkPackaging({ rows, onSaved }: { rows: Product[]; onSaved: () 
                         onKeyDown={(e) => move(e, ri, ci)}
                         onChange={(e) => setEdits((x) => ({ ...x, [p.id]: { ...x[p.id], [c.k]: e.target.value } }))}
                         className={cn('h-8 rounded-md border border-transparent bg-muted/40 px-2 outline-none transition-colors hover:border-border focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/20',
-                          c.w, c.num && 'text-right tabular-nums', dirty && 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950',
+                          c.w, c.num && 'text-end tabular-nums', dirty && 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950',
                           bad(p.id, c.k) && 'border-destructive bg-destructive/5')} />
                     </td>
                   )

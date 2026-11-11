@@ -9,10 +9,10 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, Omit<React.Input
     const [show, setShow] = React.useState(false)
     return (
       <div className="relative">
-        <Input ref={ref} type={show ? 'text' : 'password'} className={cn('pr-10', className)} autoCapitalize="none" autoCorrect="off" spellCheck={false} {...props} />
+        <Input ref={ref} type={show ? 'text' : 'password'} className={cn('pe-10', className)} autoCapitalize="none" autoCorrect="off" spellCheck={false} {...props} />
         <button type="button" onClick={() => setShow((x) => !x)} aria-label={show ? 'Hide password' : 'Show password'} title={show ? 'Hide password' : 'Show password'}
           aria-pressed={show}
-          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          className="absolute inset-y-0 end-0 flex w-10 items-center justify-center rounded-e-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
         </button>
       </div>

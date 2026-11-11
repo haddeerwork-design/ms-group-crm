@@ -1,3 +1,4 @@
+import { useTx } from '@/lib/i18n'
 import * as React from 'react'
 import * as D from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
@@ -19,7 +20,7 @@ export function DialogContent({ className, children, ...props }: React.Component
         {...props}
       >
         {children}
-        <D.Close className="absolute right-3 top-3 rounded-md p-1.5 text-muted-foreground hover:bg-accent" aria-label="Close">
+        <D.Close className="absolute end-3 top-3 rounded-md p-1.5 text-muted-foreground hover:bg-accent" aria-label="Close">
           <X className="size-4" />
         </D.Close>
       </D.Content>
@@ -27,14 +28,14 @@ export function DialogContent({ className, children, ...props }: React.Component
   )
 }
 export function DialogHeader({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('border-b border-border px-5 py-4 pr-12', className)} {...p} />
+  return <div className={cn('border-b border-border px-5 py-4 pe-12', className)} {...p} />
 }
 export const DialogTitle = React.forwardRef<HTMLHeadingElement, React.ComponentPropsWithoutRef<typeof D.Title>>(
-  ({ className, ...p }, ref) => <D.Title ref={ref} className={cn('text-base font-semibold', className)} {...p} />,
+  ({ className, children, ...p }, ref) => { const tx = useTx(); return <D.Title ref={ref} className={cn('text-base font-semibold', className)} {...p}>{tx(children)}</D.Title> },
 )
 DialogTitle.displayName = 'DialogTitle'
 export const DialogDescription = React.forwardRef<HTMLParagraphElement, React.ComponentPropsWithoutRef<typeof D.Description>>(
-  ({ className, ...p }, ref) => <D.Description ref={ref} className={cn('mt-1 text-sm text-muted-foreground', className)} {...p} />,
+  ({ className, children, ...p }, ref) => { const tx = useTx(); return <D.Description ref={ref} className={cn('mt-1 text-sm text-muted-foreground', className)} {...p}>{tx(children)}</D.Description> },
 )
 DialogDescription.displayName = 'DialogDescription'
 export function DialogBody({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) {

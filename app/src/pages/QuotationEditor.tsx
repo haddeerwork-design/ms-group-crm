@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { StickyActions } from '@/components/ui/sticky-actions'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
+import { tr, useT } from '@/lib/i18n'
 import { AWAIT_DAYS } from '@/lib/analytics'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
@@ -67,7 +68,7 @@ function parseShrink(packing: string): { k: number; jar: string } | null {
   return null
 }
 
-const Step = ({ n }: { n: number }) => <span className="mr-2 inline-grid size-6 place-items-center rounded-full bg-primary/10 align-[2px] text-xs font-semibold text-primary">{n}</span>
+const Step = ({ n }: { n: number }) => <span className="me-2 inline-grid size-6 place-items-center rounded-full bg-primary/10 align-[2px] text-xs font-semibold text-primary">{n}</span>
 
 function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Line[] } {
         const form: Form = {
@@ -108,6 +109,7 @@ export function QuotationEditor() {
   const [params] = useSearchParams()
   const nav = useNavigate()
   const { hasRole, session } = useAuth()
+  const { t: tl } = useT()
   const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings; companies: Company[]; rates: Rate[]; v14: boolean } | null>(null)
   const [quote, setQuote] = useState<Quotation | null>(null)
   const [versions, setVersions] = useState<QuoteVersion[]>([])
@@ -190,7 +192,7 @@ export function QuotationEditor() {
           })
           ls = r.lines.map((l) => ({ ...l, key: ++seq }))
           if (co) Object.assign(f, companyFields(co))
-          toast.success(`Copied from ${src.number}. Choose the buyer, and check the prices are still current.`)
+          toast.success(tr('Copied from {n}. Choose the buyer, and check the prices are still current.', { n: src.number }))
         }
         setForm(f); setLines(ls); setDirty(!!planId || !!fromId)
       } else {
@@ -344,9 +346,9 @@ export function QuotationEditor() {
         price_per_ton: tonFinal, price_basis: l.basis, unit_price: unitFinal }),
     }
   })
-  const grand = computed.length && computed.every((l) => l.total != null) ? computed.reduce((a, l) => a + (l.total ?? 0), 0) : null
+  const grand = computed.length && computed.every((l) => l.total != null) ? computed.reduce((a, l) => <T>a + (l.total ?? 0), 0) : null
 
-  async function save(): Promise<string | null> {
+  async function save(): Promise</T><string | null> {
     if (!form) return null
     if (!lines.length) { toast.error('Add at least one product.'); return null }
     for (const l of lines) {
@@ -422,7 +424,7 @@ export function QuotationEditor() {
     const { error } = await supabase.rpc('set_quotation_status', { qid, new_status: st })
     setBusy(null)
     if (error) return toast.error(error.message)
-    toast.success(`Quotation ${STATUS_LABEL[st].toLowerCase()}`)
+    toast.success(tr('Quotation: {status}', { status: tr(STATUS_LABEL[st]) }))
     if (form?.company_id && (st === 'sent' || st === 'accepted' || st === 'rejected')) {
       await supabase.from('activities').insert({ company_id: form.company_id, kind: 'quotation', summary: `Quotation ${quote?.number ?? ''} ${STATUS_LABEL[st].toLowerCase()}`, created_by: session?.user.id })
       if (st === 'sent') await supabase.from('companies').update({ lead_status: 'quotation_sent', last_contact_date: today() }).eq('id', form.company_id).in('lead_status', ['new_lead', 'contacted', 'interested'])
@@ -440,7 +442,7 @@ export function QuotationEditor() {
       assignee_id: session!.user.id, created_by: session!.user.id, due_date: due, priority: 'medium', status: 'open',
     }).select('id').single()
     if (error || !data) return
-    toast.message(`Follow-up task added for ${fmtDateDMY(due)}`, {
+    toast.message(tr('Follow-up task added for {date}', { date: fmtDateDMY(due) }), {
       duration: 8000,
       action: { label: 'Undo', onClick: async () => { await supabase.from('tasks').delete().eq('id', data.id); toast.success('Follow-up removed') } },
     })
@@ -471,19 +473,19 @@ export function QuotationEditor() {
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => (!dirty || !canEdit || window.confirm('You have unsaved changes. Leave without saving?')) && nav('/quotations')} aria-label="Back"><ArrowLeft /></Button>
+        <Button variant="ghost" size="icon" onClick={() => (!dirty || !canEdit || window.confirm('You have unsaved changes. Leave without saving?')) && nav('/quotations')} aria-label={tl('Back')}><ArrowLeft className="rtl:-scale-x-100" /></Button>
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-            {quote?.number ?? 'New quotation'}
-            {quote && quote.version > 1 && <span className="text-sm font-normal text-muted-foreground">rev. {quote.version}</span>}
-            <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', STATUS_STYLE[status])}>{STATUS_LABEL[status]}</span>
+            {quote?.number ?? tl('New quotation')}
+            {quote && quote.version > 1 && <span className="text-sm font-normal text-muted-foreground">{tl('rev.')} {quote.version}</span>}
+            <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', STATUS_STYLE[status])}>{tl(STATUS_LABEL[status])}</span>
           </h1>
-          <p className="text-sm text-muted-foreground">{quote ? `Issued ${fmtDateDMY(quote.issue_date)}${quote.valid_until ? ` · valid until ${fmtDateDMY(quote.valid_until)}` : ''}` : 'The number is given when you save.'}</p>
+          <p className="text-sm text-muted-foreground">{quote ? `${tl('Issued {date}', { date: fmtDateDMY(quote.issue_date) })}${quote.valid_until ? ` · ${tl('valid until {date}', { date: fmtDateDMY(quote.valid_until) })}` : ''}` : tl('The number is given when you save.')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {/* Save and Preview sit in the bar at the bottom while editing */}
           {!canEdit && <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>}
-          {quote && hasRole(...QUOTE_WRITERS) && <Button variant="outline" onClick={() => (!dirty || window.confirm('You have unsaved changes. Leave without saving?')) && nav(`/quotations/new?from=${quote.id}`)} data-tip="New quotation with the same products and terms"><Copy />Duplicate</Button>}
+          {quote && hasRole(...QUOTE_WRITERS) && <Button variant="outline" onClick={() => (!dirty || window.confirm('You have unsaved changes. Leave without saving?')) && nav(`/quotations/new?from=${quote.id}`)} data-tip={tl('New quotation with the same products and terms')}><Copy />Duplicate</Button>}
           {canWrite && editableStatus && <Button onClick={() => setStatus('sent')} disabled={!!busy}>{busy === 'sent' ? <Loader2 className="animate-spin" /> : <Send />}Mark as sent</Button>}
           {canWrite && status === 'sent' && <>
             <Button onClick={() => setStatus('accepted')} disabled={!!busy}><Check />Accepted</Button>
@@ -495,8 +497,8 @@ export function QuotationEditor() {
         </div>
       </div>
 
-      {!editableStatus && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">This quotation is <b>{STATUS_LABEL[status].toLowerCase()}</b> and locked. Use <b>Revise</b> to make a new version; the current one stays saved.</p>}
-      {!canWrite && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">Read-only for your role.</p>}
+      {!editableStatus && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">{tl('This quotation is “{status}” and locked. Use “Revise” to make a new version; the current one stays saved.', { status: tl(STATUS_LABEL[status]) })}</p>}
+      {!canWrite && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">{tl('Read-only for your role.')}</p>}
 
       {draft && canEdit && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100" role="status">
@@ -560,8 +562,8 @@ export function QuotationEditor() {
                 <div className="sm:col-span-2 lg:col-span-3">
                   <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more}
                     className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                    <ChevronDown className={cn('size-4 transition-transform', !more && '-rotate-90')} />
-                    {more ? 'Fewer details' : 'More details'} <span className="font-normal text-muted-foreground">(email, phone, production time, payment terms)</span>
+                    <ChevronDown className={cn('size-4 transition-transform', !more && '-rotate-90 rtl:rotate-90')} />
+                    {tl(more ? 'Fewer details' : 'More details')} <span className="font-normal text-muted-foreground">{tl('(email, phone, production time, payment terms)')}</span>
                   </button>
                 </div>
                 {more && <>
@@ -631,7 +633,7 @@ export function QuotationEditor() {
                       </Field>
                       )}
                       <div className="flex items-end justify-between gap-2 sm:col-span-3">
-                        <div className="pb-2 text-sm"><span className="text-xs text-muted-foreground">Total </span><b className="tabular-nums">{money(l.total, form.currency)}</b></div>
+                        <div className="pb-2 text-sm"><span className="text-xs text-muted-foreground">{tl('Total')} </span><b className="tabular-nums">{money(l.total, form.currency)}</b></div>
                         {canEdit && <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => { setLines((ls) => ls.filter((x) => x.key !== l.key)); setDirty(true) }}><Trash2 /></Button>}
                       </div>
                       {isJam(l) && (
@@ -652,8 +654,8 @@ export function QuotationEditor() {
                           )}
                           <div className="flex items-end pb-2 text-sm text-muted-foreground">
                             {l.sell === 'shrink'
-                              ? (l.unitFinal ? <span>Price per shrink: <b className="text-foreground tabular-nums">{money(l.unitFinal, form.currency)}</b> ({l.k} × {money(l.jarFinal, form.currency)})</span> : <span>Enter the jars per shrink and the jar price.</span>)
-                              : l.jarFinal ? <span>Price per jar: <b className="text-foreground tabular-nums">{money(l.jarFinal, form.currency)}</b></span> : null}
+                              ? (l.unitFinal ? <span>{tl('Price per shrink:')} <b className="text-foreground tabular-nums">{money(l.unitFinal, form.currency)}</b> ({l.k} × {money(l.jarFinal, form.currency)})</span> : <span>{tl('Enter the jars per shrink and the jar price.')}</span>)
+                              : l.jarFinal ? <span>{tl('Price per jar:')} <b className="text-foreground tabular-nums">{money(l.jarFinal, form.currency)}</b></span> : null}
                           </div>
                         </div>
                       )}
@@ -676,8 +678,8 @@ export function QuotationEditor() {
                             {l.fxr ? (
                               <span>= <b className="text-foreground">{money(isJam(l) ? l.jarFinal : l.basis === 'unit' ? l.unitFinal : l.tonFinal, form.currency)}</b> {isJam(l) ? 'per jar' : l.basis === 'unit' ? `per ${l.unit_label}` : 'per ton'} · 1 {l.in_ccy} = {+l.fxr.rate.toPrecision(6)} {form.currency} <span className="opacity-80">({l.fx ? (l.fxNote || 'typed') : `${l.fxr.source}, ${new Date(l.fxr.rate_at).toLocaleDateString('en-GB')}`})</span></span>
                             ) : <span className="text-destructive">No saved rate {l.in_ccy}→{form.currency}.</span>}
-                            <label className="flex items-center gap-1">rate
-                              <Input inputMode="decimal" className="h-7 w-24 text-xs" placeholder={l.fxr ? String(+l.fxr.rate.toPrecision(6)) : `1 ${l.in_ccy} = ?`} value={l.fx}
+                            <label className="flex items-center gap-1"><T>rate
+</T>                              <Input inputMode="decimal" className="h-7 w-24 text-xs" placeholder={l.fxr ? String(+l.fxr.rate.toPrecision(6)) : `1 ${l.in_ccy} = ?`} value={l.fx}
                                 onChange={(e) => updLine(l.key, { fx: e.target.value, fxNote: e.target.value ? 'typed by you' : '' })} aria-label={`Rate 1 ${l.in_ccy} in ${form.currency}`} />
                             </label>
                           </div>
@@ -690,10 +692,10 @@ export function QuotationEditor() {
               {canEdit && (
                 <button type="button" onClick={addLine}
                   className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Plus className="size-4" />Add {lines.length ? 'another' : 'a'} {form.brand === 'prime_roots' ? 'jam' : 'product'}
+                  <Plus className="size-4" />{tl(form.brand === 'prime_roots' ? (lines.length ? 'Add another jam' : 'Add a jam') : (lines.length ? 'Add another product' : 'Add a product'))}
                 </button>
               )}
-              {lines.length > 0 && <div className="flex justify-end text-sm">Total: <b className="ml-2 tabular-nums">{grand != null ? money(grand, form.currency) : 'enter all quantities to see the total'}</b></div>}
+              {lines.length > 0 && <div className="flex justify-end text-sm">{tl('Total:')} <b className="ms-2 tabular-nums">{grand != null ? money(grand, form.currency) : tl('enter all quantities to see the total')}</b></div>}
             </CardContent>
           </Card>
         </div>
@@ -714,7 +716,7 @@ export function QuotationEditor() {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><History className="size-4" />Sent versions</CardTitle><CardDescription>Saved exactly as they were sent.</CardDescription></CardHeader>
               <CardContent>
-                {!versions.length ? <p className="text-sm text-muted-foreground">Not sent yet.</p> : (
+                {!versions.length ? <p className="text-sm text-muted-foreground">{tl('Not sent yet.')}</p> : (
                   <ul className="divide-y divide-border text-sm">
                     {versions.map((v) => (
                       <li key={v.id} className="flex items-center justify-between py-2">
@@ -733,7 +735,7 @@ export function QuotationEditor() {
         </div>
       </div>
       {canEdit && (
-        <StickyActions dirty={dirty} info={<span className="text-muted-foreground">{lines.length} product{lines.length === 1 ? '' : 's'} · Total <b className="text-foreground tabular-nums">{grand != null ? money(grand, form.currency) : '—'}</b></span>}>
+        <StickyActions dirty={dirty} info={<span className="text-muted-foreground">{tl(lines.length === 1 ? '1 product' : '{n} products', { n: lines.length })} · {tl('Total')} <b className="text-foreground tabular-nums">{grand != null ? money(grand, form.currency) : '—'}</b></span>}>
           <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>
           <Button onClick={save} disabled={!!busy} title="Ctrl + S">{busy === 'save' ? <Loader2 className="animate-spin" /> : <Save />}Save</Button>
         </StickyActions>

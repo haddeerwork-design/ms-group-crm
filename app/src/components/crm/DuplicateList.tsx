@@ -12,7 +12,7 @@ export function DuplicateList({ hits }: { hits: DuplicateHit[] }) {
           <li key={h.company_id + h.idx}>
             <b>{h.company_name}</b>{h.country ? `, ${h.country}` : ''} — owner: {h.owner_name}{h.archived ? ' (archived)' : ''}
             <span className="text-xs"> · {h.reasons.join(', ')}</span>
-            {h.can_open && <Link to={`/crm/${h.company_id}`} target="_blank" className="ml-1 inline-flex items-center gap-0.5 text-xs underline">open <ExternalLink className="size-3" /></Link>}
+            {h.can_open && <Link to={`/crm/${h.company_id}`} target="_blank" className="ms-1 inline-flex items-center gap-0.5 text-xs underline">open <ExternalLink className="size-3" /></Link>}
           </li>
         ))}
       </ul>

@@ -1,9 +1,11 @@
+import { useT } from '@/lib/i18n'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 /** Grey placeholder rows in the shape of a list, so the page feels ready while data arrives. */
 export function Loading({ label = 'Loading…', rows = 5 }: { label?: string; rows?: number }) {
+  const { t } = useT()
   return (
     <div className="p-5" role="status" aria-live="polite">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{t(label)}</span>
       <div className="animate-pulse space-y-4" aria-hidden="true">
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="flex items-center gap-4">
@@ -29,10 +31,11 @@ export function ErrorState({ message }: { message: string }) {
 }
 /** Empty state: says what is missing and offers the next step (action). */
 export function Empty({ title, hint, action }: { title: string; hint?: string; action?: React.ReactNode }) {
+  const { t } = useT()
   return (
     <div className="rounded-md border border-dashed border-border p-8 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      {hint && <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{hint}</p>}
+      <p className="text-sm font-medium">{t(title)}</p>
+      {hint && <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{t(hint)}</p>}
       {action && <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   )

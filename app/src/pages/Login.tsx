@@ -28,15 +28,15 @@ export function Login() {
     <div className="min-h-screen">
       <div className="relative grid min-h-screen w-full overflow-hidden bg-gradient-to-br from-[#227d4c] to-[#0b4429] lg:grid-cols-[1.1fr_1fr]">
         {/* white side with a wavy edge (large screens) */}
-        <svg aria-hidden="true" className="absolute inset-y-0 left-0 hidden h-full w-[60%] lg:block" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <svg aria-hidden="true" className="absolute inset-y-0 start-0 hidden h-full w-[60%] lg:block" viewBox="0 0 100 100" preserveAspectRatio="none">
           <path d="M0 0 H80 C86 16 97 34 93 53 C89 71 74 82 71 100 H0 Z" fill="#f7f8f5" />
         </svg>
         <div className="relative hidden flex-col px-12 pb-10 pt-10 lg:flex">
           <img src={`${BASE}logo.png`} alt="MS El-brancy Group" className="h-14 w-auto self-start" />
           <img src={`${BASE}login-illustration.webp`} alt="A crate of Egyptian fruit and vegetables in front of the farm, with a plane flying over a world map"
             className="mx-auto my-auto w-full max-w-[640px] select-none drop-shadow-[0_18px_30px_rgba(20,83,45,0.12)]" draggable={false} />
-          <p className="mt-auto pr-16 text-center text-2xl font-medium italic text-[#14532d]">From our farms to global markets.</p>
-          <div className="mx-auto mt-3 h-1 w-24 rounded-full bg-[#8bc34a] pr-16" />
+          <p className="mt-auto pe-16 text-center text-2xl font-medium italic text-[#14532d]">From our farms to global markets.</p>
+          <div className="mx-auto mt-3 h-1 w-24 rounded-full bg-[#8bc34a] pe-16" />
         </div>
 
         {/* form side */}
@@ -61,7 +61,7 @@ export function Login() {
               <label htmlFor="password" className="sr-only">Password</label>
               <div className={field}>
                 <Lock className="size-5 shrink-0 text-white/90" />
-                <div className="h-full flex-1 [&_button]:right-0 [&_button]:text-white/80 [&_button:hover]:text-white [&_input]:h-14 [&_input]:border-0 [&_input]:bg-transparent [&_input]:px-3 [&_input]:text-[15px] [&_input]:text-white [&_input]:shadow-none [&_input]:placeholder:text-white/70 [&_input]:focus-visible:ring-0">
+                <div className="h-full flex-1 [&_button]:end-0 [&_button]:text-white/80 [&_button:hover]:text-white [&_input]:h-14 [&_input]:border-0 [&_input]:bg-transparent [&_input]:px-3 [&_input]:text-[15px] [&_input]:text-white [&_input]:shadow-none [&_input]:placeholder:text-white/70 [&_input]:focus-visible:ring-0">
                   <PasswordInput id="password" autoComplete="current-password" placeholder="Enter your password" {...register('password')} />
                 </div>
               </div>
@@ -90,7 +90,7 @@ export function Login() {
 
           <ul className="mt-12 grid grid-cols-4" aria-label="What you can do in the platform">
             {MODULES.map(({ icon: Icon, label }, i) => (
-              <li key={label} className={cn('flex flex-col items-center gap-2 text-center text-xs text-white/90 sm:text-sm', i > 0 && 'border-l border-white/20')}>
+              <li key={label} className={cn('flex flex-col items-center gap-2 text-center text-xs text-white/90 sm:text-sm', i > 0 && 'border-s border-white/20')}>
                 <Icon className="size-8 text-lime-300" strokeWidth={1.5} />{label}
               </li>
             ))}
