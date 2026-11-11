@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Check, ChevronDown, Copy, FileText, History, Loader2, Pencil, Plus, Printer, RotateCcw, Save, Send, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -115,6 +115,15 @@ export function QuotationEditor() {
   const [lines, setLines] = useState<Line[]>([])
   const [dirty, setDirty] = useState(false)
   const [more, setMore] = useState(false)
+  // Draft safety net: unsaved edits are kept in this browser and offered back after a crash or a closed tab.
+  const draftKey = `ms_qdraft:${isNew ? 'new' : id}`
+  const [draft, setDraft] = useState<{ at: string; form: Form; lines: Line[] } | null>(null)
+  const dropDraft = useCallback(() => { try { localStorage.removeItem(draftKey) } catch { /* ignore */ } setDraft(null) }, [draftKey])
+  useEffect(() => {
+    if (!dirty || !form) return
+    const h = setTimeout(() => { try { localStorage.setItem(draftKey, JSON.stringify({ at: new Date().toISOString(), form, lines })) } catch { /* ignore */ } }, 800)
+    return () => clearTimeout(h)
+  }, [dirty, form, lines, draftKey])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -194,6 +203,23 @@ export function QuotationEditor() {
     } catch (e) { setError((e as Error).message) }
   }, [id, isNew, params, policyFrom])
   useEffect(() => { load() }, [load])
+  const offered = useRef(false)
+  useEffect(() => {
+    if (offered.current || !form || (!isNew && !quote)) return
+    offered.current = true
+    try {
+      const raw = localStorage.getItem(draftKey); if (!raw) return
+      const d = JSON.parse(raw) as { at: string; form: Form; lines: Line[] }
+      // only if the draft is newer than the saved quotation
+      if (quote && Date.parse(quote.updated_at) >= Date.parse(d.at)) { localStorage.removeItem(draftKey); return }
+      if (d.form && Array.isArray(d.lines)) setDraft(d)
+    } catch { /* ignore */ }
+  }, [form, quote, isNew, draftKey])
+  function restoreDraft() {
+    if (!draft) return
+    setForm(draft.form); setLines(draft.lines.map((l) => ({ ...l, key: ++seq }))); setDirty(true); setDraft(null)
+    toast.success('Unsaved changes restored. Click Save to keep them.')
+  }
 
   const upd = (patch: Partial<Form>) => { setForm((f) => f && ({ ...f, ...patch })); setDirty(true) }
   const updLine = (key: number, patch: Partial<Line>) => { setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l))); setDirty(true) }
@@ -375,7 +401,7 @@ export function QuotationEditor() {
     const r = await supabase.from('quotation_items').insert(items)
     setBusy(null)
     if (r.error) { toast.error('Saved, but the products failed: ' + r.error.message); return qid }
-    setDirty(false)
+    setDirty(false); dropDraft()
     toast.success('Quotation saved')
     if (isNew) nav(`/quotations/${qid}`, { replace: true })
     else load()
@@ -472,6 +498,14 @@ export function QuotationEditor() {
       {!editableStatus && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">This quotation is <b>{STATUS_LABEL[status].toLowerCase()}</b> and locked. Use <b>Revise</b> to make a new version; the current one stays saved.</p>}
       {!canWrite && <p className="mb-4 rounded-md border border-border bg-accent px-3 py-2 text-sm">Read-only for your role.</p>}
 
+      {draft && canEdit && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100" role="status">
+          <History className="size-4 shrink-0" />
+          <span className="flex-1">You have unsaved changes from {new Date(draft.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} on this device.</span>
+          <Button size="sm" onClick={restoreDraft}>Restore them</Button>
+          <Button size="sm" variant="ghost" onClick={dropDraft}>Discard</Button>
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card>

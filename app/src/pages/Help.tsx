@@ -1,3 +1,6 @@
+import { PlayCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { replayTour } from '@/components/layout/WelcomeTour'
 import { PageHeader } from '@/components/layout/AppShell'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -66,7 +69,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
 export function Help() {
   return (
     <>
-      <PageHeader title="Help" summary="Quick user guide (Arabic)." />
+      <PageHeader title="Help" summary="Quick user guide (Arabic)." action={<Button variant="outline" onClick={replayTour}><PlayCircle />Take the 1-minute tour</Button>} />
       <div dir="rtl" lang="ar" className="grid gap-4 md:grid-cols-2">
         {SECTIONS.map((s) => (
           <Card key={s.title}>

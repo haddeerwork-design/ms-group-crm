@@ -12,14 +12,15 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
+import { usePersistentState } from '@/lib/usePersistentState'
 
 export function Quotations() {
   const nav = useNavigate()
   const { hasRole } = useAuth()
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchQuotations>> | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [q, setQ] = useState('')
-  const [st, setSt] = useState('')
+  const [q, setQ] = usePersistentState('quotes.q', '')
+  const [st, setSt] = usePersistentState('quotes.status', '')
   useEffect(() => { fetchQuotations().then(setRows).catch((e) => setError(e.message)) }, [])
 
   const list = useMemo(() => (rows ?? []).filter((r) => (!st || r.status === st) &&

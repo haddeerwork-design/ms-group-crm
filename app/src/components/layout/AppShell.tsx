@@ -8,6 +8,7 @@ import { LEGACY_CRM_URL } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { NotificationBell } from './NotificationBell'
+import { WelcomeTour } from './WelcomeTour'
 import { GlobalSearch } from './GlobalSearch'
 import { ChangePasswordButton } from './ChangePassword'
 import { QuickAdd } from './QuickAdd'
@@ -135,6 +136,7 @@ export function AppShell() {
           </div>
         </header>
         <main className={cn('mx-auto w-full flex-1 p-4 md:p-8', pathname === '/' ? 'max-w-[1440px]' : 'max-w-6xl')}><Outlet /></main>
+        <WelcomeTour />
       </div>
     </div>
   )

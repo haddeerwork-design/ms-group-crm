@@ -19,6 +19,7 @@ import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { ProductDialog } from '@/components/products/ProductDialog'
 import { CategoriesDialog } from '@/components/products/CategoriesDialog'
 import { cn } from '@/lib/utils'
+import { usePersistentState } from '@/lib/usePersistentState'
 import { MobileFilters } from '@/components/ui/mobile-filters'
 import { BulkPackaging } from '@/components/products/BulkPackaging'
 
@@ -33,12 +34,12 @@ export function Products() {
   const canEdit = hasRole(...CATALOG_MANAGERS)
   const [data, setData] = useState<{ categories: Category[]; products: Product[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [q, setQ] = useState('')
-  const [cat, setCat] = useState('')
-  const [avail, setAvail] = useState('')
-  const [setup, setSetup] = useState('')
-  const [showArchived, setShowArchived] = useState(false)
-  const [view, setView] = useState<'list' | 'season' | 'quick'>('list')
+  const [q, setQ] = usePersistentState('products.q', '')
+  const [cat, setCat] = usePersistentState('products.cat', '')
+  const [avail, setAvail] = usePersistentState('products.avail', '')
+  const [setup, setSetup] = usePersistentState('products.setup', '')
+  const [showArchived, setShowArchived] = usePersistentState('products.archived', false)
+  const [view, setView] = usePersistentState<'list' | 'season' | 'quick'>('products.view', 'list')
   const [editing, setEditing] = useState<Product | null>(null)
   const [dupOf, setDupOf] = useState<Product | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
