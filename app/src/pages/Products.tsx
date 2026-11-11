@@ -1,7 +1,9 @@
+import { AlertTriangle, Leaf, Package } from 'lucide-react'
+import { StatCard } from '@/components/analytics/dash'
 import { useT } from '@/lib/i18n'
-import { T } from '@/lib/i18n'
+import { T, TV } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, ArchiveRestore, CalendarDays, Copy, Table2, FolderCog, List, Plus, Search } from 'lucide-react'
+import { Archive, ArchiveRestore, CalendarDays, Copy, Merge, Table2, FolderCog, List, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { archivedToast } from '@/lib/undo'
@@ -24,6 +26,8 @@ import { cn } from '@/lib/utils'
 import { usePersistentState } from '@/lib/usePersistentState'
 import { MobileFilters } from '@/components/ui/mobile-filters'
 import { BulkPackaging } from '@/components/products/BulkPackaging'
+import { DuplicatesDialog } from '@/components/products/DuplicatesDialog'
+import { duplicateGroups } from '@/lib/duplicates'
 
 const TYPE_STYLE = {
   fresh: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900',
@@ -46,6 +50,7 @@ export function Products() {
   const [editing, setEditing] = useState<Product | null>(null)
   const [dupOf, setDupOf] = useState<Product | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [dupOpen, setDupOpen] = useState(false)
   const [catsOpen, setCatsOpen] = useState(false)
 
   const load = () => fetchCatalog().then(setData).catch((e) => setError(e.message))
@@ -71,6 +76,8 @@ export function Products() {
   }, [data])
   const needSetup = data?.products.filter((p) => !p.archived_at && missingSetup(p).length).length ?? 0
   const activeCount = data?.products.filter((p) => !p.archived_at).length ?? 0
+  const dupGroups = useMemo(() => duplicateGroups(data?.products ?? []), [data])
+  const canMerge = hasRole('super_admin', 'sales_manager')
 
   async function toggleArchive(p: Product) {
     const archiving = !p.archived_at
@@ -89,11 +96,25 @@ export function Products() {
         summary={data ? tl('{n} products · {m} still need packaging weight or cartons per pallet', { n: activeCount, m: needSetup }) : 'Central product catalog'}
         action={canEdit && (
           <div className="flex gap-2">
+            {canMerge && dupGroups.length > 0 && <Button variant="outline" onClick={() => setDupOpen(true)}><Merge /><TV k="Duplicates ({n})" v={{ n: dupGroups.length }} /></Button>}
             <Button variant="outline" onClick={() => setCatsOpen(true)}><FolderCog />Categories</Button>
             <Button onClick={() => open(null)}><Plus />Add product</Button>
           </div>
         )} />
 
+      {data && (() => {
+        const m = new Date().getMonth() + 1
+        const live = data.products.filter((p) => !p.archived_at)
+        const inSeasonNow = live.filter((p) => p.season_start_month && p.season_end_month && (p.season_start_month <= p.season_end_month ? m >= p.season_start_month && m <= p.season_end_month : m >= p.season_start_month || m <= p.season_end_month)).length
+        return (
+          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard icon={Package} tone="emerald" label="Products" value={live.length} foot="In the catalog" />
+            <StatCard icon={AlertTriangle} tone="amber" label="Need setup" value={needSetup} foot="Packing weight or pallet · bar = ready" progress={{ pct: live.length ? ((live.length - needSetup) / live.length) * 100 : null }} />
+            <StatCard icon={Leaf} tone="teal" label="In season now" value={inSeasonNow} foot="Season covers this month" />
+            <StatCard icon={Merge} tone="violet" label="Possible duplicates" value={dupGroups.length} foot={dupGroups.length ? 'Review them' : 'None found'} />
+          </div>
+        )
+      })()}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -228,7 +249,8 @@ export function Products() {
       {data && (
         <>
           <ProductDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setDupOf(null) }} product={editing} duplicateOf={dupOf} categories={data.categories} canEdit={canEdit} onSaved={load} />
-          <CategoriesDialog open={catsOpen} onOpenChange={setCatsOpen} categories={data.categories} counts={counts} onSaved={load} />
+          {data && <DuplicatesDialog open={dupOpen} onOpenChange={setDupOpen} groups={dupGroups} categories={data.categories} onMerged={() => { load() }} />}
+      <CategoriesDialog open={catsOpen} onOpenChange={setCatsOpen} categories={data.categories} counts={counts} onSaved={load} />
         </>
       )}
     </>

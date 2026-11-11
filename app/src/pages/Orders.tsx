@@ -1,3 +1,6 @@
+import { TV } from '@/lib/i18n'
+import { Boxes, CheckCircle2, PackageCheck, Ship } from 'lucide-react'
+import { StatCard } from '@/components/analytics/dash'
 import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -32,6 +35,19 @@ export function Orders() {
     <>
       <PageHeader title="Orders & Shipments" summary="From confirmed order to delivery: stage, shipment, documents and payments."
         action={hasRole(...QUOTE_WRITERS) && <Button onClick={() => nav('/orders/new')}><Plus />New order</Button>} />
+      {rows && rows.length > 0 && (() => {
+        const today = new Date().toISOString().slice(0, 10)
+        const week = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+        const active = rows.filter((r) => !['completed', 'cancelled'].includes(r.stage)).length
+        return (
+          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard icon={Boxes} tone="blue" label="Active orders" value={active} foot="Confirmed, not completed" />
+            <StatCard icon={PackageCheck} tone="amber" label="Preparing & packing" value={rows.filter((r) => ['awaiting_advance', 'preparing', 'packing', 'ready', 'booked'].includes(r.stage)).length} foot="Before shipping" />
+            <StatCard icon={Ship} tone="teal" label="In transit" value={rows.filter((r) => r.stage === 'shipped').length} foot={<TV k="{n} arriving in 7 days" v={{ n: rows.filter((r) => r.stage === 'shipped' && r.eta && r.eta >= today && r.eta <= week).length }} />} />
+            <StatCard icon={CheckCircle2} tone="emerald" label="Completed" value={rows.filter((r) => r.stage === 'completed').length} foot="Delivered and closed" />
+          </div>
+        )
+      })()}
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative min-w-52 flex-1"><Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="ps-8" placeholder="Search order, buyer, B/L, container…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="w-48"><Select value={st} onChange={(e) => setSt(e.target.value)} aria-label="Stage"><option value="active">Active orders</option><option value="">All</option>{[...STAGES, 'cancelled' as const].map((s) => <option key={s} value={s}><T>{STAGE_LABEL[s]}</T></option>)}</Select></div>

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
-import { activePackaging, fetchCatalog, PRODUCT_TYPE_LABEL, type Category, type Product } from '@/lib/catalog'
+import { activePackaging, packOptionLabel, packsFor, fetchCatalog, PRODUCT_TYPE_LABEL, type Category, type Product } from '@/lib/catalog'
 import { CURRENCIES, INCOTERMS, resolveRate, type Incoterm, type Rate } from '@/lib/pricing'
 import { fetchLatestRates, fetchPriceList, isExpired, money, type PriceListRow } from '@/lib/prices'
 import { fetchPlan } from '@/lib/containers'
@@ -46,6 +46,7 @@ type Line = {
   in_ccy: string; fx: string; fxNote: string
   // jams: sold per jar or per shrink (a pack of jars). unit_price stays the price of ONE jar; net = one jar.
   sell?: 'jar' | 'shrink'; per_shrink?: string
+  variety?: string // chosen variety (filters packing and price; printed in the description)
 }
 type QuoteItemRow = { input_price?: number | null; unit_price?: number | null }
 type Form = {
@@ -100,7 +101,13 @@ function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Li
           return { ...l, sell: sh ? 'shrink' as const : 'jar' as const, per_shrink: sh ? String(k) : '', packing: sh?.jar ?? l.packing,
             net: l.net && sh ? s(+(n(l.net)! / k).toFixed(4)) : l.net, unit_label: 'jar', unit_price: s(jarPrice) }
         })
-        return { form, lines }
+        // the variety was printed as "Name — Variety": pick it again so packing and price follow it
+        const withVariety = lines.map((l) => {
+          const pr = products.find((x) => x.id === l.product_id)
+          const v = pr?.varieties.find((x) => l.description.toLowerCase().endsWith(` — ${x.toLowerCase()}`))
+          return v ? { ...l, variety: v } : l
+        })
+        return { form, lines: withVariety }
 }
 
 export function QuotationEditor() {
@@ -226,8 +233,11 @@ export function QuotationEditor() {
   const upd = (patch: Partial<Form>) => { setForm((f) => f && ({ ...f, ...patch })); setDirty(true) }
   const updLine = (key: number, patch: Partial<Line>) => { setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l))); setDirty(true) }
 
-  function findPrice(productId: string, packagingId: string, incoterm: Incoterm | null, currency: string) {
-    const all = (base?.prices ?? []).filter((p) => p.product_id === productId && !isExpired(p))
+  function findPrice(productId: string, packagingId: string, incoterm: Incoterm | null, currency: string, variety = '') {
+    const v = variety.trim().toLowerCase()
+    // a price for this variety first, then one for all varieties, then any other
+    const rank = (r: PriceListRow) => (v && (r.variety ?? '').toLowerCase() === v ? 0 : !r.variety ? 1 : 2)
+    const all = (base?.prices ?? []).filter((p) => p.product_id === productId && !isExpired(p) ).sort((a, b) => rank(a) - rank(b))
     // prefer prices already in the quotation currency; otherwise use another currency and convert
     const c = [...all.filter((p) => p.sell_currency === currency), ...all.filter((p) => p.sell_currency !== currency)]
     const hit = c.find((p) => p.incoterm === incoterm && (p.packaging_id ?? '') === packagingId) ?? c.find((p) => p.incoterm === incoterm)
@@ -245,15 +255,19 @@ export function QuotationEditor() {
     if (other) return { ...fromRow(other), price_id: other.id, priceNote: other.incoterm ? `⚠ Price list has ${other.incoterm}, not ${incoterm}` : 'Price list (no Incoterm set)' }
     return { price: '', price_id: null, priceNote: `No ${incoterm} price — enter it`, in_ccy: currency, fx: '', fxNote: '' }
   }
-  function pickProduct(key: number, productId: string, packagingId?: string) {
+  function pickProduct(key: number, productId: string, packagingId?: string, variety?: string) {
     const p = prod[productId]
-    if (!p || !form) return updLine(key, { product_id: '' })
-    const pk = activePackaging(p).find((x) => x.id === packagingId) ?? activePackaging(p)[0]
+    if (!p || !form) return updLine(key, { product_id: '', variety: '' })
+    const cur = lines.find((l) => l.key === key)
+    const v = variety ?? (cur?.product_id === productId ? cur.variety ?? '' : '')
+    const packs = packsFor(p, v)
+    const pk = packs.find((x) => x.id === packagingId) ?? packs[0]
+    const name = form.language === 'ar' && p.name_ar ? p.name_ar : p.name
     updLine(key, {
-      product_id: productId, packaging_id: pk?.id ?? '', description: form.language === 'ar' && p.name_ar ? p.name_ar : p.name, packing: pk?.label ?? '',
+      product_id: productId, variety: v, packaging_id: pk?.id ?? '', description: v ? `${name} — ${v}` : name, packing: pk?.label ?? '',
       product_type_label: (form.language === 'ar' ? PRODUCT_TYPE_LABEL_AR : PRODUCT_TYPE_LABEL)[p.product_type], net: s(pk?.net_weight_kg), cpp: s(pk?.cartons_per_pallet),
       unit_label: packLabel(pk),
-      ...findPrice(productId, pk?.id ?? '', p.product_type === 'jam' || form.brand === 'prime_roots' ? null : form.incoterm, form.currency),
+      ...findPrice(productId, pk?.id ?? '', p.product_type === 'jam' || form.brand === 'prime_roots' ? null : form.incoterm, form.currency, v),
       ...(p.product_type === 'jam' ? jamDefaults(key) : {}),
     })
     // Jams are sold under Prime Roots: switch the letterhead when every line is a jam.
@@ -602,12 +616,20 @@ export function QuotationEditor() {
                           {grouped.map(({ c, items }) => <optgroup key={c.id} label={c.name}>{items.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</optgroup>)}
                         </Select>
                       </Field>
-                      <Field label="Printed description" className="sm:col-span-5"><Input dir="auto" value={l.description} onChange={(e) => updLine(l.key, { description: e.target.value })} placeholder="e.g. Dragon Fruit — Red/White" /></Field>
+                      {p && p.varieties.length > 0 && (
+                        <Field label="Variety" className="sm:col-span-3">
+                          <Select value={l.variety ?? ''} onChange={(e) => pickProduct(l.key, l.product_id, undefined, e.target.value)}>
+                            <option value="">Any / not specified</option>
+                            {p.varieties.map((v) => <option key={v} value={v}>{v}</option>)}
+                          </Select>
+                        </Field>
+                      )}
+                      <Field label="Printed description" className={p && p.varieties.length > 0 ? 'sm:col-span-5' : 'sm:col-span-5'}><Input dir="auto" value={l.description} onChange={(e) => updLine(l.key, { description: e.target.value })} placeholder="e.g. Dragon Fruit — Red/White" /></Field>
                       <Field label="Product type" className="sm:col-span-3"><Input dir="auto" value={l.product_type_label} onChange={(e) => updLine(l.key, { product_type_label: e.target.value })} /></Field>
                       <Field label="Packing" className="sm:col-span-4">
-                        {p && activePackaging(p).length > 0 ? (
+                        {p && packsFor(p, l.variety).length > 0 ? (
                           <Select value={l.packaging_id} onChange={(e) => pickProduct(l.key, l.product_id, e.target.value)}>
-                            {activePackaging(p).map((pk) => <option key={pk.id} value={pk.id}>{pk.label}</option>)}
+                            {packsFor(p, l.variety).map((pk) => <option key={pk.id} value={pk.id}>{packOptionLabel(pk)}</option>)}
                           </Select>
                         ) : <Input value={l.packing} onChange={(e) => updLine(l.key, { packing: e.target.value })} placeholder="e.g. 10 kg carton" />}
                         {p && activePackaging(p).length > 0 && form.language === 'ar' && (

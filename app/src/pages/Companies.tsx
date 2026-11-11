@@ -1,3 +1,5 @@
+import { Building2, Handshake, PhoneCall, UserPlus } from 'lucide-react'
+import { StatCard } from '@/components/analytics/dash'
 import { useT } from '@/lib/i18n'
 import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -66,6 +68,18 @@ export function Companies() {
           {canWrite && <Button variant="outline" onClick={() => setImportOpen(true)}><FileUp />Import</Button>}
           {canWrite && <Button onClick={() => setAddOpen(true)}><Plus />Add company</Button>}
         </div>} />
+      {rows && rows.length > 0 && (() => {
+        const live = rows.filter((r) => !r.archived_at)
+        const month = new Date().toISOString().slice(0, 7)
+        return (
+          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard icon={Building2} tone="blue" label="Companies" value={live.length} foot="In the CRM" />
+            <StatCard icon={Handshake} tone="emerald" label="Active customers" value={live.filter((r) => r.lead_status === 'active_customer').length} foot="Buying from us" />
+            <StatCard icon={PhoneCall} tone="rose" label="Follow-ups due" value={due} foot="Today or overdue" />
+            <StatCard icon={UserPlus} tone="violet" label="New this month" value={live.filter((r) => r.created_at.slice(0, 7) === month).length} foot="Added to the CRM" />
+          </div>
+        )
+      })()}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

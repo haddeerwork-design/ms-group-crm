@@ -1,3 +1,4 @@
+import type { Brand } from './quotations'
 import { supabase } from './supabase'
 import type { Incoterm } from './pricing'
 
@@ -19,6 +20,7 @@ export type Proforma = {
   shipment_mode: 'sea' | 'air' | 'land' | null; container_details: string | null; estimated_shipment: string | null; payment_terms: string | null
   other_charges_label: string | null; other_charges: number | null; bank_details: string | null; terms: string | null; notes: string | null
   issued_at: string | null; created_at: string; created_by: string; updated_at: string; proforma_items?: PIItem[]
+  brand?: Brand | null // from 0017
 }
 
 /** Amount for one line. Converts between quantity unit and price unit using net kg per carton when needed. */

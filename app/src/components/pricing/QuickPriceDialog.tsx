@@ -1,10 +1,9 @@
-import { T } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { activePackaging, type Category, type Product } from '@/lib/catalog'
+import { packOptionLabel, packsFor, type Category, type Product } from '@/lib/catalog'
 import { CURRENCIES, INCOTERMS } from '@/lib/pricing'
 import type { PriceListRow } from '@/lib/prices'
 import { packLabel } from '@/lib/quotations'
@@ -44,7 +43,7 @@ export function QuickPriceDialog({ open, onOpenChange, row, products, categories
   }, [open, row])
 
   const product = products.find((p) => p.id === f.productId)
-  const packs = product ? activePackaging(product) : []
+  const packs = product ? packsFor(product, f.variety) : []
   const pk = packs.find((x) => x.id === f.packagingId) ?? null
   const label = packLabel(pk)
   const grouped = useMemo(() => categories.map((c) => ({ c, items: products.filter((p) => p.category_id === c.id && !p.archived_at).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => g.items.length), [products, categories])
@@ -85,13 +84,22 @@ export function QuickPriceDialog({ open, onOpenChange, row, products, categories
             </Select>
           </Field>
           <Field label="Variety (optional)">
-            <Input list="qp-varieties" value={f.variety} onChange={(e) => setF({ ...f, variety: e.target.value })} placeholder="All varieties" />
-            <datalist id="qp-varieties">{(product?.varieties ?? []).map((v) => <option key={v} value={v} />)}</datalist>
+            {product && product.varieties.length > 0 ? (
+              <Select value={f.variety} onChange={(e) => {
+                const v = e.target.value
+                // keep the packing only if it fits the variety
+                const ok = !f.packagingId || packsFor(product, v).some((x) => x.id === f.packagingId)
+                setF({ ...f, variety: v, packagingId: ok ? f.packagingId : '' })
+              }}>
+                <option value="">All varieties</option>
+                {product.varieties.map((v) => <option key={v} value={v}>{v}</option>)}
+              </Select>
+            ) : <Input value={f.variety} onChange={(e) => setF({ ...f, variety: e.target.value })} placeholder="All varieties" />}
           </Field>
           <Field label="Packing (optional)">
             <Select value={f.packagingId} onChange={(e) => setF({ ...f, packagingId: e.target.value, per: !e.target.value && f.per === 'pack' ? 'kg' : f.per })}>
               <option value="">Any packing</option>
-              {packs.map((x) => <option key={x.id} value={x.id}><T>{x.label}</T></option>)}
+              {packs.map((x) => <option key={x.id} value={x.id}>{packOptionLabel(x)}</option>)}
             </Select>
           </Field>
           <Field label="Price" className="sm:col-span-2" hint={ton && f.per !== 'ton' ? `= ${ton.toLocaleString('en-US')} ${f.currency} per ton` : undefined}>

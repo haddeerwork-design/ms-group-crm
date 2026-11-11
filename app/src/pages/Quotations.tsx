@@ -1,3 +1,5 @@
+import { CheckCircle2, FilePen, Send, Target } from 'lucide-react'
+import { StatCard } from '@/components/analytics/dash'
 import { useT } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -32,6 +34,18 @@ export function Quotations() {
     <>
       <PageHeader title="Quotations" summary="Quotations on the El Brancy letterhead, with full revision history."
         action={hasRole(...QUOTE_WRITERS) && <Button onClick={() => nav('/quotations/new')}><Plus />{t('New quotation')}</Button>} />
+      {rows && rows.length > 0 && (() => {
+        const c = (...st: string[]) => rows.filter((r) => st.includes(r.status)).length
+        const decided = c('accepted', 'rejected', 'expired')
+        return (
+          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard icon={FilePen} tone="blue" label="Drafts" value={c('draft', 'revised')} foot="Not sent yet" />
+            <StatCard icon={Send} tone="amber" label="Waiting for an answer" value={c('sent')} foot="Sent to the customer" />
+            <StatCard icon={CheckCircle2} tone="emerald" label="Accepted" value={c('accepted')} foot="Ready for a proforma" />
+            <StatCard icon={Target} tone="violet" label="Win rate" value={decided ? `${Math.round((c('accepted') / decided) * 100)}%` : '—'} progress={{ pct: decided ? (c('accepted') / decided) * 100 : null }} />
+          </div>
+        )
+      })()}
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

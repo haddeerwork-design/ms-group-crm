@@ -77,3 +77,14 @@ export function missingSetup(p: Product): string[] {
 
 export const fmt = (n: number | null | undefined, d = 2) =>
   n == null ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: d })
+
+/** Packing that fits a variety: ones made for that variety first, then the ones for all varieties. */
+export function packsFor(p: Product, variety?: string | null) {
+  const all = activePackaging(p)
+  const v = (variety ?? '').trim().toLowerCase()
+  if (!v) return all
+  const own = all.filter((x) => (x.variety ?? '').trim().toLowerCase() === v)
+  const general = all.filter((x) => !(x.variety ?? '').trim())
+  return [...own, ...general]
+}
+export const packOptionLabel = (pk: Packaging) => `${pk.label}${pk.variety ? ` · ${pk.variety}` : ''}${pk.is_default ? ' ★' : ''}`

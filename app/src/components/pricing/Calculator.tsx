@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { PRICE_MANAGERS } from '@/lib/roles'
-import { activePackaging, type Category, type Product } from '@/lib/catalog'
+import { activePackaging, packOptionLabel, packsFor, type Category, type Product } from '@/lib/catalog'
 import {
   COMPONENTS, computePrice, CURRENCIES, INCOTERM_COMPONENTS, INCOTERMS, resolveRate, staleness,
   type Component, type Incoterm, type Rate,
@@ -60,7 +60,7 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
   const set = (patch: Partial<State>) => setS((x) => ({ ...x, ...patch }))
 
   const product = products.find((p) => p.id === s.productId)
-  const packs = product ? activePackaging(product) : []
+  const packs = product ? packsFor(product, s.variety) : []
   const grouped = useMemo(() => categories.map((c) => ({ c, items: products.filter((p) => p.category_id === c.id && !p.archived_at).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => g.items.length), [products, categories])
 
   function applyVersion(v: PriceVersion, base: Partial<State> = {}) {
@@ -104,6 +104,13 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
   function selectPackaging(id: string) {
     const pk = packs.find((x) => x.id === id)
     set({ packagingId: id, netKg: str(pk?.net_weight_kg), cpp: str(pk?.cartons_per_pallet) })
+  }
+  /** A variety narrows the packing list; keep the chosen packing if it still fits, else take the first that does. */
+  function selectVariety(variety: string) {
+    if (!product) return set({ variety })
+    const list = packsFor(product, variety)
+    const pk = list.find((x) => x.id === s.packagingId) ?? list[0]
+    set({ variety, packagingId: pk?.id ?? '', netKg: str(pk?.net_weight_kg), cpp: str(pk?.cartons_per_pallet) })
   }
 
   const autoFx = resolveRate(s.costCurrency, s.sellCurrency, rates)
@@ -160,16 +167,16 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
             </Field>
             {product && (
               <>
+                <Field label="Variety">
+                  <Select value={s.variety} onChange={(e) => selectVariety(e.target.value)} disabled={!product.varieties.length}>
+                    <option value="">{product.varieties.length ? 'Any / not specified' : 'No varieties'}</option>
+                    {product.varieties.map((v) => <option key={v} value={v}>{v}</option>)}
+                  </Select>
+                </Field>
                 <Field label="Packaging">
                   <Select value={s.packagingId} onChange={(e) => selectPackaging(e.target.value)}>
                     {!packs.length && <option value="">No packaging saved</option>}
-                    {packs.map((pk) => <option key={pk.id} value={pk.id}>{pk.label}{pk.is_default ? ' ★' : ''}</option>)}
-                  </Select>
-                </Field>
-                <Field label="Variety">
-                  <Select value={s.variety} onChange={(e) => set({ variety: e.target.value })} disabled={!product.varieties.length}>
-                    <option value="">{product.varieties.length ? 'Any / not specified' : 'No varieties'}</option>
-                    {product.varieties.map((v) => <option key={v}>{v}</option>)}
+                    {packs.map((pk) => <option key={pk.id} value={pk.id}>{packOptionLabel(pk)}</option>)}
                   </Select>
                 </Field>
                 <Field label="Net kg per carton"><Input inputMode="decimal" value={s.netKg} onChange={(e) => set({ netKg: e.target.value })} /></Field>
