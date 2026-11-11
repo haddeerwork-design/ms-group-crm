@@ -44,7 +44,10 @@ export function TradeData({ onFindImporters }: { onFindImporters: (product: stri
         : v.kind === 'country' ? { flow: 'M' as const, reporter: v.reporter, partner: '0', cmd: HS_PRODUCTS.map((x) => x.code).join(','), year }
         : v.kind === 'suppliers' ? { flow: 'M' as const, reporter: v.reporter, cmd: v.cmd, year }
         : { flow: 'X' as const, reporter: EGYPT, cmd: v.cmd, year }
-      const r = await fetchTrade(q)
+      // ask for at most 20 products per call (the free Comtrade service limit), then join the answers
+      const codes = q.cmd.split(',')
+      const parts = await Promise.all(Array.from({ length: Math.ceil(codes.length / 20) }, (_, i) => fetchTrade({ ...q, cmd: codes.slice(i * 20, i * 20 + 20).join(',') })))
+      const r = { rows: parts.flatMap((x) => x.rows), source: parts[0]?.source ?? '' }
       if (push && view) setStack((s) => [...s, view])
       setView(v); setRows(r.rows); setSource(r.source)
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
