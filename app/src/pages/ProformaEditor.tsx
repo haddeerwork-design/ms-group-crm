@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
 import { CURRENCIES, INCOTERMS } from '@/lib/pricing'
-import { fetchQuotation, fmtDateDMY, lineTons } from '@/lib/quotations'
+import { BRANDS, fetchQuotation, fmtDateDMY, lineTons, type Brand } from '@/lib/quotations'
 import { fetchProforma, lineAmount, PI_STATUS, PI_STYLE, type PIStatus, type PriceUnit, type Proforma, type QtyUnitPI } from '@/lib/proformas'
 import { money } from '@/lib/prices'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,6 +41,9 @@ export function ProformaEditor() {
   const [versions, setVersions] = useState<{ id: number; version: number; created_at: string }[]>([])
   const [h, setH] = useState<Head | null>(null)
   const [meta, setMeta] = useState<{ quotation_id: string | null; company_id: string | null }>({ quotation_id: null, company_id: null })
+  // letterhead; the column exists from migration 0017 (hasBrand tells us it is safe to send)
+  const [brand, setBrand] = useState<Brand>('ms_elbrancy')
+  const [hasBrand, setHasBrand] = useState(false)
   const [lines, setLines] = useState<Line[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -68,6 +71,7 @@ export function ProformaEditor() {
             destination: q.destination ?? '', payment_terms: q.payment_terms ?? '',
           })
           setMeta({ quotation_id: q.id, company_id: (q as unknown as { company_id?: string | null }).company_id ?? null })
+          setBrand(q.brand ?? 'ms_elbrancy')
           ls = (q.quotation_items ?? []).map((i) => {
             if (i.price_basis === 'unit' && i.unit_price) {
               // Priced per jar/bunch: keep it per piece on the proforma.
@@ -88,6 +92,7 @@ export function ProformaEditor() {
         setPi(p); setVersions(vs)
         setH(Object.fromEntries(HEAD.map((k) => [k, s((p as Record<string, unknown>)[k])])) as Head)
         setMeta({ quotation_id: p.quotation_id, company_id: p.company_id })
+        setBrand(p.brand ?? 'ms_elbrancy'); setHasBrand('brand' in p)
         setLines((p.proforma_items ?? []).map((i) => ({ key: ++seq, product_id: i.product_id, description: i.description, packing: i.packing ?? '', quantity: s(i.quantity), unit: i.unit, net: s(i.net_weight_kg), price: s(i.unit_price), price_unit: i.price_unit })))
         setDirty(false)
       }
@@ -111,6 +116,7 @@ export function ProformaEditor() {
     const row: Record<string, unknown> = Object.fromEntries(HEAD.map((k) => [k, t(h[k])]))
     row.other_charges = n(h.other_charges); row.currency = h.currency; row.issue_date = h.issue_date
     row.quotation_id = meta.quotation_id; row.company_id = meta.company_id
+    if (hasBrand || brand !== 'ms_elbrancy') row.brand = brand
     setBusy('save')
     let pid = pi?.id ?? null
     if (pid) {
@@ -187,6 +193,11 @@ export function ProformaEditor() {
         <div className="space-y-4 lg:col-span-2">
           <Card><CardHeader><CardTitle>Buyer</CardTitle></CardHeader><CardContent>
             <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-3">
+              <Field label="Letterhead" hint="Which company the proforma is printed under." className="sm:col-span-3">
+                <Select value={brand} onChange={(e) => { setBrand(e.target.value as Brand); setDirty(true) }}>
+                  {(Object.keys(BRANDS) as Brand[]).map((b) => <option key={b} value={b}>{BRANDS[b].label}</option>)}
+                </Select>
+              </Field>
               {inp('customer_company', 'Company')}{inp('customer_name', 'Contact')}{inp('customer_country', 'Country')}
               {inp('customer_address', 'Address', {}, 'sm:col-span-3')}{inp('customer_email', 'Email')}{inp('customer_phone', 'Phone')}{inp('issue_date', 'Date', { type: 'date' })}
             </fieldset>

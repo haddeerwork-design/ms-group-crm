@@ -1,3 +1,4 @@
+import { letterheadUrl } from '@/components/quotations/QuotationDocument'
 import { T } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
@@ -30,7 +31,7 @@ export function ProformaPrint() {
   }, [id, v])
   useEffect(() => {
     if (!doc) return
-    const img = new Image(); img.src = `${import.meta.env.BASE_URL}letterhead.jpg`
+    const img = new Image(); img.src = letterheadUrl(doc.brand)
     const go = () => setTimeout(() => window.print(), 300)
     if (img.complete) go(); else img.onload = go
   }, [doc])

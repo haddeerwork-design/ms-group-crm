@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { fmtDateDMY, fmtPrice } from '@/lib/quotations'
+import { BRANDS, fmtDateDMY, fmtPrice } from '@/lib/quotations'
+import { letterheadUrl } from '@/components/quotations/QuotationDocument'
 import type { PIItem, Proforma } from '@/lib/proformas'
 
 export type PrintablePI = Omit<Proforma, 'proforma_items' | 'id' | 'created_by' | 'created_at' | 'updated_at' | 'issued_at' | 'notes'> & { items: PIItem[] }
 type Company = { company_name: string; slogan: string | null }
-const LETTERHEAD = `${import.meta.env.BASE_URL}letterhead.jpg`
 const UNIT = { tons: 't', cartons: 'ctn', kg: 'kg', pieces: 'pcs' } as const
 
 function pages<T>(rows: T[], shrink: number) {
@@ -22,16 +22,20 @@ function pages<T>(rows: T[], shrink: number) {
   return out
 }
 
-const MAX_CONTENT_MM = 178 // writable height of the letterhead (46 mm → ~224 mm)
+// writable height of each letterhead (content starts 46 mm / 50 mm from the top)
+const MAX_CONTENT_MM = { ms_elbrancy: 178, prime_roots: 200 } as const
 
-export function ProformaDocument({ p, company }: { p: PrintablePI; company: Company }) {
+export function ProformaDocument({ p, company: settings }: { p: PrintablePI; company: Company }) {
+  const b = p.brand ?? 'ms_elbrancy'
+  const brand = BRANDS[b]
+  const company = brand.name ? { company_name: brand.name, slogan: brand.slogan } : settings
   const [shrink, setShrink] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el || shrink > 12) return
     const mm = 96 / 25.4
-    const tooTall = [...el.querySelectorAll<HTMLElement>('.q-content')].some((c) => c.scrollHeight > MAX_CONTENT_MM * mm)
+    const tooTall = [...el.querySelectorAll<HTMLElement>('.q-content')].some((c) => c.scrollHeight > MAX_CONTENT_MM[b] * mm)
     if (tooTall) setShrink((x) => x + 1)
   })
   const subtotal = p.items.reduce((s, i) => s + Number(i.line_total), 0)
@@ -43,10 +47,10 @@ export function ProformaDocument({ p, company }: { p: PrintablePI; company: Comp
     ['Estimated shipment', p.estimated_shipment ? fmtDateDMY(p.estimated_shipment) : null],
   ]
   return (
-    <div className="quote-doc" dir="ltr" lang="en" ref={ref}>
+    <div className={'quote-doc brand-' + b} dir="ltr" lang="en" ref={ref} style={{ ['--q-primary' as string]: brand.primary, ['--q-heading' as string]: brand.heading }}>
       {pg.map((page, pi) => (
         <div className="q-page" key={pi}>
-          <img className="q-bg" src={LETTERHEAD} alt="" />
+          <img className="q-bg" src={letterheadUrl(b)} alt="" />
           <div className="q-content">
             {pi === 0 ? (
               <>
@@ -107,7 +111,7 @@ export function ProformaDocument({ p, company }: { p: PrintablePI; company: Comp
 export const PI_EXTRA_CSS = `
 .pi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; font-size: 8.5pt; line-height: 1.4 }
 .quote-doc .pi-grid + table { margin-top: 5mm }
-.pi-h { font-size: 8.5pt; font-weight: 700; color: #176b4b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1mm }
+.pi-h { font-size: 8.5pt; font-weight: 700; color: var(--q-heading, #176b4b); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1mm }
 .pi-k { color: #666 }
 .quote-doc table.pi-totals { width: 45%; margin: 3mm 0 0 auto }
 .quote-doc table.pi-totals td { padding: 1.5mm 3mm; text-align: right }
