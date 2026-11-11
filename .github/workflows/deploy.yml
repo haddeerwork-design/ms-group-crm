@@ -49,6 +49,10 @@ jobs:
         working-directory: supabase/functions/admin-users
         run: ADMIN_USERS_TEST=1 deno test --allow-env --allow-net index.test.ts
 
+      - name: Test trade-data Edge Function (fake Comtrade)
+        working-directory: supabase/functions/trade-data
+        run: deno test --allow-env index.test.ts
+
       - name: Build new platform
         working-directory: app
         env:

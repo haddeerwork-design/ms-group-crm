@@ -1,3 +1,6 @@
+import { TradeData } from '@/components/research/TradeData'
+import { FindImporters } from '@/components/research/FindImporters'
+import { FALLBACK_COUNTRIES, HS_PRODUCTS } from '@/lib/trade'
 import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -56,6 +59,9 @@ export function MarketResearch() {
   const [status, setStatus] = usePersistentState('research.status', '')
   const [only, setOnly] = usePersistentState<'' | 'short' | 'mine' | 'open' | 'archived'>('research.only', 'open')
   const [edit, setEdit] = useState<Lead | 'new' | null>(null)
+  const [tab, setTab] = usePersistentState<'leads' | 'trade' | 'find'>('research.tab', 'leads')
+  const [fp, setFp] = useState(''); const [fc, setFc] = useState('')
+  const [prefill, setPrefill] = useState<Record<string, string>>({})
 
   const load = useCallback(() => Promise.all([
     supabase.from('research_leads').select('*').order('research_date', { ascending: false }),
@@ -126,7 +132,17 @@ export function MarketResearch() {
   return (
     <>
       <PageHeader title="Market Research" summary="Potential buyers you found, each with its source. Only companies with evidence are marked “Verified importer”."
-        action={<div className="flex gap-2"><Button variant="outline" onClick={csv} disabled={!list.length}>CSV</Button><Button onClick={() => setEdit('new')}><Plus />Add research lead</Button></div>} />
+        action={tab === 'leads' && <div className="flex gap-2"><Button variant="outline" onClick={csv} disabled={!list.length}>CSV</Button><Button onClick={() => { setPrefill({}); setEdit('new') }}><Plus />Add research lead</Button></div>} />
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
+        {([['leads', 'Research leads'], ['trade', 'Trade figures'], ['find', 'Find importers']] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors', tab === k ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}><T>{l}</T></button>
+        ))}
+      </div>
+      {tab === 'trade' && <TradeData onFindImporters={(p, c) => { setFp(p); setFc(c); setTab('find') }} />}
+      {tab === 'find' && <FindImporters product={fp} country={fc} setProduct={setFp} setCountry={setFc}
+        products={HS_PRODUCTS.map((x) => x.label.replace(/\s*\(.*\)$/, ''))} countries={[...new Set([...FALLBACK_COUNTRIES.map((c) => c.name), ...countries])]}
+        onAdd={() => { setPrefill({ country: fc, products_imported: fp, notes: '' }); setEdit('new') }} />}
+      {tab === 'leads' && <>
       <div className="mb-3 flex flex-wrap gap-2">
         <div className="relative w-64"><Search className="absolute start-2.5 top-2.5 size-4 text-muted-foreground" /><Input className="ps-8" placeholder="Search company, product, origin…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select aria-label="Country" value={country} onChange={(e) => setCountry(e.target.value)} className="w-40"><option value="">All countries</option>{countries.map((c) => <option key={c}>{c}</option>)}</Select>
@@ -137,7 +153,7 @@ export function MarketResearch() {
         <span className="ms-auto self-center text-sm text-muted-foreground">{list.length} of {rows.filter((r) => !r.archived_at).length}</span>
       </div>
       {list.length === 0 ? <Empty title="No research leads here" hint="Add companies you find on trade directories, LinkedIn or import records — with the link where you found them."
-        action={<Button onClick={() => setEdit('new')}><Plus />Add research lead</Button>} /> : (
+        action={<Button onClick={() => { setPrefill({}); setEdit('new') }}><Plus />Add research lead</Button>} /> : (
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-start text-xs text-muted-foreground">
@@ -172,9 +188,10 @@ export function MarketResearch() {
           </table>
         </Card>
       )}
+      </>}
       <SimpleFormDialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)} title={edit === 'new' ? 'Add research lead' : 'Research lead'}
         description="Only enter what you actually found. Leave unknown fields empty." fields={FIELDS}
-        initial={edit === 'new' || !edit ? { verification_status: 'unverified', research_date: new Date().toISOString().slice(0, 10) } : fromRow(edit, KEYS)}
+        initial={edit === 'new' || !edit ? { verification_status: 'unverified', research_date: new Date().toISOString().slice(0, 10), ...prefill } : fromRow(edit, KEYS)}
         readOnly={edit !== 'new' && !!edit && !canEdit(edit)} onSubmit={save}
         extraFooter={edit && edit !== 'new' && canEdit(edit) ? (
           <Button variant="ghost" onClick={async () => { await patch(edit, { archived_at: edit.archived_at ? null : new Date().toISOString() }); setEdit(null) }}>{edit.archived_at ? 'Restore' : 'Archive'}</Button>

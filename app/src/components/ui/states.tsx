@@ -23,9 +23,10 @@ export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return <span className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />{label}</span>
 }
 export function ErrorState({ message }: { message: string }) {
+  const { t } = useT()
   return (
     <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-      <AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{message}</span>
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{t(message)}</span>
     </div>
   )
 }
