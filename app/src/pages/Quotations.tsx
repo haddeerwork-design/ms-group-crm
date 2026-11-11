@@ -26,10 +26,10 @@ export function Quotations() {
 
   const { t } = useT()
   const list = useMemo(() => (rows ?? []).filter((r) => (!st || r.status === st) &&
-    (!q.trim() || [r.number, r.customer_name, r.customer_company, r.destination].some((x) => <T>(x ?? '').toLowerCase().includes(q.trim().toLowerCase())))), [rows, q, st])
+    (!q.trim() || [r.number, r.customer_name, r.customer_company, r.destination].some((x) => (x ?? '').toLowerCase().includes(q.trim().toLowerCase())))), [rows, q, st])
 
   return (
-</T>    <>
+    <>
       <PageHeader title="Quotations" summary="Quotations on the El Brancy letterhead, with full revision history."
         action={hasRole(...QUOTE_WRITERS) && <Button onClick={() => nav('/quotations/new')}><Plus />{t('New quotation')}</Button>} />
       <div className="mb-4 flex flex-wrap gap-2">
@@ -56,9 +56,9 @@ export function Quotations() {
               <tbody>
                 {list.map((r) => {
                   const totals = r.quotation_items.map((i) => i.line_total)
-                  const total = totals.length && totals.every((x) => x != null) ? totals.reduce((s, x) => <T>s + (x ?? 0), 0) : null
+                  const total = totals.length && totals.every((x) => x != null) ? totals.reduce((s, x) => s + (x ?? 0), 0) : null
                   return (
-</T>                    <tr key={r.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50" onClick={() => nav(`/quotations/${r.id}`)}>
+                    <tr key={r.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50" onClick={() => nav(`/quotations/${r.id}`)}>
                       <td className="px-5 py-3 font-medium">{r.number}{r.version > 1 && <span className="ms-1 text-xs font-normal text-muted-foreground">{t('rev.')} {r.version}</span>}</td>
                       <td className="px-3 py-3">{r.customer_name || r.customer_company || <span className="text-muted-foreground">—</span>}{r.customer_country && <div className="text-xs text-muted-foreground">{r.customer_country}</div>}</td>
                       <td className="px-3 py-3 text-muted-foreground">{fmtDateDMY(r.issue_date)}</td>

@@ -12,9 +12,9 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, Dia
 function TempPassword({ email, password, onClose }: { email: string; password: string; onClose: () => void }) {
   const link = 'https://haddeerwork-design.github.io/ms-group-crm/app/'
   const msg = `Your MS El-brancy platform account:\n${link}\nEmail: ${email}\nTemporary password: ${password}\nYou will choose your own password at first login.`
-  const copy = (t: string) => navigator.clipboard.writeText(t).then(() => toast.success('Copied'), () => <T>toast.error('Copy failed, select the text and copy it.'))
+  const copy = (t: string) => navigator.clipboard.writeText(t).then(() => toast.success('Copied'), () => toast.error('Copy failed, select the text and copy it.'))
   return (
-</T>    <div className="space-y-4 text-sm">
+    <div className="space-y-4 text-sm">
       <p>Send these details to the employee privately (WhatsApp or in person). <b>The password is shown only now.</b></p>
       <div className="rounded-md border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed">
         <div>Email: {email}</div>

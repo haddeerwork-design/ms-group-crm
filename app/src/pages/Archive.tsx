@@ -36,8 +36,8 @@ export function Archive() {
       setRows(all)
     })()
   }, [])
-  const last = useMemo(() => rows?.reduce((m, r) => (r.archived_at > <T>m ? r.archived_at : m), '') ?? '', [rows])
-  if (error) return</T> <ErrorState message={error} />
+  const last = useMemo(() => rows?.reduce((m, r) => (r.archived_at > m ? r.archived_at : m), '') ?? '', [rows])
+  if (error) return <ErrorState message={error} />
   if (!rows) return <Loading />
 
   const t = q.trim().toLowerCase()

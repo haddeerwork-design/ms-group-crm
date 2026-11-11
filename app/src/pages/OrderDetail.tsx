@@ -45,9 +45,9 @@ export function OrderDetail() {
   const canEditCommercial = isOwnerOrManager && (!closed || hasRole(...CRM_ASSIGNERS))
   const canEditShipment = (isOwnerOrManager || isLogistics) && (!closed || hasRole(...CRM_ASSIGNERS))
   const total = orderTotal(o)
-  const paidIn = d.payments.filter((p) => p.direction === 'in' && !p.cancelled_at).reduce((s, p) => <T>s + Number(p.amount_paid), 0)
+  const paidIn = d.payments.filter((p) => p.direction === 'in' && !p.cancelled_at).reduce((s, p) => s + Number(p.amount_paid), 0)
 
-  async function patch(p: Partial</T><Order>, msg: string) {
+  async function patch(p: Partial<Order>, msg: string) {
     const { error, data } = await supabase.from('sales_orders').update(p).eq('id', o.id).select('id')
     if (error || !data?.length) return toast.error(error?.message ?? 'Not allowed.')
     toast.success(msg); load()
@@ -133,9 +133,9 @@ function Items({ order, canEdit, onSaved }: { order: Order; canEdit: boolean; on
     await supabase.from('sales_orders').update({ other_charges: n(other) ?? 0 }).eq('id', order.id)
     setBusy(false); toast.success('Products saved'); onSaved()
   }
-  const total = comp.reduce((s, l) => <T>s + (l.amount ?? 0), 0) + (n(other) ?? 0)
+  const total = comp.reduce((s, l) => s + (l.amount ?? 0), 0) + (n(other) ?? 0)
   return (
-</T>    <Card>
+    <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Products</CardTitle>
         {canEdit && <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setLines((ls) => [...ls, { key: ++seq, product_id: null, description: '', packing: '', quantity: '', unit: 'tons', net: '', price: '', price_unit: 'ton' }])}><Plus />Add line</Button>
           <Button size="sm" onClick={save} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <Save />}Save</Button></div>}</CardHeader>

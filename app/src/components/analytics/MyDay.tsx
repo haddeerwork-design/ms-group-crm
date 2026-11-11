@@ -20,10 +20,10 @@ export function MyDay({ data, userId, today, name }: { data: AnalyticsData; user
     { key: 'await', icon: Clock, title: t('No answer for {n}+ days', { n: AWAIT_DAYS }), to: '/quotations', items: r.awaiting.map((q) => ({ id: q.id, to: `/quotations/${q.id}`, label: `${q.number}${q.customer_company ? ` · ${q.customer_company}` : ''}`, meta: t('sent {n} days ago', { n: ago(q.sent_at!, today) }), late: false })) },
     { key: 'exp', icon: CalendarClock, title: t('Quotations expiring'), to: '/quotations', items: r.expiring.map((q) => ({ id: q.id, to: `/quotations/${q.id}`, label: `${q.number}${q.customer_company ? ` · ${q.customer_company}` : ''}`, meta: q.valid_until === today ? t('expires today') : t('until {date}', { date: dm(q.valid_until!) }), late: q.valid_until === today })) },
     { key: 'arr', icon: Ship, title: t('Arriving this week'), to: '/orders', items: r.arriving.map((o) => ({ id: o.id, to: `/orders/${o.id}`, label: `${o.number}${o.customer_company ? ` · ${o.customer_company}` : ''}`, meta: `ETA ${dm(o.eta!)}`, late: false })) },
-  ].filter((g) => <T>g.items.length)
+  ].filter((g) => g.items.length)
 
   return (
-</T>    <Panel className="mb-4"
+    <Panel className="mb-4"
       title={<span>{t('My day')}{name ? `${t(', ')}${name.split(' ')[0]}` : ''}</span>}
       sub={r.total ? (r.total > 1 ? t('{n} things need you today', { n: r.total }) : t('1 thing needs you today')) : t('Nothing waiting for you today')}
       action={r.total > 0 && <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">{t(open ? 'Hide' : 'Show')}<ChevronDown className={cn('size-3.5 transition-transform', !open && '-rotate-90 rtl:rotate-90')} /></button>}>

@@ -81,9 +81,9 @@ export function Pipeline() {
           {stages.map((s) => {
             const items = opps.filter((o) => o.stage_id === s.id)
             const total = items.reduce((a, o) => a + (o.expected_revenue ?? 0), 0)
-            const ccys = new Set(items.map((o) => <T>o.currency))
+            const ccys = new Set(items.map((o) => o.currency))
             return (
-</T>              <div key={s.id}
+              <div key={s.id}
                 onDragOver={(e) => { e.preventDefault(); setOverStage(s.id) }} onDragLeave={() => setOverStage(null)}
                 onDrop={(e) => { e.preventDefault(); setOverStage(null); const id = e.dataTransfer.getData('text/plain') || dragId; const o = d.opps.find((x) => x.id === id); if (o && canMove(o)) move(o, s.id) }}
                 className={cn('flex w-64 shrink-0 flex-col rounded-lg border border-border bg-muted/40 transition-colors', overStage === s.id && 'border-primary bg-accent',

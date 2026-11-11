@@ -264,9 +264,9 @@ function SetupStatus() {
   const { t } = useT()
   const [applied, setApplied] = useState<Set<string> | null>(null)
   useEffect(() => { supabase.from('app_migrations').select('version').then(({ data }) => setApplied(new Set((data ?? []).map((x) => x.version)))) }, [])
-  if (!applied || PLAN.every(([v]) => <T>applied.has(v))) return null
+  if (!applied || PLAN.every(([v]) => applied.has(v))) return null
   return (
-</T>    <Card className="mt-4">
+    <Card className="mt-4">
       <CardHeader><CardTitle className="text-sm">{t('Database setup (only Super Admin sees this)')}</CardTitle></CardHeader>
       <CardContent className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
         {PLAN.map(([v, l]) => (

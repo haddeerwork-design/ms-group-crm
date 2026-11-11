@@ -60,9 +60,9 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
 
   const product = products.find((p) => p.id === s.productId)
   const packs = product ? activePackaging(product) : []
-  const grouped = useMemo(() => categories.map((c) => ({ c, items: products.filter((p) => p.category_id === c.id && !p.archived_at).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => <T>g.items.length), [products, categories])
+  const grouped = useMemo(() => categories.map((c) => ({ c, items: products.filter((p) => p.category_id === c.id && !p.archived_at).sort((a, b) => a.name.localeCompare(b.name)) })).filter((g) => g.items.length), [products, categories])
 
-  function applyVersion(v: PriceVersion, base: Partial</T><State> = {}) {
+  function applyVersion(v: PriceVersion, base: Partial<State> = {}) {
     const costs = emptyCosts()
     for (const c of ALL_COMPONENTS) costs[c] = str(v[COST_COLUMN[c]])
     setS((x) => ({
@@ -202,8 +202,8 @@ export function PriceCalculator({ products, categories, rates, initial, onSaved 
                 </div>
                 {!autoFx && !s.useManualFx && <p className="text-xs text-destructive">No saved rate for this pair. Add one in “Exchange rates” or enter it below.</p>}
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <input type="checkbox" className="size-3.5 accent-[#23856B]" checked={s.useManualFx} onChange={(e) => set({ useManualFx: e.target.checked })} /><T>Use a different rate for this price
-</T>                </label>
+                  <input type="checkbox" className="size-3.5 accent-[#23856B]" checked={s.useManualFx} onChange={(e) => set({ useManualFx: e.target.checked })} />Use a different rate for this price
+                </label>
                 {s.useManualFx && <Input inputMode="decimal" placeholder={`1 ${s.costCurrency} = ? ${s.sellCurrency}`} value={s.fxManual} onChange={(e) => set({ fxManual: e.target.value })} />}
               </div>
             )}

@@ -65,8 +65,8 @@ export function MarketResearch() {
   }).catch((e) => setError(e.message)), [])
   useEffect(() => { load() }, [load])
 
-  const countries = useMemo(() => [...new Set((rows ?? []).map((r) => <T>r.country).filter(Boolean) as string[])].sort(), [rows])
-  if (error) return</T> <ErrorState message={/research_leads/.test(error) ? 'Market research is not installed yet. Run migration 0010_research in Supabase first.' : error} />
+  const countries = useMemo(() => [...new Set((rows ?? []).map((r) => r.country).filter(Boolean) as string[])].sort(), [rows])
+  if (error) return <ErrorState message={/research_leads/.test(error) ? 'Market research is not installed yet. Run migration 0010_research in Supabase first.' : error} />
   if (!rows) return <Loading />
 
   const s = q.trim().toLowerCase()

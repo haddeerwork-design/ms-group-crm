@@ -110,8 +110,8 @@ export function Products() {
           <option value="">Any setup</option><option value="missing">Needs setup</option><option value="ready">Ready</option>
         </Select></div>
         <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-          <input type="checkbox" className="size-4 accent-[#23856B]" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /><T>Archived
-</T>        </label>
+          <input type="checkbox" className="size-4 accent-[#23856B]" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />Archived
+        </label>
         </MobileFilters>
         <div className="ms-auto flex rounded-md border border-border p-0.5">
           <Button variant={view === 'list' ? 'outline' : 'ghost'} size="sm" onClick={() => setView('list')}><List />List</Button>

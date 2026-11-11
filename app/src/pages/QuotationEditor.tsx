@@ -346,9 +346,9 @@ export function QuotationEditor() {
         price_per_ton: tonFinal, price_basis: l.basis, unit_price: unitFinal }),
     }
   })
-  const grand = computed.length && computed.every((l) => l.total != null) ? computed.reduce((a, l) => <T>a + (l.total ?? 0), 0) : null
+  const grand = computed.length && computed.every((l) => l.total != null) ? computed.reduce((a, l) => a + (l.total ?? 0), 0) : null
 
-  async function save(): Promise</T><string | null> {
+  async function save(): Promise<string | null> {
     if (!form) return null
     if (!lines.length) { toast.error('Add at least one product.'); return null }
     for (const l of lines) {
@@ -678,8 +678,8 @@ export function QuotationEditor() {
                             {l.fxr ? (
                               <span>= <b className="text-foreground">{money(isJam(l) ? l.jarFinal : l.basis === 'unit' ? l.unitFinal : l.tonFinal, form.currency)}</b> {isJam(l) ? 'per jar' : l.basis === 'unit' ? `per ${l.unit_label}` : 'per ton'} · 1 {l.in_ccy} = {+l.fxr.rate.toPrecision(6)} {form.currency} <span className="opacity-80">({l.fx ? (l.fxNote || 'typed') : `${l.fxr.source}, ${new Date(l.fxr.rate_at).toLocaleDateString('en-GB')}`})</span></span>
                             ) : <span className="text-destructive">No saved rate {l.in_ccy}→{form.currency}.</span>}
-                            <label className="flex items-center gap-1"><T>rate
-</T>                              <Input inputMode="decimal" className="h-7 w-24 text-xs" placeholder={l.fxr ? String(+l.fxr.rate.toPrecision(6)) : `1 ${l.in_ccy} = ?`} value={l.fx}
+                            <label className="flex items-center gap-1">rate
+                              <Input inputMode="decimal" className="h-7 w-24 text-xs" placeholder={l.fxr ? String(+l.fxr.rate.toPrecision(6)) : `1 ${l.in_ccy} = ?`} value={l.fx}
                                 onChange={(e) => updLine(l.key, { fx: e.target.value, fxNote: e.target.value ? 'typed by you' : '' })} aria-label={`Rate 1 ${l.in_ccy} in ${form.currency}`} />
                             </label>
                           </div>

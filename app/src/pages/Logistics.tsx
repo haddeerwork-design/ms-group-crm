@@ -97,10 +97,10 @@ export function Logistics() {
   }
 
   const visible = rates.filter((r) => !r.archived_at && (!mode || r.mode === mode) && (showExpired || rateValidity(r) !== 'expired')
-    && (!q.trim() || [r.destination_country, r.destination_port, r.origin_port, r.carrier, r.forwarder_id ? fwdName[r.forwarder_id] : ''].some((x) => <T>(x ?? '').toLowerCase().includes(q.trim().toLowerCase()))))
+    && (!q.trim() || [r.destination_country, r.destination_port, r.origin_port, r.carrier, r.forwarder_id ? fwdName[r.forwarder_id] : ''].some((x) => (x ?? '').toLowerCase().includes(q.trim().toLowerCase()))))
 
   return (
-</T>    <>
+    <>
       <PageHeader title="Shipping & Logistics" summary="Freight rates with their source and validity, forwarders, and a freight calculator."
         action={canEdit && tab !== 'calc' && <Button onClick={() => tab === 'rates' ? (setRateEdit(null), setRateOpen(true)) : (setFwdEdit(null), setFwdOpen(true))}><Plus />{tab === 'rates' ? 'Add rate' : 'Add forwarder'}</Button>} />
       <div className="mb-4 flex gap-1 border-b border-border">

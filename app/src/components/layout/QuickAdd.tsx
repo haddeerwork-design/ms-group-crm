@@ -31,9 +31,9 @@ export function QuickAdd() {
     { show: hasRole(...CRM_WRITERS), label: 'Deal', icon: Handshake, to: '/pipeline?new=1' },
     { show: true, label: 'Task', icon: CheckSquare, to: '/tasks?new=1' },
     { show: hasRole(...QUOTE_WRITERS), label: 'Quotation', icon: FileText, to: '/quotations/new' },
-  ].filter((i) => <T>i.show)
+  ].filter((i) => i.show)
   return (
-</T>    <div className="relative" ref={ref}>
+    <div className="relative" ref={ref}>
       <Button size="sm" onClick={() => setOpen((o) => !o)} aria-label={t('Quick add')} data-tip={t('New… (N)')}><Plus /><span className="hidden sm:inline">{t('New')}</span></Button>
       {open && (
         <div className="absolute end-0 z-50 mt-2 w-44 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-xl">
