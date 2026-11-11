@@ -35,6 +35,7 @@ export const MODULE_ACCESS = {
   archive: ROLES, // rows filtered by RLS (own old records unless manager/finance)
   help: ROLES,
   team: ['super_admin', 'sales_manager'],
+  activity: ['super_admin'], // audit_logs RLS: app_is_super_admin()
   settings: ROLES, // everyone can read; only super_admin can edit (enforced by RLS)
 } satisfies Record<string, readonly AppRole[]>
 export type ModuleKey = keyof typeof MODULE_ACCESS

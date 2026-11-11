@@ -1,5 +1,5 @@
-import { T } from '@/lib/i18n'
-import { useEffect } from 'react'
+import { T, tr } from '@/lib/i18n'
+import { useEffect, useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import {
   activePackaging, AVAILABILITY_LABEL, MONTHS, PRODUCT_TYPE_LABEL,
-  type Availability, type Category, type Product, type ProductType,
+  type Availability, type Category, type Product, type ProductType, saveProductPhoto,
 } from '@/lib/catalog'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
+import { ProductPhotoPicker, type PhotoChange } from './ProductPhoto'
 
 const optNum = z.string().trim().refine((v) => v === '' || (isFinite(Number(v)) && Number(v) > 0), 'Must be a number above 0')
 const optInt = z.string().trim().refine((v) => v === '' || (Number.isInteger(Number(v)) && Number(v) > 0), 'Whole number above 0')
@@ -103,6 +104,9 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
   const varietyOptions = (watch('varieties') ?? '').split(',').map((x) => x.trim()).filter(Boolean)
   const activeCats = categories.filter((c) => !c.archived_at || c.id === product?.category_id)
 
+  const [photo, setPhoto] = useState<PhotoChange>(null)
+  useEffect(() => { if (open) setPhoto(null) }, [open, product])
+
   async function onSubmit(v: Form) {
     const row = {
       name: v.name.trim(), category_id: v.category_id,
@@ -151,6 +155,10 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
       }
       steps.push(p.id ? supabase.from('product_packaging').update(pr).eq('id', p.id) : supabase.from('product_packaging').insert(pr))
     })
+    if (photo) {
+      try { await saveProductPhoto(id!, photo.file, product?.image_path) }
+      catch (e) { toast.error(tr('Product saved, but the photo was not: {why}', { why: tr((e as Error).message) })) }
+    }
     const results = await Promise.all(steps)
     const failed = results.find((r) => r.error)
     if (failed?.error) toast.error('Product saved, but packaging failed: ' + friendly(failed.error.message))
@@ -169,6 +177,7 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
         <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col" noValidate>
           <DialogBody>
             <fieldset disabled={!canEdit} className="space-y-6">
+              <ProductPhotoPicker path={product?.image_path} change={photo} onChange={setPhoto} disabled={!canEdit} />
               <section className="grid gap-4 sm:grid-cols-2">
                 <Field label="Product name" htmlFor="name" error={errors.name?.message}><Input id="name" {...register('name')} /></Field>
                 <Field label="Arabic name (for Arabic quotations)" htmlFor="name_ar"><Input id="name_ar" dir="rtl" lang="ar" {...register('name_ar')} /></Field>

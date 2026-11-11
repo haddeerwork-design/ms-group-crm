@@ -1,7 +1,6 @@
-import { TV } from '@/lib/i18n'
 import { Boxes, CheckCircle2, PackageCheck, Ship } from 'lucide-react'
 import { StatCard } from '@/components/analytics/dash'
-import { T } from '@/lib/i18n'
+import { T, TV } from '@/lib/i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
@@ -66,7 +65,8 @@ export function Orders() {
                 <td className="px-3 py-3 text-muted-foreground">{[r.shipping_method?.toUpperCase(), r.port_of_discharge ?? r.destination].filter(Boolean).join(' · ') || '—'}
                   {r.eta && <div className={cn('text-xs', r.eta < today && !['arrived', 'completed'].includes(r.stage) && 'text-destructive')}>ETA {fmtDateDMY(r.eta)}</div>}</td>
                 <td className="px-3 py-3 text-end tabular-nums">{money(orderTotal(r), r.currency)}</td>
-                <td className="px-3 py-3"><span className={cn('rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium', TONE[r.stage])}><T>{STAGE_LABEL[r.stage]}</T></span></td>
+                <td className="px-3 py-3"><span className={cn('rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium', TONE[r.stage])}><T>{STAGE_LABEL[r.stage]}</T></span>
+                  {!['completed', 'cancelled'].includes(r.stage) && <div className={cn('mt-1 text-[11px] tabular-nums', r.docs.missing.length ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300')}><TV k="Docs {a}/{b}" v={{ a: r.docs.ready, b: r.docs.needed }} /></div>}</td>
               </tr>
             ))}</tbody>
           </table>

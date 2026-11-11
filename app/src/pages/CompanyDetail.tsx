@@ -18,6 +18,8 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
+import { Samples } from '@/components/crm/Samples'
+import { fetchSamples } from '@/lib/samples'
 import { CompanyForm } from '@/components/crm/CompanyForm'
 import { OpportunityDialog } from '@/components/sales/OpportunityDialog'
 import { TaskDialog } from '@/components/sales/TaskDialog'
@@ -35,8 +37,10 @@ export function CompanyDetail() {
   const [d, setD] = useState<Detail | null>(null)
   const [team, setTeam] = useState<TeamMember[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'timeline' | 'deals' | 'contacts' | 'profile' | 'quotes'>('timeline')
+  const [tab, setTab] = useState<'timeline' | 'deals' | 'contacts' | 'samples' | 'profile' | 'quotes'>('timeline')
   const [editOpen, setEditOpen] = useState(false)
+  const [samples, setSamples] = useState<number | null>(null)
+  useEffect(() => { if (id) fetchSamples(id).then((r) => r.ready && setSamples(r.rows.length)) }, [id])
 
   const load = useCallback(() => Promise.all([fetchCompanyDetail(id!), fetchTeam()]).then(([x, t]) => { setD(x); setTeam(t) }).catch((e) => setError(e.message)), [id])
   useEffect(() => { load() }, [load])
@@ -104,15 +108,16 @@ export function CompanyDetail() {
         </CardContent></Card>
       </div>
 
-      <div className="mb-4 flex gap-1 border-b border-border">
-        {([['timeline', `Timeline (${d.activities.length})`], ['deals', 'Deals & tasks'], ['contacts', `Contacts (${d.contacts.length})`], ['profile', 'Profile'], ['quotes', `Quotations (${d.quotations.length})`]] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}><T>{l}</T></button>
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
+        {([['timeline', 'Timeline', d.activities.length], ['deals', 'Deals & tasks', null], ['contacts', 'Contacts', d.contacts.length], ['samples', 'Samples', samples], ['profile', 'Profile', null], ['quotes', 'Quotations', d.quotations.length]] as const).map(([k, l, n]) => (
+          <button key={k} onClick={() => setTab(k)} className={cn('-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium', tab === k ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}><T>{l}</T>{n != null && <span className="ms-1 tabular-nums text-muted-foreground">({n})</span>}</button>
         ))}
       </div>
 
       {tab === 'timeline' && <Timeline company={c} activities={d.activities} canEdit={canEdit} owner={owner} onChange={load} />}
       {tab === 'deals' && <DealsAndTasks company={c} team={team} canEdit={canEdit} />}
       {tab === 'contacts' && <Contacts companyId={c.id} contacts={d.contacts} canEdit={canEdit} onChange={load} />}
+      {tab === 'samples' && <Samples companyId={c.id} companyName={c.name} canEdit={canEdit} onCount={setSamples} />}
       {tab === 'profile' && <Profile c={c} />}
       {tab === 'quotes' && (
         <Card><CardContent className="p-0">

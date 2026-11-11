@@ -71,9 +71,13 @@ export function orderTotal(o: Pick<Order, 'other_charges'> & { order_items?: Pic
 }
 
 export async function fetchOrders() {
-  const { data, error } = await supabase.from('sales_orders').select('*, order_items(line_total)').order('created_at', { ascending: false })
+  const [{ data, error }, waivers] = await Promise.all([
+    supabase.from('sales_orders').select('*, order_items(line_total), order_documents(doc_type)').order('created_at', { ascending: false }),
+    fetchWaivers(),
+  ])
   if (error) throw error
-  return (data ?? []) as (Order & { order_items: { line_total: number }[] })[]
+  return ((data ?? []) as (Order & { order_items: { line_total: number }[]; order_documents?: { doc_type: string }[] })[])
+    .map((o) => ({ ...o, docs: docChecklist(o.order_documents ?? [], waivers.filter((w) => w.order_id === o.id).map((w) => w.doc_type)) }))
 }
 export async function fetchOrder(id: string) {
   const [o, d, h, p] = await Promise.all([
@@ -85,6 +89,33 @@ export async function fetchOrder(id: string) {
   if (o.error) throw o.error
   const order = o.data as Order
   order.order_items = (order.order_items ?? []).sort((a, b) => a.sort_order - b.sort_order)
-  return { order, docs: (d.data ?? []) as OrderDoc[], history: (h.data ?? []) as { id: number; from_stage: Stage | null; to_stage: Stage; changed_at: string; changed_by: string | null }[], payments: (p.data ?? []) as Payment[] }
+  const waived = (await fetchWaivers(id)).map((w) => w.doc_type as string)
+  return { order, waived, docs: (d.data ?? []) as OrderDoc[], history: (h.data ?? []) as { id: number; from_stage: Stage | null; to_stage: Stage; changed_at: string; changed_by: string | null }[], payments: (p.data ?? []) as Payment[] }
 }
 export const safeFileName = (n: string) => n.normalize('NFKD').replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_').slice(-80)
+
+// ---------------------------------------------------------------------
+// Shipment document checklist: every document type is expected unless it is
+// marked "not needed" for that order. Uploading a file ticks it.
+// ---------------------------------------------------------------------
+export const REQUIRED_DOCS: DocType[] = ['commercial_invoice', 'packing_list', 'phytosanitary', 'certificate_of_origin', 'bl_awb', 'quality_certificate', 'health_certificate']
+export type DocState = 'ready' | 'missing' | 'not_needed'
+export function docChecklist(docs: { doc_type: string }[], waived: string[]) {
+  const items = REQUIRED_DOCS.map((type) => ({
+    type, state: (docs.some((d) => d.doc_type === type) ? 'ready' : waived.includes(type) ? 'not_needed' : 'missing') as DocState,
+  }))
+  const needed = items.filter((i) => i.state !== 'not_needed').length
+  const ready = items.filter((i) => i.state === 'ready').length
+  return { items, needed, ready, missing: items.filter((i) => i.state === 'missing').map((i) => i.type) }
+}
+/** Days until the ship leaves (departure date, else ETA); null when no date yet or already shipped. */
+export function daysToDeparture(o: { stage: Stage; departure_date: string | null }, today: string) {
+  if (!o.departure_date || ['shipped', 'arrived', 'completed', 'cancelled'].includes(o.stage)) return null
+  return Math.round((Date.parse(o.departure_date) - Date.parse(today)) / 86400000)
+}
+export async function fetchWaivers(orderId?: string) {
+  let q = supabase.from('order_doc_waivers').select('order_id, doc_type')
+  if (orderId) q = q.eq('order_id', orderId)
+  const { data, error } = await q
+  return error ? [] : (data as { order_id: string; doc_type: DocType }[]) // before migration 0019: nothing waived
+}

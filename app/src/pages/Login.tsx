@@ -1,10 +1,10 @@
 import { useT } from '@/lib/i18n'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowRight, FileText, Info, Loader2, Lock, Package, Tag, Truck, User } from 'lucide-react'
-import { useAuth } from '@/lib/auth'
+import { ArrowRight, FileText, Info, Loader2, Lock, MailCheck, Package, Tag, Truck, User } from 'lucide-react'
+import { isResetLink, useAuth } from '@/lib/auth'
 import { PasswordInput } from '@/components/ui/password-input'
 import { cn } from '@/lib/utils'
 
@@ -18,10 +18,25 @@ const MODULES = [{ icon: Package, label: 'Products' }, { icon: Tag, label: 'Pric
 
 export function Login() {
   const { t, lang, setLang } = useT()
-  const { signIn } = useAuth()
+  const { signIn, sendPasswordReset, finishRecovery } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [help, setHelp] = useState<'forgot' | 'access' | null>(null)
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(schema) })
+  // forgot password: we email a reset link
+  const [resetEmail, setResetEmail] = useState('')
+  const [reset, setReset] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [resetError, setResetError] = useState<string | null>(null)
+  // a reset link that could not log in (opened in another browser, or too old)
+  const [badLink] = useState(isResetLink)
+  useEffect(() => { if (badLink) finishRecovery() }, [badLink, finishRecovery])
+  async function sendReset(e: React.FormEvent) {
+    e.preventDefault()
+    const email = resetEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setResetError('Enter a valid email')
+    setResetError(null); setReset('sending')
+    const err = await sendPasswordReset(email)
+    if (err) { setResetError(err); setReset('idle') } else setReset('sent')
+  }
   const onSubmit = async (v: Form) => { setError(null); const e = await signIn(v.email, v.password); if (e) setError(e) }
 
   const field = 'flex h-14 items-center gap-1 rounded-full border border-white/25 bg-white/10 px-5 text-white transition focus-within:border-lime-300/80 focus-within:bg-white/15 focus-within:ring-2 focus-within:ring-lime-300/30'
@@ -52,6 +67,7 @@ export function Login() {
           <div className="mt-4 h-1 w-20 rounded-full bg-gradient-to-r from-lime-300 to-lime-500" />
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-10 space-y-4">
+            {badLink && !error && <p role="alert" className="rounded-2xl border border-amber-200/40 bg-amber-400/15 px-4 py-3 text-sm text-amber-50">{t('That reset link could not be used. It works once, for one hour, in the same browser where you asked for it. Ask for a new one below.')}</p>}
             {error && <p role="alert" className="rounded-2xl border border-red-300/40 bg-red-500/15 px-4 py-3 text-sm text-red-100">{t(error)}</p>}
             <div>
               <label htmlFor="email" className="sr-only">{t('Email')}</label>
@@ -73,7 +89,7 @@ export function Login() {
               {errors.password && <p className="mt-1 px-5 text-xs text-red-200">{t(errors.password.message ?? '')}</p>}
             </div>
             <div className="flex justify-end">
-              <button type="button" onClick={() => setHelp(help === 'forgot' ? null : 'forgot')} className="text-sm text-white underline underline-offset-4 hover:text-lime-200">{t('Forgot password?')}</button>
+              <button type="button" onClick={() => { setHelp(help === 'forgot' ? null : 'forgot'); setResetEmail(getValues('email') ?? ''); setReset('idle'); setResetError(null) }} className="text-sm text-white underline underline-offset-4 hover:text-lime-200">{t('Forgot password?')}</button>
             </div>
             <button type="submit" disabled={isSubmitting}
               className="mx-auto flex h-14 w-full max-w-sm items-center justify-center gap-3 rounded-full bg-gradient-to-r from-lime-200 to-lime-500 text-lg font-bold text-[#0b3d22] shadow-[0_10px_24px_rgba(132,204,22,0.35)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b4a2c] disabled:opacity-70">
@@ -83,15 +99,33 @@ export function Login() {
               {t('Don’t have an account?')}{' '}
               <button type="button" onClick={() => setHelp(help === 'access' ? null : 'access')} className="font-medium text-lime-300 underline underline-offset-4 hover:text-lime-200">{t('Request access')}</button>
             </p>
-            {help && (
+            {help === 'access' && (
               <p role="status" className="flex gap-2 rounded-2xl border border-white/20 bg-white/10 p-3 text-sm text-white/90">
                 <Info className="mt-0.5 size-4 shrink-0 text-lime-300" />
-                {help === 'forgot'
-                  ? t('Ask the Super Admin to reset your password (Team & Roles → Manage). You will get a temporary password and choose a new one when you log in.')
-                  : t('Accounts are created by the Super Admin. Ask them to add you from Team & Roles; you will receive your email and a temporary password.')}
+                {t('Accounts are created by the Super Admin. Ask them to add you from Team & Roles; you will receive your email and a temporary password.')}
               </p>
             )}
           </form>
+          {help === 'forgot' && (
+            <div className="mt-4 rounded-2xl border border-white/20 bg-white/10 p-4 text-sm text-white/90">
+              {reset === 'sent' ? (
+                <p role="status" className="flex gap-2"><MailCheck className="mt-0.5 size-4 shrink-0 text-lime-300" />
+                  {t('If {email} has an account, a reset link is on its way. Open it on this device and browser; it works once and expires in one hour. Check the spam folder too.', { email: resetEmail.trim() })}</p>
+              ) : (
+                <form onSubmit={sendReset} noValidate className="space-y-3">
+                  <label htmlFor="reset-email" className="block font-medium text-white">{t('We will email you a link to choose a new password.')}</label>
+                  <div className="flex flex-wrap gap-2">
+                    <input id="reset-email" type="email" autoComplete="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder={t('Enter your work email')} autoFocus
+                      className="h-11 min-w-0 flex-1 rounded-full border border-white/25 bg-white/10 px-4 text-white outline-none placeholder:text-white/70 focus:border-lime-300/80 focus:ring-2 focus:ring-lime-300/30" />
+                    <button type="submit" disabled={reset === 'sending'} className="inline-flex h-11 items-center gap-2 rounded-full bg-lime-300 px-5 font-semibold text-[#0b3d22] hover:bg-lime-200 disabled:opacity-70">
+                      {reset === 'sending' && <Loader2 className="size-4 animate-spin" />}{t('Send link')}</button>
+                  </div>
+                  {resetError && <p role="alert" className="text-xs text-red-200">{t(resetError)}</p>}
+                  <p className="text-xs text-white/70">{t('No email? The Super Admin can also give you a temporary password from Team & Roles.')}</p>
+                </form>
+              )}
+            </div>
+          )}
 
           <ul className="mt-12 grid grid-cols-4" aria-label={t('What you can do in the platform')}>
             {MODULES.map(({ icon: Icon, label }, i) => (

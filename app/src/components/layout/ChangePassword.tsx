@@ -16,7 +16,7 @@ export function passwordProblem(p: string, confirm: string) {
   return null
 }
 
-function Form({ onDone }: { onDone?: () => void }) {
+export function NewPasswordForm({ onDone }: { onDone?: () => void }) {
   const [p, setP] = useState(''); const [c, setC] = useState(''); const [busy, setBusy] = useState(false)
   async function save(e: React.FormEvent) {
     e.preventDefault()
@@ -39,15 +39,15 @@ function Form({ onDone }: { onDone?: () => void }) {
 }
 
 /** Full screen shown after logging in with a temporary password. */
-export function ForcedPasswordChange({ onSignOut }: { onSignOut: () => void }) {
+export function ForcedPasswordChange({ onSignOut, recovery, onDone }: { onSignOut: () => void; recovery?: boolean; onDone?: () => void }) {
   return (
     <div className="grid min-h-screen place-items-center p-4">
       <div className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="space-y-1">
-          <h1 className="text-lg font-semibold"><T>Choose your own password</T></h1>
-          <p className="text-sm text-muted-foreground"><T>You logged in with a temporary password. Set a new one to continue.</T></p>
+          <h1 className="text-lg font-semibold"><T>{recovery ? 'Set a new password' : 'Choose your own password'}</T></h1>
+          <p className="text-sm text-muted-foreground"><T>{recovery ? 'You opened the reset link from your email. Choose a new password to continue.' : 'You logged in with a temporary password. Set a new one to continue.'}</T></p>
         </div>
-        <Form />
+        <NewPasswordForm onDone={onDone} />
         <button onClick={onSignOut} className="w-full text-center text-xs text-muted-foreground hover:underline">Sign out</button>
       </div>
     </div>
@@ -64,7 +64,7 @@ export function ChangePasswordButton() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>{t('Change password')}</DialogTitle><DialogDescription>{t('Pick a password only you know.')}</DialogDescription></DialogHeader>
-          <DialogBody><Form onDone={() => setOpen(false)} /></DialogBody>
+          <DialogBody><NewPasswordForm onDone={() => setOpen(false)} /></DialogBody>
         </DialogContent>
       </Dialog>
     </>

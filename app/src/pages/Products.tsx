@@ -1,4 +1,4 @@
-import { AlertTriangle, Leaf, Package } from 'lucide-react'
+import { BookOpen, AlertTriangle, Leaf, Package } from 'lucide-react'
 import { StatCard } from '@/components/analytics/dash'
 import { useT } from '@/lib/i18n'
 import { T, TV } from '@/lib/i18n'
@@ -12,6 +12,7 @@ import { CATALOG_MANAGERS } from '@/lib/roles'
 import {
   activePackaging, AVAILABILITY_LABEL, fetchCatalog, fmt, missingSetup, MONTHS, PRODUCT_TYPE_LABEL,
   seasonLabel, seasonMonths, type Category, type Product,
+  productImageUrl,
 } from '@/lib/catalog'
 import { PageHeader } from '@/components/layout/AppShell'
 import { Card, CardContent } from '@/components/ui/card'
@@ -77,6 +78,7 @@ export function Products() {
   const needSetup = data?.products.filter((p) => !p.archived_at && missingSetup(p).length).length ?? 0
   const activeCount = data?.products.filter((p) => !p.archived_at).length ?? 0
   const dupGroups = useMemo(() => duplicateGroups(data?.products ?? []), [data])
+  const anyPhoto = useMemo(() => (data?.products ?? []).some((p) => p.image_path), [data])
   const canMerge = hasRole('super_admin', 'sales_manager')
 
   async function toggleArchive(p: Product) {
@@ -94,11 +96,12 @@ export function Products() {
     <>
       <PageHeader title="Products"
         summary={data ? tl('{n} products · {m} still need packaging weight or cartons per pallet', { n: activeCount, m: needSetup }) : 'Central product catalog'}
-        action={canEdit && (
-          <div className="flex gap-2">
-            {canMerge && dupGroups.length > 0 && <Button variant="outline" onClick={() => setDupOpen(true)}><Merge /><TV k="Duplicates ({n})" v={{ n: dupGroups.length }} /></Button>}
-            <Button variant="outline" onClick={() => setCatsOpen(true)}><FolderCog />Categories</Button>
-            <Button onClick={() => open(null)}><Plus />Add product</Button>
+        action={(
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => window.open(`${location.pathname}#/catalog/print`, '_blank')} data-tip={tl('Product catalog with photos, ready to print or save as PDF')}><BookOpen />Catalog PDF</Button>
+            {canEdit && canMerge && dupGroups.length > 0 && <Button variant="outline" onClick={() => setDupOpen(true)}><Merge /><TV k="Duplicates ({n})" v={{ n: dupGroups.length }} /></Button>}
+            {canEdit && <Button variant="outline" onClick={() => setCatsOpen(true)}><FolderCog />Categories</Button>}
+            {canEdit && <Button onClick={() => open(null)}><Plus />Add product</Button>}
           </div>
         )} />
 
@@ -165,6 +168,7 @@ export function Products() {
                   const miss = missingSetup(p)
                   return (
                     <li key={p.id} className="flex items-start gap-2 px-4 py-3">
+                      {anyPhoto && <Thumb path={p.image_path} />}
                       <button type="button" className="min-w-0 flex-1 text-start" onClick={() => open(p)}>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{p.name}</span>
@@ -198,6 +202,7 @@ export function Products() {
                       <tr key={p.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50" onClick={() => open(p)}>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
+                            {anyPhoto && <Thumb path={p.image_path} />}
                             <span className="font-medium">{p.name}</span>
                             <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}><T>{PRODUCT_TYPE_LABEL[p.product_type]}</T></span>
                           </div>
@@ -291,4 +296,10 @@ function SeasonCalendar({ rows, onOpen }: { rows: Product[]; onOpen: (p: Product
       {without > 0 && withSeason.length > 0 && <p className="mt-3 text-xs text-muted-foreground">{without} products have no season set and are not shown.</p>}
     </div>
   )
+}
+
+function Thumb({ path }: { path?: string | null }) {
+  const src = productImageUrl(path)
+  return src ? <img src={src} alt="" loading="lazy" className="size-9 shrink-0 rounded-lg border border-border object-cover" />
+    : <span className="size-9 shrink-0 rounded-lg border border-dashed border-border bg-muted/40" aria-hidden />
 }

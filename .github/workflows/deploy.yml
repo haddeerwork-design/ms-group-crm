@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -63,7 +63,8 @@ jobs:
       - name: Smoke test every page and role (fake data, no network)
         working-directory: app
         run: |
-          npx playwright install --with-deps chromium
+          # system packages sometimes fail to download on GitHub; the runner already has most of them
+          npx playwright install --with-deps chromium || npx playwright install chromium
           npm run e2e
 
       - name: Assemble site (current CRM at root, new platform at /app)
@@ -101,7 +102,7 @@ jobs:
   deploy:
     if: github.event_name != 'pull_request'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

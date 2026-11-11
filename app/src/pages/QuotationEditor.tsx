@@ -22,6 +22,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { StickyActions } from '@/components/ui/sticky-actions'
+import { SendDialog } from '@/components/sales/SendDialog'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
 import { tr, useT } from '@/lib/i18n'
 import { AWAIT_DAYS } from '@/lib/analytics'
@@ -115,7 +116,7 @@ export function QuotationEditor() {
   const isNew = !id || id === 'new'
   const [params] = useSearchParams()
   const nav = useNavigate()
-  const { hasRole, session } = useAuth()
+  const { hasRole, session, profile } = useAuth()
   const { t: tl } = useT()
   const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings; companies: Company[]; rates: Rate[]; v14: boolean } | null>(null)
   const [quote, setQuote] = useState<Quotation | null>(null)
@@ -134,6 +135,7 @@ export function QuotationEditor() {
     return () => clearTimeout(h)
   }, [dirty, form, lines, draftKey])
   const [busy, setBusy] = useState<string | null>(null)
+  const [sendOpen, setSendOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const prod = useMemo(() => Object.fromEntries((base?.products ?? []).map((p) => [p.id, p])), [base])
@@ -424,7 +426,7 @@ export function QuotationEditor() {
     return qid
   }
 
-  async function setStatus(st: QuoteStatus) {
+  async function setStatus(st: QuoteStatus, confirmed = false) {
     let qid = quote?.id ?? null
     if (dirty && editableStatus) { qid = await save(); if (!qid) return }
     if (!qid) return
@@ -433,7 +435,7 @@ export function QuotationEditor() {
       revised: 'Open a new revision? The sent version stays saved and you can edit a new version.',
       rejected: 'Mark as rejected?', expired: 'Mark as expired?',
     }
-    if (ask[st] && !window.confirm(ask[st])) return
+    if (!confirmed && ask[st] && !window.confirm(tr(ask[st]))) return
     setBusy(st)
     const { error } = await supabase.rpc('set_quotation_status', { qid, new_status: st })
     setBusy(null)
@@ -500,7 +502,8 @@ export function QuotationEditor() {
           {/* Save and Preview sit in the bar at the bottom while editing */}
           {!canEdit && <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>}
           {quote && hasRole(...QUOTE_WRITERS) && <Button variant="outline" onClick={() => (!dirty || window.confirm('You have unsaved changes. Leave without saving?')) && nav(`/quotations/new?from=${quote.id}`)} data-tip={tl('New quotation with the same products and terms')}><Copy />Duplicate</Button>}
-          {canWrite && editableStatus && <Button onClick={() => setStatus('sent')} disabled={!!busy}>{busy === 'sent' ? <Loader2 className="animate-spin" /> : <Send />}Mark as sent</Button>}
+          {quote && form && status !== 'rejected' && status !== 'expired' && <Button variant={canWrite && editableStatus ? 'default' : 'outline'} onClick={() => setSendOpen(true)} disabled={!!busy || !lines.length}><Send />Send</Button>}
+          {canWrite && editableStatus && <Button variant="outline" onClick={() => setStatus('sent')} disabled={!!busy}>{busy === 'sent' ? <Loader2 className="animate-spin" /> : <Check />}Mark as sent</Button>}
           {canWrite && status === 'sent' && <>
             <Button onClick={() => setStatus('accepted')} disabled={!!busy}><Check />Accepted</Button>
             <Button variant="outline" onClick={() => setStatus('rejected')} disabled={!!busy}><X />Rejected</Button>
@@ -756,6 +759,10 @@ export function QuotationEditor() {
           )}
         </div>
       </div>
+      {quote && form && <SendDialog open={sendOpen} onOpenChange={setSendOpen} email={form.customer_email} phone={form.customer_phone}
+        doc={{ kind: 'quotation', number: quote.number, version: quote.version, lang: form.language, contactName: form.customer_name || null, company: form.customer_company,
+          validUntil: quote.valid_until, sender: profile?.full_name, brandName: form.brand === 'prime_roots' ? 'Prime Roots' : 'MS El-brancy Group' }}
+        onPdf={() => printIt()} onMarkSent={canWrite && editableStatus ? () => setStatus('sent', true) : undefined} />}
       {canEdit && (
         <StickyActions dirty={dirty} info={<span className="text-muted-foreground">{tl(lines.length === 1 ? '1 product' : '{n} products', { n: lines.length })} · {tl('Total')} <b className="text-foreground tabular-nums">{grand != null ? money(grand, form.currency) : '—'}</b></span>}>
           <Button variant="outline" onClick={() => printIt()} disabled={!!busy || (isNew && !lines.length)}><Printer />Preview / PDF</Button>
