@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { StickyActions } from '@/components/ui/sticky-actions'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
+import { AWAIT_DAYS } from '@/lib/analytics'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
 
@@ -400,7 +401,23 @@ export function QuotationEditor() {
       await supabase.from('activities').insert({ company_id: form.company_id, kind: 'quotation', summary: `Quotation ${quote?.number ?? ''} ${STATUS_LABEL[st].toLowerCase()}`, created_by: session?.user.id })
       if (st === 'sent') await supabase.from('companies').update({ lead_status: 'quotation_sent', last_contact_date: today() }).eq('id', form.company_id).in('lead_status', ['new_lead', 'contacted', 'interested'])
     }
+    if (st === 'sent' && session) await addFollowUp(quote?.number ?? '', form?.customer_company || form?.customer_name || '')
     load()
+  }
+
+  /** After sending: a follow-up task in AWAIT_DAYS days, with Undo. */
+  async function addFollowUp(number: string, who: string) {
+    const d = new Date(); d.setDate(d.getDate() + AWAIT_DAYS)
+    const due = d.toISOString().slice(0, 10)
+    const { data, error } = await supabase.from('tasks').insert({
+      title: `Follow up on quotation ${number}${who ? ` · ${who}` : ''}`, company_id: form?.company_id || null,
+      assignee_id: session!.user.id, created_by: session!.user.id, due_date: due, priority: 'medium', status: 'open',
+    }).select('id').single()
+    if (error || !data) return
+    toast.message(`Follow-up task added for ${fmtDateDMY(due)}`, {
+      duration: 8000,
+      action: { label: 'Undo', onClick: async () => { await supabase.from('tasks').delete().eq('id', data.id); toast.success('Follow-up removed') } },
+    })
   }
 
   async function remove() {

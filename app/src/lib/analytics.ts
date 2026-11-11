@@ -225,3 +225,24 @@ export async function fetchAnalytics(): Promise<AnalyticsData> {
     team: pick<{ id: string; name: string }>('Team', tm), warnings,
   }
 }
+
+// ---------------------------------------------------------------------
+// "My day": what one person should act on today.
+// ---------------------------------------------------------------------
+const plusDays = (iso: string, n: number) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
+export const AWAIT_DAYS = 3 // a sent quotation with no answer after this many days needs a nudge
+
+export function myDay(d: Pick<AnalyticsData, 'tasks' | 'companies' | 'quotes' | 'orders'>, userId: string, today: string) {
+  const tasks = d.tasks.filter((t) => t.assignee_id === userId && (t.status === 'open' || t.status === 'in_progress') && t.due_date && t.due_date <= today)
+    .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1))
+  const followUps = d.companies.filter((c) => c.owner_id === userId && !c.archived_at && c.lead_status !== 'lost' && c.next_follow_up_date && c.next_follow_up_date <= today)
+    .sort((a, b) => (a.next_follow_up_date! < b.next_follow_up_date! ? -1 : 1))
+  const mine = d.quotes.filter((q) => q.created_by === userId)
+  const awaiting = mine.filter((q) => q.status === 'sent' && q.sent_at && q.sent_at.slice(0, 10) <= plusDays(today, -AWAIT_DAYS))
+    .sort((a, b) => (a.sent_at! < b.sent_at! ? -1 : 1))
+  const expiring = mine.filter((q) => (q.status === 'sent' || q.status === 'draft' || q.status === 'revised') && q.valid_until && q.valid_until >= today && q.valid_until <= plusDays(today, 3))
+    .sort((a, b) => (a.valid_until! < b.valid_until! ? -1 : 1))
+  const arriving = d.orders.filter((o) => o.stage === 'shipped' && o.eta && o.eta >= today && o.eta <= plusDays(today, 7))
+    .sort((a, b) => (a.eta! < b.eta! ? -1 : 1))
+  return { tasks, followUps, awaiting, expiring, arriving, total: tasks.length + followUps.length + awaiting.length + expiring.length + arriving.length }
+}
