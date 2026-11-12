@@ -46,3 +46,17 @@ body { @apply bg-background text-foreground antialiased; font-feature-settings: 
   }
 }
 @media (hover: hover) { [data-tip-end]:hover::after, [data-tip-end]:focus-visible::after { left: auto; right: auto; inset-inline-end: 0; transform: none; } }
+
+/* Scrollbars: thin, no arrows, no white track — just a soft rounded handle.
+   Chrome / Edge / Safari use the ::-webkit rules; Firefox uses the standard ones. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+::-webkit-scrollbar-thumb { background-color: hsl(var(--muted-foreground) / 0.35); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background-color: hsl(var(--muted-foreground) / 0.65); }
+/* scroll areas that show their own "more below" hint instead of a bar (side menu) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+@supports not selector(::-webkit-scrollbar) {
+  :where(*) { scrollbar-width: thin; scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent; }
+}

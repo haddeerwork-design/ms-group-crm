@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Archive, ChevronDown, History, LifeBuoy, BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
@@ -84,7 +84,7 @@ export function AppShell() {
           : <><img src={`${import.meta.env.BASE_URL}logo.png`} alt="MS El-brancy Group" className="h-9 w-auto dark:hidden" /><img src={`${import.meta.env.BASE_URL}logo-white.png`} alt="MS El-brancy Group" className="hidden h-9 w-auto dark:block" /></>}
       </div>
       {/* The menu scrolls on its own when the screen is not tall enough; logo and bottom link stay put. */}
-      <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-1 [scrollbar-width:thin]">
+      <MenuScroll>
       {groups.map((g, gi) => {
         const active = g.items.some((n) => isIn(pathname, n.to))
         const open = !g.title || collapsed || active || !closed.includes(g.id)
@@ -101,7 +101,7 @@ export function AppShell() {
           </div>
         )
       })}
-      </div>
+      </MenuScroll>
       <div className="mt-2 shrink-0 space-y-0.5 border-t border-border pt-2">
         {canAccess(roles, HELP.module) && <NavItemLink item={HELP} collapsed={collapsed} onPick={() => setMobileOpen(false)} />}
         <a href={LEGACY_CRM_URL} title={t('The current CRM stays available until it is switched off')}
@@ -153,6 +153,33 @@ export function AppShell() {
         <main className={cn('mx-auto w-full flex-1 p-4 md:p-8', pathname === '/' ? 'max-w-[1440px]' : 'max-w-6xl')}><Outlet /></main>
         <WelcomeTour />
       </div>
+    </div>
+  )
+}
+
+/**
+ * The side menu scrolls without a visible scrollbar (no grey bar, no arrows):
+ * a soft fade at the top / bottom shows there is more to scroll to.
+ */
+function MenuScroll({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [edge, setEdge] = useState({ top: false, bottom: false })
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => setEdge({ top: el.scrollTop > 2, bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 2 })
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    const ro = new ResizeObserver(check); ro.observe(el); for (const c of el.children) ro.observe(c)
+    const mo = new MutationObserver(() => { check(); for (const c of el.children) ro.observe(c) }); mo.observe(el, { childList: true, subtree: true })
+    return () => { el.removeEventListener('scroll', check); ro.disconnect(); mo.disconnect() }
+  }, [])
+  const fade = 'pointer-events-none absolute inset-x-0 z-10 h-8 transition-opacity duration-200'
+  return (
+    <div className="relative -mx-1 flex min-h-0 flex-1 flex-col">
+      <div ref={ref} className="no-scrollbar flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-1">{children}</div>
+      <div aria-hidden className={cn(fade, 'top-0 bg-gradient-to-b from-card to-transparent', edge.top ? 'opacity-100' : 'opacity-0')} />
+      <div aria-hidden className={cn(fade, 'bottom-0 bg-gradient-to-t from-card to-transparent', edge.bottom ? 'opacity-100' : 'opacity-0')} />
     </div>
   )
 }
