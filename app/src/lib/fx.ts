@@ -4,7 +4,7 @@ import { CURRENCIES } from './pricing'
 // Live exchange rates (free, no key): ExchangeRate-API's open endpoint, updated once a day.
 export const FX_API_URL = 'https://open.er-api.com/v6/latest/USD'
 export const FX_API_SOURCE = 'ExchangeRate-API (open.er-api.com)'
-export const FX_AUTO_SOURCE = `${FX_API_SOURCE} · daily auto-update`
+export const FX_AUTO_SOURCE = `${FX_API_SOURCE} · auto-update`
 export type LiveRates = { at: string; rates: Record<string, number> }
 
 /** Reads the service's answer; only the currencies the app uses. */
@@ -24,17 +24,18 @@ export async function fetchLiveRates(fetcher: typeof fetch = fetch): Promise<Liv
 }
 
 const KEY = 'ms_fx_auto'
-const today = () => new Date().toISOString().slice(0, 10)
+/** One check per hour: "2026-11-12T14". */
+const thisHour = () => new Date().toISOString().slice(0, 13)
 
 /**
- * Once a day, for people allowed to edit rates: if the service has published
+ * Every hour, for people allowed to edit rates: if the service has published
  * newer rates than the newest saved USD rate, save them (with their source and
  * time). Rates entered by hand are never overwritten — a newer row is added, and
  * the history keeps both. Returns how many rates were saved (0 = nothing new).
  */
 export async function autoDailyRates(userId: string, fetcher: typeof fetch = fetch): Promise<number> {
-  try { if (localStorage.getItem(KEY) === today()) return 0 } catch { /* private mode: still fine */ }
-  const mark = () => { try { localStorage.setItem(KEY, today()) } catch { /* ignore */ } }
+  try { if (localStorage.getItem(KEY) === thisHour()) return 0 } catch { /* private mode: still fine */ }
+  const mark = () => { try { localStorage.setItem(KEY, thisHour()) } catch { /* ignore */ } }
   const live = await fetchLiveRates(fetcher)
   const { data, error } = await supabase.from('exchange_rates').select('rate_at').eq('base_currency', 'USD')
     .in('quote_currency', Object.keys(live.rates)).order('rate_at', { ascending: false }).limit(1)

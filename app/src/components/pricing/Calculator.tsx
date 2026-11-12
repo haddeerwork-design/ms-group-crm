@@ -35,6 +35,8 @@ const str = (v: unknown) => (v == null ? '' : String(v))
 const num = parseAmount
 const today = () => new Date().toISOString().slice(0, 10)
 const UNIT_LABEL: Record<PriceUnit, string> = { ton: 'per ton', kg: 'per kg', carton: 'per carton', pallet: 'per pallet' }
+const UNIT_TAB: Record<PriceUnit, string> = { ton: 'Ton', kg: 'Kg', carton: 'Carton', pallet: 'Pallet' }
+const HERO_LABEL: Record<PriceUnit, string> = { ton: 'Price per ton', kg: 'Price per kg', carton: 'Price per carton', pallet: 'Price per pallet' }
 
 type State = {
   productId: string; packagingId: string; variety: string; incoterm: Incoterm; destination: string
@@ -228,7 +230,8 @@ export function PriceCalculator({ products, categories, rates, list = [], initia
   }
 
   // the same price in the other currencies (per the unit the person is looking at)
-  const shownUnit: PriceUnit = s.mode === 'price' ? s.priceUnit : 'ton'
+  const shownUnit: PriceUnit = s.priceUnit
+  const priceIn: Record<PriceUnit, number | null> = { ton: result.pricePerTon, kg: result.per.price.kg, carton: result.per.price.carton, pallet: result.per.price.pallet }
   const others = result.pricePerTon == null ? [] : CURRENCIES.filter((c) => c !== s.sellCurrency).map((c) => {
     const r = resolveRate(s.sellCurrency, c, rates)
     const v = r ? fromPerTon(result.pricePerTon! * r.rate, shownUnit, netKg, cpp) : null
@@ -330,13 +333,30 @@ export function PriceCalculator({ products, categories, rates, list = [], initia
               </div>
             </div>
 
-            {/* 2. how the price is set */}
+            {/* 2. the unit: the price is typed and shown per ton, kg, carton or pallet */}
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground"><T>Price per</T></div>
+              <div role="radiogroup" aria-label={t('Price per')} className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+                {(['ton', 'kg', 'carton', 'pallet'] as const).map((u) => {
+                  const ok = unitsPerTon(u, netKg, cpp) != null
+                  return (
+                    <button key={u} type="button" role="radio" aria-checked={s.priceUnit === u} disabled={!ok} onClick={() => changeUnit(u)}
+                      data-tip={!ok ? t(u === 'pallet' ? 'Needs kg per carton and cartons per pallet' : 'Needs the kg per carton') : undefined}
+                      className={cn('rounded-md py-1.5 text-xs font-semibold transition-colors disabled:opacity-40', s.priceUnit === u ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+                      {t(UNIT_TAB[u])}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 3. how the price is set */}
             <div className="flex rounded-lg border border-border p-0.5 text-sm">
               {(['price', 'margin'] as const).map((m) => (
                 <button key={m} type="button"
                   onClick={() => {
                     if (m === s.mode) return
-                    if (m === 'price' && result.pricePerTon) set({ mode: m, priceUnit: 'ton', price: roundForInput(result.pricePerTon) })
+                    if (m === 'price' && result.pricePerTon) set({ mode: m, price: roundForInput(fromPerTon(result.pricePerTon, s.priceUnit, netKg, cpp) ?? result.pricePerTon), ...(fromPerTon(result.pricePerTon, s.priceUnit, netKg, cpp) == null ? { priceUnit: 'ton' as PriceUnit } : {}) })
                     else if (m === 'margin' && !s.margin && result.marginPct != null) set({ mode: m, margin: String(Math.round(result.marginPct * 100) / 100) })
                     else set({ mode: m })
                   }}
@@ -347,14 +367,9 @@ export function PriceCalculator({ products, categories, rates, list = [], initia
             </div>
 
             {s.mode === 'price' ? (
-              <Field label={t('Price ({c})', { c: s.sellCurrency })}>
-                <div className="flex gap-1.5">
-                  <Input ref={priceInput} inputMode="decimal" value={s.price} onChange={(e) => set({ price: e.target.value })} onFocus={(e) => e.target.select()}
-                    className="h-11 text-lg font-semibold tabular-nums" placeholder="0" aria-label={t('Price')} />
-                  <Select value={s.priceUnit} onChange={(e) => changeUnit(e.target.value as PriceUnit)} className="h-11 w-[130px] shrink-0" aria-label={t('Per')}>
-                    {(['ton', 'kg', 'carton', 'pallet'] as const).map((u) => <option key={u} value={u} disabled={unitsPerTon(u, netKg, cpp) == null}>{UNIT_LABEL[u]}</option>)}
-                  </Select>
-                </div>
+              <Field label={t('Price ({c}) {u}', { c: s.sellCurrency, u: t(UNIT_LABEL[s.priceUnit]) })}>
+                <Input ref={priceInput} inputMode="decimal" value={s.price} onChange={(e) => set({ price: e.target.value })} onFocus={(e) => e.target.select()}
+                  className="h-11 text-lg font-semibold tabular-nums" placeholder="0" aria-label={t('Price')} />
               </Field>
             ) : (
               <Field label="Target margin %" hint="Margin = profit ÷ selling price"><Input inputMode="decimal" value={s.margin} onChange={(e) => set({ margin: e.target.value })} className="h-11 text-lg font-semibold" /></Field>
@@ -381,10 +396,10 @@ export function PriceCalculator({ products, categories, rates, list = [], initia
 
             {/* 3. the answer */}
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <div className="text-xs text-muted-foreground"><T>Price per ton</T></div>
-              <div className="text-3xl font-bold tabular-nums tracking-tight text-primary" dir="ltr">{money(result.pricePerTon)} <span className="text-base font-semibold">{s.sellCurrency}</span></div>
+              <div className="text-xs text-muted-foreground">{t(HERO_LABEL[s.priceUnit])}</div>
+              <div className="text-3xl font-bold tabular-nums tracking-tight text-primary" dir="ltr">{money(priceIn[s.priceUnit], undefined, s.priceUnit === 'kg' ? 3 : 2)} <span className="text-base font-semibold">{s.sellCurrency}</span></div>
               <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
-                {([['Per kg', result.per.price.kg, 3], ['Per carton', result.per.price.carton, 2], ['Per pallet', result.per.price.pallet, 2]] as const).map(([l, v, d]) => (
+                {(['ton', 'kg', 'carton', 'pallet'] as const).filter((u) => u !== s.priceUnit).map((u) => [HERO_LABEL[u].replace('Price per', 'Per'), priceIn[u], u === 'kg' ? 3 : 2] as const).map(([l, v, d]) => (
                   <div key={l} className="rounded-lg bg-card px-2 py-1.5">
                     <dt className="text-[11px] text-muted-foreground"><T>{l}</T></dt>
                     <dd className="font-semibold tabular-nums" dir="ltr">{money(v, undefined, d)}</dd>

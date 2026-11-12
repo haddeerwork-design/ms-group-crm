@@ -17,7 +17,8 @@ export const STATUS_STYLE: Record<QuoteStatus, string> = {
 
 /** Quotation quantities can also be counted in units (jars, bunches…). */
 export type QuoteQtyUnit = QtyUnit | 'units'
-export type PriceBasis = 'ton' | 'unit'
+/** How a line is priced: per ton, per carton/jar/pack ('unit'), per kg or per pallet (kg + pallet from migration 0021). */
+export type PriceBasis = 'ton' | 'unit' | 'kg' | 'pallet'
 
 export type QuoteItem = {
   id?: string; quotation_id?: string; product_id: string | null; packaging_id: string | null
@@ -74,6 +75,16 @@ export function lineTons(i: Pick<QuoteItem, 'quantity' | 'quantity_unit' | 'net_
   return (i.quantity * i.cartons_per_pallet * i.net_weight_kg) / 1000
 }
 export function lineTotal(i: Parameters<typeof lineTons>[0] & { price_per_ton: number | null; price_basis?: PriceBasis | null; unit_price?: number | null }) {
+  if (i.price_basis === 'kg') {
+    const t = lineTons(i)
+    return t != null && i.unit_price ? Math.round(t * 1000 * i.unit_price * 100) / 100 : null
+  }
+  if (i.price_basis === 'pallet') {
+    if (!i.unit_price || !i.quantity || !i.quantity_unit) return null
+    if (i.quantity_unit === 'pallets') return Math.round(i.quantity * i.unit_price * 100) / 100
+    const t = lineTons(i)
+    return t != null && i.net_weight_kg && i.cartons_per_pallet ? Math.round(((t * 1000) / (i.net_weight_kg * i.cartons_per_pallet)) * i.unit_price * 100) / 100 : null
+  }
   if (i.price_basis === 'unit') {
     // Price per unit: count the units (exact when the quantity is already in units).
     if (!i.unit_price || !i.quantity || !i.quantity_unit) return null
@@ -138,7 +149,7 @@ export const QUOTE_TEXT = {
 export const PRODUCT_TYPE_LABEL_AR = { fresh: 'طازج', frozen: 'مجمد', jam: 'مربى' } as const
 const PACK_AR: Record<string, [string, string]> = {
   jar: ['برطمان', 'برطمان'], shrink: ['شرينك', 'شرينك'], carton: ['كرتونة', 'كرتونة'], basket: ['سبت', 'سبت'], crate: ['صندوق بلاستيك', 'صندوق بلاستيك'],
-  tray: ['صينية', 'صينية'], kg: ['كجم', 'كجم'], ton: ['طن', 'طن'], bag: ['شوال', 'شوال'], box: ['صندوق', 'صندوق'], bunch: ['حزمة', 'حزمة'], punnet: ['علبة', 'علبة'], unit: ['وحدة', 'وحدة'],
+  tray: ['صينية', 'صينية'], kg: ['كجم', 'كجم'], pallet: ['بالتة', 'بالتة'], ton: ['طن', 'طن'], bag: ['شوال', 'شوال'], box: ['صندوق', 'صندوق'], bunch: ['حزمة', 'حزمة'], punnet: ['علبة', 'علبة'], unit: ['وحدة', 'وحدة'],
 }
 /** Unit name as printed, e.g. jar → "jars" (en) or "برطمان" (ar). */
 export function unitWord(label: string | null | undefined, lang: QuoteLang, n = 2) {
@@ -187,3 +198,17 @@ export function kgFromPacking(text: string | null | undefined): number | null {
   return null
 }
 const round4 = (v: number) => Math.round(v * 1e4) / 1e4
+
+/** How many of this price unit make one ton: ton 1, kg 1000, carton 1000 ÷ kg, pallet 1000 ÷ (kg × cartons). Null if the packing is unknown. */
+export function basisPerTon(basis: PriceBasis, netKg: number | null, cartonsPerPallet: number | null): number | null {
+  if (basis === 'ton') return 1
+  if (basis === 'kg') return 1000
+  if (!netKg || netKg <= 0) return null
+  if (basis === 'unit') return 1000 / netKg
+  return cartonsPerPallet && cartonsPerPallet > 0 ? 1000 / (netKg * cartonsPerPallet) : null
+}
+/** Same price written for another unit (e.g. 1,250 per ton → 1.25 per kg). */
+export function convertBasis(value: number, from: PriceBasis, to: PriceBasis, netKg: number | null, cpp: number | null): number | null {
+  const a = basisPerTon(from, netKg, cpp), b = basisPerTon(to, netKg, cpp)
+  return a == null || b == null ? null : (value * a) / b
+}
