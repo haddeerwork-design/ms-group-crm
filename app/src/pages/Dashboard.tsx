@@ -259,7 +259,7 @@ function ListPanel({ icon: Icon, title, to, rows, empty }: { icon: React.Compone
 const PLAN = [
   ['0001_foundation', 'Foundation'], ['0002_products', 'Products'], ['0003_pricing', 'Pricing'], ['0004_containers', 'Container planner'],
   ['0005_quotations', 'Quotations'], ['0006_crm', 'CRM'], ['0007_sales', 'Pipeline & tasks'], ['0008_logistics', 'Suppliers, logistics & proformas'],
-  ['0009_operations', 'Orders & payments'], ['0010_research', 'Market research'], ['0011_production', 'Archive & security'], ['0012_product_specs', 'Product specs & packing'], ['0013_brands_unit_prices', 'Prime Roots & unit prices'], ['0014_quote_language_fx', 'Quotation language & currency'], ['0015_prime_roots_terms', 'Prime Roots terms'], ['0016_selling_prices', 'Selling prices'], ['0017_merge_products_pi_brand', 'Merge products & proforma letterhead'], ['0018_clean_price_list', 'Clean price list'], ['0019_docs_samples_photos', 'Documents, samples & photos'],
+  ['0009_operations', 'Orders & payments'], ['0010_research', 'Market research'], ['0011_production', 'Archive & security'], ['0012_product_specs', 'Product specs & packing'], ['0013_brands_unit_prices', 'Prime Roots & unit prices'], ['0014_quote_language_fx', 'Quotation language & currency'], ['0015_prime_roots_terms', 'Prime Roots terms'], ['0016_selling_prices', 'Selling prices'], ['0017_merge_products_pi_brand', 'Merge products & proforma letterhead'], ['0018_clean_price_list', 'Clean price list'], ['0019_docs_samples_photos', 'Documents, samples & photos'], ['0020_remove_prices', 'Remove prices'],
 ]
 function SetupStatus() {
   const { t } = useT()
