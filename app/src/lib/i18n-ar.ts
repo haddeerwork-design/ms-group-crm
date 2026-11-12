@@ -1396,7 +1396,7 @@ export const AR: Record<string, string> = {
   'Detailed trade figures (free account)': 'أرقام تجارة تفصيلية (حساب مجاني)',
   'These sites are outside the system. Check each company yourself before adding it; only add companies with a real source link.': 'المواقع دي برّه السيستم. اتأكد من كل شركة بنفسك قبل ما تضيفها؛ وضيف بس الشركات اللي ليها لينك مصدر حقيقي.',
   'The trade-data function is not set up yet in Supabase (Edge Functions).': 'دالة trade-data لسه متجهزتش في Supabase (Edge Functions).',
-  'Too many searches right now. Wait a minute and try again.': 'في بحث كتير دلوقتي. استنى دقيقة وجرّب تاني.',
+  'Too many searches right now. Wait a minute and try again.': 'في بحث كتير دلوقتي. استني دقيقة وجرّبي تاني.',
   'Choose a year.': 'اختار السنة.',
   'Choose a product (HS code).': 'اختار منتج (كود HS).',
   'Mangoes & guavas (fresh)': 'مانجو وجوافة (فريش)',
@@ -1550,4 +1550,6 @@ export const AR: Record<string, string> = {
   'Mark it as sent so it is locked, the customer moves to “Quotation sent” and a follow-up reminder is added.': 'علّمي إنه اتبعت علشان يتقفل، والعميل يتنقل لـ “عرض سعر اتبعت”، ويتضاف تذكير متابعة.',
   'Issue it so it is locked and this version is kept.': 'أصدريها علشان تتقفل والنسخة دي تتحفظ.',
   'Not now': 'مش دلوقتي',
+  'The free UN service is busy. Trying again by itself in {n} seconds…': 'خدمة الأمم المتحدة المجانية مشغولة. هنحاول تاني لوحدنا بعد {n} ثانية…',
+  'The free UN trade service is busy right now. Wait 2–3 minutes and try again.': 'خدمة الأمم المتحدة المجانية مشغولة دلوقتي. استني 2–3 دقايق وجربي تاني.',
 }
