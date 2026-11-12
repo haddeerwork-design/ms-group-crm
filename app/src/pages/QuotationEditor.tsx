@@ -14,6 +14,7 @@ import {
   addDays, fetchQuotation, fmtDateDMY, lineTotal, renderPolicy, STATUS_LABEL, STATUS_STYLE,
   type Quotation, type QuoteStatus, type QuoteVersion,
   BRANDS, packLabel, PRODUCT_TYPE_LABEL_AR, unitToTon, unitsLabel, type Brand, type PriceBasis, type QuoteLang, type QuoteQtyUnit,
+  kgFromPacking,
 } from '@/lib/quotations'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,7 +25,7 @@ import { Field } from '@/components/ui/field'
 import { StickyActions } from '@/components/ui/sticky-actions'
 import { SendDialog } from '@/components/sales/SendDialog'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
-import { tr, useT } from '@/lib/i18n'
+import { T, tr, useT } from '@/lib/i18n'
 import { AWAIT_DAYS } from '@/lib/analytics'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
@@ -41,6 +42,7 @@ let seq = 0
 
 type Line = {
   key: number; product_id: string; packaging_id: string; description: string; packing: string; product_type_label: string
+  netManual?: boolean // the weight was typed by hand (not read from Packing)
   quantity: string; quantity_unit: QuoteQtyUnit; net: string; cpp: string; price: string; price_id: string | null; priceNote: string
   basis: PriceBasis; unit_price: string; unit_label: string
   // currency the price was typed in; fx = typed/saved rate (1 in_ccy = fx quote currency), empty = use the latest saved rate
@@ -338,6 +340,8 @@ export function QuotationEditor() {
   }
   const r2 = (x: number) => Math.round(x * 100) / 100
   const isJam = (l: Line) => prod[l.product_id]?.product_type === 'jam' && l.basis === 'unit'
+  /** Weight of one carton/jar: the saved or typed one, else read from the Packing text ("3 kg"). */
+  const netOf = (l: Line) => n(l.net) ?? kgFromPacking(l.packing)
   const computed = lines.map((l) => {
     const fx = rateFor(l)
     if (isJam(l)) {
@@ -345,7 +349,7 @@ export function QuotationEditor() {
       const k = l.sell === 'shrink' ? n(l.per_shrink ?? '') : 1
       const jarFinal = n(l.unit_price) && fx ? r2(n(l.unit_price)! * fx.rate) : null
       const unitFinal = jarFinal && k ? r2(jarFinal * k) : null
-      const effNet = n(l.net) && k ? +(n(l.net)! * k).toFixed(4) : null
+      const effNet = netOf(l) && k ? +(netOf(l)! * k).toFixed(4) : null
       const effLabel = l.sell === 'shrink' ? 'shrink' : 'jar'
       const tonFinal = unitFinal && effNet ? unitToTon(unitFinal, effNet) : null
       return {
@@ -355,10 +359,11 @@ export function QuotationEditor() {
       }
     }
     const unitFinal = l.basis === 'unit' && n(l.unit_price) && fx ? r2(n(l.unit_price)! * fx.rate) : null
-    const tonFinal = !fx ? null : l.basis === 'unit' ? (unitFinal && n(l.net) ? unitToTon(unitFinal, n(l.net)!) : null) : n(l.price) ? r2(n(l.price)! * fx.rate) : null
+    const net = netOf(l)
+    const tonFinal = !fx ? null : l.basis === 'unit' ? (unitFinal && net ? unitToTon(unitFinal, net) : null) : n(l.price) ? r2(n(l.price)! * fx.rate) : null
     return {
-      ...l, fxr: fx, unitFinal, tonFinal, jarFinal: null, effNet: n(l.net), effLabel: l.unit_label, k: 1,
-      total: lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: n(l.net), cartons_per_pallet: n(l.cpp),
+      ...l, fxr: fx, unitFinal, tonFinal, jarFinal: null, effNet: net, effLabel: l.unit_label, k: 1,
+      total: lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: net, cartons_per_pallet: n(l.cpp),
         price_per_ton: tonFinal, price_basis: l.basis, unit_price: unitFinal }),
     }
   })
@@ -372,10 +377,10 @@ export function QuotationEditor() {
       if (isJam(l) && l.sell === 'shrink' && !(Number.isInteger(n(l.per_shrink ?? '')) && n(l.per_shrink ?? '')! > 0)) { toast.error(`“${l.description}”: enter how many jars are in one shrink.`); return null }
       if (l.basis === 'unit') {
         if (!(n(l.unit_price)! > 0)) { toast.error(`Enter the price per ${l.unit_label || 'unit'} for “${l.description}”.`); return null }
-        if (!(n(l.net)! > 0)) { toast.error(`“${l.description}” needs the weight of one ${l.unit_label || 'unit'} (choose its packing).`); return null }
+        if (!(netOf(l)! > 0)) { toast.error(tl('“{d}”: write the weight of one {u} — e.g. “3 kg” in Packing, or fill “Net kg per {u}”.', { d: l.description, u: tl(l.unit_label || 'carton') })); setFocusKey(l.key); document.getElementById(`line-${l.key}-net`)?.focus(); return null }
       } else if (!(n(l.price)! > 0)) { toast.error(`Enter the price per ton for “${l.description}”.`); return null }
       if (l.in_ccy !== form.currency && !rateFor(l)) { toast.error(`“${l.description}”: enter the rate 1 ${l.in_ccy} = ? ${form.currency} (or add it in Pricing → Exchange rates).`); return null }
-      if (l.quantity_unit === 'units' && n(l.quantity) && !(n(l.net)! > 0)) { toast.error(`“${l.description}”: quantity in units needs the unit weight (choose its packing).`); return null }
+      if ((l.quantity_unit === 'units' || l.quantity_unit === 'cartons') && n(l.quantity) && !(netOf(l)! > 0)) { toast.error(tl('“{d}”: write the weight of one {u} — e.g. “3 kg” in Packing, or fill “Net kg per {u}”.', { d: l.description, u: tl(l.unit_label || 'carton') })); document.getElementById(`line-${l.key}-net`)?.focus(); return null }
     }
     const vd = n(form.validity_days)
     const row = {
@@ -634,7 +639,22 @@ export function QuotationEditor() {
                           <Select value={l.packaging_id} onChange={(e) => pickProduct(l.key, l.product_id, e.target.value)}>
                             {packsFor(p, l.variety).map((pk) => <option key={pk.id} value={pk.id}>{packOptionLabel(pk)}</option>)}
                           </Select>
-                        ) : <Input value={l.packing} onChange={(e) => updLine(l.key, { packing: e.target.value })} placeholder="e.g. 10 kg carton" />}
+                        ) : (
+                          <>
+                            <Input value={l.packing} placeholder="e.g. 10 kg carton" onChange={(e) => {
+                              // the weight follows what is typed ("3 kg"), unless it was typed by hand
+                              const auto = kgFromPacking(e.target.value)
+                              const wasAuto = !l.netManual && (!l.net.trim() || n(l.net) === kgFromPacking(l.packing))
+                              updLine(l.key, { packing: e.target.value, ...(wasAuto ? { net: auto != null ? String(auto) : '' } : {}) })
+                            }} />
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <Input id={`line-${l.key}-net`} inputMode="decimal" value={l.net} placeholder={String(kgFromPacking(l.packing) ?? "?")} aria-label={tl("Net kg per carton")}
+                                onChange={(e) => updLine(l.key, { net: e.target.value, netManual: e.target.value.trim() !== '' })}
+                                className={cn('h-8 w-20 text-sm', !netOf(l) && (l.basis === 'unit' || l.quantity_unit !== 'tons') && 'border-amber-400')} />
+                              <span className="whitespace-nowrap text-xs text-muted-foreground"><T>kg net in one carton</T></span>
+                            </div>
+                          </>
+                        )}
                         {p && activePackaging(p).length > 0 && form.language === 'ar' && (
                           <Input className="mt-1" dir="rtl" lang="ar" aria-label="Printed packing" placeholder="Printed packing (Arabic)" value={l.packing} onChange={(e) => updLine(l.key, { packing: e.target.value })} />
                         )}

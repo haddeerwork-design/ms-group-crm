@@ -1593,4 +1593,7 @@ export const AR: Record<string, string> = {
   'per kg': 'للكيلو',
   'per carton': 'للكرتونة',
   'per pallet': 'للبالتة',
+  '“{d}”: write the weight of one {u} — e.g. “3 kg” in Packing, or fill “Net kg per {u}”.': '“{d}”: اكتبي وزن {u} واحدة — مثلاً “3 kg” في خانة التعبئة، أو املي “صافي الكيلو في {u}”.',
+  'kg net in one carton': 'كيلو صافي في الكرتونة',
+  'carton': 'كرتونة',
 }

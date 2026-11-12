@@ -167,3 +167,23 @@ export function policySections(lines: string[]): { title: string | null; items: 
   }
   return out
 }
+
+/**
+ * Net kg of one carton / pack read from what was typed in Packing:
+ * "3 Kg" → 3, "10kg carton" → 10, "10 x 1 kg" → 10, "12×500 g" → 6, "500 gm" → 0.5,
+ * "4.5 كجم" / "٣ كيلو" → 4.5 / 3. Nothing that looks like a weight → null.
+ */
+export function kgFromPacking(text: string | null | undefined): number | null {
+  if (!text) return null
+  const s = text.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[٫,]/g, '.').toLowerCase()
+  const KG = '(?:kgs?|kilos?|kilograms?|كجم|كج|كيلو(?:جرام)?|ك\\.ج)'
+  const G = '(?:g|gr|grs|gm|gms|grams?|جم|جرام)'
+  const multi = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*[x×*]\\s*(\\d+(?:\\.\\d+)?)\\s*(${KG}|${G})(?![a-z])`).exec(s)
+  if (multi) { const v = +multi[1] * +multi[2]; return round4(new RegExp(`^${G}$`).test(multi[3]) ? v / 1000 : v) }
+  const kg = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*${KG}(?![a-z])`).exec(s)
+  if (kg) return +kg[1] > 0 ? round4(+kg[1]) : null
+  const g = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*${G}(?![a-z])`).exec(s)
+  if (g) return +g[1] > 0 ? round4(+g[1] / 1000) : null
+  return null
+}
+const round4 = (v: number) => Math.round(v * 1e4) / 1e4
