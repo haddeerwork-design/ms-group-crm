@@ -46,6 +46,7 @@ body { @apply bg-background text-foreground antialiased; font-feature-settings: 
   }
 }
 @media (hover: hover) { [data-tip-end]:hover::after, [data-tip-end]:focus-visible::after { left: auto; right: auto; inset-inline-end: 0; transform: none; } }
+@media (hover: hover) { [data-tip-up]:hover::after, [data-tip-up]:focus-visible::after { top: auto; bottom: calc(100% + 6px); } }
 
 /* Scrollbars: thin, no arrows, no white track — just a soft rounded handle.
    Chrome / Edge / Safari use the ::-webkit rules; Firefox uses the standard ones. */

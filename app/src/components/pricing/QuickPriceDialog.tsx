@@ -104,7 +104,7 @@ export function QuickPriceDialog({ open, onOpenChange, row, products, categories
           </Field>
           <Field label="Price" className="sm:col-span-2" hint={ton && f.per !== 'ton' ? `= ${ton.toLocaleString('en-US')} ${f.currency} per ton` : undefined}>
             <div className="flex gap-1">
-              <Input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} aria-label="Price" />
+              <Input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} aria-label="Price" autoFocus={!!row} onFocus={(e) => e.target.select()} />
               <Select value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })} className="w-[88px] shrink-0" aria-label="Currency">
                 {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
               </Select>

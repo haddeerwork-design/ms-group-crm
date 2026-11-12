@@ -168,3 +168,36 @@ export function staleness(rate_at: string, now = new Date()): Staleness {
   const h = rateAgeHours(rate_at, now)
   return h < 24 ? 'fresh' : h < 72 ? 'old' : 'stale'
 }
+
+// ---------------------------------------------------------------------
+// Typing a price per kg / carton / pallet, and switching currency
+// ---------------------------------------------------------------------
+export const PRICE_UNITS = ['ton', 'kg', 'carton', 'pallet'] as const
+export type PriceUnit = (typeof PRICE_UNITS)[number]
+
+/** How many of this unit make one ton (null when the packing is unknown). */
+export function unitsPerTon(unit: PriceUnit, netKg: number | null, cartonsPerPallet: number | null): number | null {
+  if (unit === 'ton') return 1
+  if (unit === 'kg') return 1000
+  if (!pos(netKg)) return null
+  if (unit === 'carton') return 1000 / netKg
+  return pos(cartonsPerPallet) ? 1000 / (netKg * cartonsPerPallet) : null
+}
+export const toPerTon = (amount: number, unit: PriceUnit, netKg: number | null, cpp: number | null) => {
+  const n = unitsPerTon(unit, netKg, cpp)
+  return n == null ? null : amount * n
+}
+export const fromPerTon = (perTon: number, unit: PriceUnit, netKg: number | null, cpp: number | null) => {
+  const n = unitsPerTon(unit, netKg, cpp)
+  return n == null ? null : perTon / n
+}
+
+/** Reads what people type: "1,250.5", " 1250 ", "١٢٥٠" (Arabic digits). Empty or bad → null. */
+export function parseAmount(v: string): number | null {
+  const s = v.trim().replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[٬,\s]/g, '').replace('٫', '.')
+  if (s === '' || !/^-?\d*\.?\d+$/.test(s)) return null
+  return Number(s)
+}
+
+/** Rounds for showing in an input: big amounts to 2 decimals, small ones (per kg) to 4. */
+export const roundForInput = (v: number) => String(Math.round(v * (Math.abs(v) < 10 ? 1e4 : 100)) / (Math.abs(v) < 10 ? 1e4 : 100))

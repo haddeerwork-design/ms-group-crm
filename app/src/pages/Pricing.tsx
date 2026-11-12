@@ -1,3 +1,4 @@
+import { T } from '@/lib/i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 import { COST_VIEWERS, PRICE_MANAGERS } from '@/lib/roles'
@@ -40,7 +41,7 @@ export function Pricing() {
         {tabs.filter((t) => t.show).map((t) => (
           <button key={t.k} onClick={() => setTab(t.k)}
             className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors', tab === t.k ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
-            {t.label}
+            <T>{t.label}</T>
           </button>
         ))}
       </div>
@@ -48,7 +49,7 @@ export function Pricing() {
         <>
           {tab === 'list' && <PriceList rows={data.list} products={data.products} categories={data.categories} canCalc canEdit={editsPrices} onSaved={load}
             onOpen={(productId, packagingId, incoterm) => { setInitial({ productId, packagingId, incoterm }); setTab('calc') }} />}
-          {tab === 'calc' && <PriceCalculator products={data.products} categories={data.categories} rates={data.rates} initial={initial} onSaved={load} />}
+          {tab === 'calc' && <PriceCalculator products={data.products} categories={data.categories} rates={data.rates} list={data.list} initial={initial} onSaved={load} />}
           {tab === 'fx' && <ExchangeRates onChanged={load} />}
         </>
       )}

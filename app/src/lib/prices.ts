@@ -29,7 +29,19 @@ export async function fetchPriceList() {
 export async function fetchVersions(productId: string) {
   const { data, error } = await supabase.from('product_prices').select('*').eq('product_id', productId).order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []) as PriceVersion[]
+  // removed prices (migration 0020) stay in the database for old quotations, but not here
+  return ((data ?? []) as (PriceVersion & { removed_at?: string | null })[]).filter((v) => !v.removed_at)
+}
+
+/** Removes one line of the price list (every version of it). Returns the ids, for Undo. */
+export async function removePriceLine(r: Pick<PriceListRow, 'product_id' | 'packaging_id' | 'variety'>): Promise<string[]> {
+  const { data, error } = await supabase.rpc('remove_price_line', { p_product: r.product_id, p_packaging: r.packaging_id, p_variety: r.variety ?? '' })
+  if (error) throw new Error(/remove_price_line|function/i.test(error.message) && /not find|does not exist/i.test(error.message) ? 'Run migration 0020_remove_prices first.' : error.message)
+  return (data ?? []) as string[]
+}
+export async function restorePrices(ids: string[]) {
+  const { error } = await supabase.rpc('restore_prices', { p_ids: ids })
+  if (error) throw error
 }
 
 export async function fetchLatestRates() {

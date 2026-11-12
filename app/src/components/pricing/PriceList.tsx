@@ -1,10 +1,13 @@
-import { T, TV, useT } from '@/lib/i18n'
+import { T, TV, tr, useT } from '@/lib/i18n'
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Calculator, Pencil, Plus, Search } from 'lucide-react'
+import { AlertTriangle, Archive, Calculator, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
+import { archivedToast } from '@/lib/undo'
 import { QuickPriceDialog } from './QuickPriceDialog'
 import type { Category, Product } from '@/lib/catalog'
 import { INCOTERMS } from '@/lib/pricing'
-import { EXPIRING_DAYS, money, OLD_PRICE_DAYS, priceHealth, priceHealthSummary, type PriceListRow } from '@/lib/prices'
+import { EXPIRING_DAYS, money, OLD_PRICE_DAYS, priceHealth, priceHealthSummary, removePriceLine, restorePrices, type PriceListRow } from '@/lib/prices'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -33,6 +36,28 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
     .filter((r) => !attention || priceHealth(r).state !== 'ok')
     .filter((r) => { const t = q.trim().toLowerCase(); const p = prod[r.product_id]; return !t || p.name.toLowerCase().includes(t) || (r.variety ?? '').toLowerCase().includes(t) || (cat[p.category_id]?.name ?? '').toLowerCase().includes(t) })
     .sort((a, b) => prod[a.product_id].name.localeCompare(prod[b.product_id].name) || (a.variety ?? '').localeCompare(b.variety ?? '') || String(a.packaging_id).localeCompare(String(b.packaging_id)))
+
+  /** Remove one price line (all its versions). Old quotations keep working; Undo brings it back. */
+  async function removePrice(r: PriceListRow) {
+    const p = prod[r.product_id]
+    const what = [p.name, r.variety, p.product_packaging.find((x) => x.id === r.packaging_id)?.label].filter(Boolean).join(' · ')
+    try {
+      const ids = await removePriceLine(r)
+      onSaved()
+      toast.success(tr('Price removed: {what}', { what }), {
+        duration: 8000,
+        action: { label: tr('Undo'), onClick: async () => { try { await restorePrices(ids); toast.success('Price restored'); onSaved() } catch (e) { toast.error((e as Error).message) } } },
+      })
+    } catch (e) { toast.error(tr((e as Error).message)) }
+  }
+  /** Remove a product with all its prices: it goes to the Archive (can be restored). */
+  async function removeProduct(productId: string) {
+    const p = prod[productId]
+    const { error, data } = await supabase.from('products').update({ archived_at: new Date().toISOString() }).eq('id', productId).select('id')
+    if (error || !data?.length) return toast.error(error?.message ?? 'Your role cannot change products.')
+    archivedToast(`“${p.name}”`, 'products', p.id, onSaved)
+    onSaved()
+  }
 
   const health = priceHealthSummary(rows.filter((r) => prod[r.product_id] && !prod[r.product_id].archived_at))
 
@@ -100,11 +125,16 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
                   const pk = p.product_packaging.find((x) => x.id === r.packaging_id)
                   const h = priceHealth(r)
                   return (
-                    <tr key={r.id} className={'border-border last:border-0 ' + (i + 1 < list.length && list[i + 1].product_id === r.product_id ? '' : 'border-b ') + (canEdit ? 'cursor-pointer hover:bg-accent/50' : '')}
+                    <tr key={r.id} className={'group border-border last:border-0 ' + (i + 1 < list.length && list[i + 1].product_id === r.product_id ? '' : 'border-b ') + (canEdit ? 'cursor-pointer hover:bg-accent/50' : '')}
                       onClick={() => canEdit && setEditing(r)}>
                       <td className="px-5 py-3">
                         {/* the product name once; its varieties / packings listed under it */}
-                        {!sameAsAbove && <div className="font-medium">{p.name}</div>}
+                        {!sameAsAbove && <div className="flex items-center gap-1 font-medium">{p.name}
+                          {canEdit && <button type="button" onClick={(e) => { e.stopPropagation(); removeProduct(p.id) }} aria-label={tl('Remove product')}
+                            data-tip={tl('Remove the product and all its prices (it goes to the Archive)')} data-tip-up
+                            className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
+                            <Archive className="size-3.5" /></button>}
+                        </div>}
                         {r.variety ? <div className={sameAsAbove ? 'ps-3 text-sm' : 'text-sm'}>{r.variety}</div> : sameAsAbove ? <div className="ps-3 text-sm text-muted-foreground"><T>All varieties</T></div> : null}
                         {!sameAsAbove && <div className="text-xs text-muted-foreground">{cat[p.category_id]?.name}</div>}
                       </td>
@@ -126,7 +156,8 @@ export function PriceList({ rows, products, categories, canCalc, canEdit, onOpen
                       {(canEdit || canCalc) && (
                         <td className="whitespace-nowrap px-3 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                           {canEdit && <Button variant="ghost" size="sm" onClick={() => setEditing(r)}><Pencil />Edit</Button>}
-                          {canCalc && <Button variant="ghost" size="icon" title="Open in calculator (build from costs)" aria-label="Open in calculator" onClick={() => onOpen(r.product_id, r.packaging_id, r.incoterm)}><Calculator /></Button>}
+                          {canCalc && <Button variant="ghost" size="icon" data-tip={tl('Open in the calculator')} data-tip-up aria-label={tl('Open in the calculator')} onClick={() => onOpen(r.product_id, r.packaging_id, r.incoterm)}><Calculator /></Button>}
+                          {canEdit && <Button variant="ghost" size="icon" data-tip={tl('Remove this price')} data-tip-end data-tip-up aria-label={tl('Remove this price')} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => removePrice(r)}><Trash2 /></Button>}
                         </td>
                       )}
                     </tr>
