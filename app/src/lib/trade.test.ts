@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultTradeYear, importerSearches, rank, type TradeRow } from './trade'
+import { defaultTradeYear, importerSearches, rank, type TradeRow , fetchTradeAll } from './trade'
 
 const row = (p: Partial<TradeRow>): TradeRow => ({ reporter: 'UAE', reporterCode: 784, partner: 'World', partnerCode: 0, cmd: '080450', cmdDesc: 'Mangoes', value: 0, kg: 0, year: 2024, ...p })
 
@@ -27,5 +27,33 @@ describe('trade data', () => {
     const s = importerSearches('Mango', 'United Arab Emirates')
     expect(s.find((x) => x.key === 'google')!.url).toContain(encodeURIComponent('Mango importers United Arab Emirates'))
     expect(s.every((x) => x.url.startsWith('https://'))).toBe(true)
+  })
+})
+
+describe('fetchTradeAll', () => {
+  const q = { flow: 'M' as const, cmd: Array.from({ length: 25 }, (_, i) => String(100000 + i)).join(','), year: 2024 }
+  const row = (cmd: string) => ({ reporter: 'A', reporterCode: 1, partner: 'W', partnerCode: 0, cmd, cmdDesc: cmd, value: 1, kg: 1, year: 2024 })
+  it('asks in parts one after the other, waits and retries when busy', async () => {
+    let calls = 0, active = 0, maxActive = 0
+    const waits: number[] = []
+    const call = async (x: { cmd: string }) => {
+      active++; maxActive = Math.max(maxActive, active); calls++
+      try {
+        if (calls === 2) throw Object.assign(new Error('Too many'), { busy: true })
+        return { rows: x.cmd.split(',').map(row), source: 'UN', url: '' }
+      } finally { active-- }
+    }
+    const r = await fetchTradeAll(q, (s) => s && waits.push(s), { call, sleep: async () => {} })
+    expect(r.rows).toHaveLength(25)
+    expect(maxActive).toBe(1)
+    expect(waits).toEqual([4])
+    // remembered: no new calls
+    const before = calls
+    await fetchTradeAll(q, undefined, { call, sleep: async () => {} })
+    expect(calls).toBe(before)
+  })
+  it('gives up with a clear message after a few tries', async () => {
+    const call = async () => { throw Object.assign(new Error('Too many'), { busy: true }) }
+    await expect(fetchTradeAll({ ...q, year: 2023 }, undefined, { call, sleep: async () => {} })).rejects.toThrow(/busy right now/)
   })
 })

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Globe2, Info, Loader2, Package, Search } from 'lucide-react'
-import { EGYPT, FALLBACK_COUNTRIES, HS_PRODUCTS, defaultTradeYear, fetchCountries, fetchTrade, hsLabel, rank, type TradeRow } from '@/lib/trade'
+import { EGYPT, FALLBACK_COUNTRIES, HS_PRODUCTS, defaultTradeYear, fetchCountries, fetchTradeAll, hsLabel, rank, type TradeRow } from '@/lib/trade'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
@@ -33,6 +33,7 @@ export function TradeData({ onFindImporters }: { onFindImporters: (product: stri
   const [rows, setRows] = useState<TradeRow[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState(0) // seconds, while the free service asks us to slow down
   const [source, setSource] = useState('')
   useEffect(() => { fetchCountries().then((c) => c.length && setCountries(c)).catch(() => { /* keep the short list */ }) }, [])
   const cname = (code: string) => countries.find((c) => c.code === code)?.name ?? code
@@ -44,10 +45,7 @@ export function TradeData({ onFindImporters }: { onFindImporters: (product: stri
         : v.kind === 'country' ? { flow: 'M' as const, reporter: v.reporter, partner: '0', cmd: HS_PRODUCTS.map((x) => x.code).join(','), year }
         : v.kind === 'suppliers' ? { flow: 'M' as const, reporter: v.reporter, cmd: v.cmd, year }
         : { flow: 'X' as const, reporter: EGYPT, cmd: v.cmd, year }
-      // ask for at most 20 products per call (the free Comtrade service limit), then join the answers
-      const codes = q.cmd.split(',')
-      const parts = await Promise.all(Array.from({ length: Math.ceil(codes.length / 20) }, (_, i) => fetchTrade({ ...q, cmd: codes.slice(i * 20, i * 20 + 20).join(',') })))
-      const r = { rows: parts.flatMap((x) => x.rows), source: parts[0]?.source ?? '' }
+      const r = await fetchTradeAll(q, setWaiting)
       if (push && view) setStack((s) => [...s, view])
       setView(v); setRows(r.rows); setSource(r.source)
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
@@ -101,6 +99,11 @@ export function TradeData({ onFindImporters }: { onFindImporters: (product: stri
         </CardContent>
       </Card>
 
+      {waiting > 0 && (
+        <p role="status" className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+          <Loader2 className="size-4 shrink-0 animate-spin" /><TV k="The free UN service is busy. Trying again by itself in {n} seconds…" v={{ n: waiting }} />
+        </p>
+      )}
       {error && <ErrorState message={error} />}
 
       {view && r && (

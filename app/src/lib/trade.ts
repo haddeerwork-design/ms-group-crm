@@ -57,9 +57,53 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
     let msg = error.message
     try { const j = ctx ? await ctx.json() : null; if (j?.error) msg = j.error } catch { /* keep message */ }
     if (/not found|404|Failed to send/i.test(msg)) msg = 'The trade-data function is not set up yet in Supabase (Edge Functions).'
-    throw new Error(msg)
+    throw Object.assign(new Error(msg), { busy: ctx?.status === 429 || /too many/i.test(msg) })
   }
   return data as T
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+/** Seconds to wait before each new try when the free UN service says "too many searches". */
+export const RETRY_WAITS = [4, 10, 20]
+const GAP_MS = 1500 // the free service accepts about one search per second
+const cache = new Map<string, { rows: TradeRow[]; source: string }>()
+
+/**
+ * All the figures for one question. Big product lists are asked in parts of 20,
+ * one after the other (never at the same time). If the free service is busy we
+ * wait and try again by ourselves (onWait tells the screen how long), and answers
+ * are remembered for this session so going Back costs nothing.
+ */
+export async function fetchTradeAll(q: TradeQuery, onWait?: (seconds: number) => void, deps = { call: fetchTrade, sleep }): Promise<{ rows: TradeRow[]; source: string }> {
+  const key = JSON.stringify(q)
+  const hit = cache.get(key) ?? (() => { try { const c = sessionStorage.getItem(`ms_trade:${key}`); return c ? JSON.parse(c) : undefined } catch { return undefined } })()
+  if (hit) return hit
+  const codes = q.cmd.split(',')
+  const rows: TradeRow[] = []
+  let source = ''
+  for (let i = 0; i < codes.length; i += 20) {
+    if (i) await deps.sleep(GAP_MS)
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const r = await deps.call({ ...q, cmd: codes.slice(i, i + 20).join(',') })
+        rows.push(...r.rows); source ||= r.source
+        break
+      } catch (e) {
+        const wait = RETRY_WAITS[attempt]
+        if (!(e as { busy?: boolean }).busy || wait == null) {
+          if ((e as { busy?: boolean }).busy) throw new Error('The free UN trade service is busy right now. Wait 2–3 minutes and try again.')
+          throw e
+        }
+        onWait?.(wait)
+        await deps.sleep(wait * 1000)
+        onWait?.(0)
+      }
+    }
+  }
+  const out = { rows, source }
+  cache.set(key, out)
+  try { sessionStorage.setItem(`ms_trade:${key}`, JSON.stringify(out)) } catch { /* too big: memory cache is enough */ }
+  return out
 }
 export const fetchTrade = (q: TradeQuery) => call<{ rows: TradeRow[]; source: string; url: string }>({ action: 'flows', ...q })
 export async function fetchCountries(): Promise<{ code: string; name: string }[]> {
