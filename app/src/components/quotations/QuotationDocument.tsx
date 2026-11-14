@@ -39,11 +39,11 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
   const company = brand.name ? { company_name: brand.name, slogan: brand.slogan } : settings
   const lang: QuoteLang = q.language ?? 'en'
   const T = QUOTE_TEXT[lang]
-  const anyUnit = q.items.some((i) => i.price_basis === 'unit')
+  const anyUnit = q.items.some((i) => i.price_basis && i.price_basis !== 'ton')
   // amounts keep left-to-right order inside Arabic text
   const M = (v: number | null) => <bdi dir="ltr">{fmtPrice(v, q.currency)}</bdi>
-  const priceCell = (it: QuoteItem) => it.price_basis === 'unit' && it.unit_price
-    ? <>{M(it.unit_price)} / {unitWord(it.unit_label, lang, 1)}</>
+  const priceCell = (it: QuoteItem) => it.price_basis && it.price_basis !== 'ton' && it.unit_price
+    ? <>{M(it.unit_price)} / {unitWord(it.price_basis === 'kg' ? 'kg' : it.price_basis === 'pallet' ? 'pallet' : it.unit_label, lang, 1)}</>
     : anyUnit ? <>{M(it.price_per_ton)} / {T.ton}</> : M(it.price_per_ton)
   const qtyCell = (it: QuoteItem) => {
     if (it.quantity && it.quantity_unit === 'units') return `${it.quantity.toLocaleString('en-US')} ${unitWord(it.unit_label, lang, it.quantity)}`

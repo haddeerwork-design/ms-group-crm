@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Archive, ChevronDown, History, LifeBuoy, BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, ExternalLink, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
+import { Archive, ChevronDown, History, LifeBuoy, BarChart3, Globe2, BadgeDollarSign, Boxes, Building2, CheckSquare, Factory, Receipt, Ship, Wallet, FileText, Handshake, LayoutDashboard, LogOut, Menu, Moon, Package, PanelLeftClose, PanelLeftOpen, Settings, Sun, Truck, Users } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { canAccess, FX_EDITORS, ROLE_LABEL, type ModuleKey } from '@/lib/roles'
 import { autoDailyRates } from '@/lib/fx'
 import { toast } from 'sonner'
 import { applyTheme, getTheme } from '@/lib/theme'
-import { LEGACY_CRM_URL } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { tr, useT } from '@/lib/i18n'
@@ -55,11 +54,14 @@ const isIn = (pathname: string, to: string) => (to === '/' ? pathname === '/' : 
 
 export function AppShell() {
   const { profile, roles, signOut, session } = useAuth()
-  // once a day: save the newest published exchange rates (Finance / Sales Manager / Admin only)
+  // every hour: save the newest published exchange rates (Finance / Sales Manager / Admin only)
   const fxEditor = roles.some((r) => (FX_EDITORS as string[]).includes(r))
   useEffect(() => {
     if (!fxEditor || !session) return
-    autoDailyRates(session.user.id).then((n) => { if (n) toast.success(tr('Exchange rates updated for today ({n} currencies)', { n })) }).catch(() => { /* silent: rates can still be fetched by hand */ })
+    const check = () => autoDailyRates(session.user.id).then((n) => { if (n) toast.success(tr('Exchange rates updated ({n} currencies)', { n })) }).catch(() => { /* silent: rates can still be fetched by hand */ })
+    check()
+    const timer = window.setInterval(check, 60 * 60 * 1000) // every hour while the app is open
+    return () => window.clearInterval(timer)
   }, [fxEditor, session])
   const { t, lang, setLang, rtl } = useT()
   const { pathname } = useLocation()
@@ -104,10 +106,6 @@ export function AppShell() {
       </MenuScroll>
       <div className="mt-2 shrink-0 space-y-0.5 border-t border-border pt-2">
         {canAccess(roles, HELP.module) && <NavItemLink item={HELP} collapsed={collapsed} onPick={() => setMobileOpen(false)} />}
-        <a href={LEGACY_CRM_URL} title={t('The current CRM stays available until it is switched off')}
-           className={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground', collapsed && 'justify-center px-0')}>
-          <ExternalLink className="size-4 shrink-0" />{!collapsed && t('Open current CRM')}
-        </a>
       </div>
     </nav>
   )

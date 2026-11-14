@@ -102,7 +102,7 @@ export function ExchangeRates({ onChanged }: { onChanged?: () => void }) {
       <div className="space-y-4 lg:col-span-2">
         {canEdit && (
           <Card>
-            <CardHeader><CardTitle>Live rates</CardTitle><CardDescription>Free daily rates against USD. They are saved automatically once a day when Finance, the Sales Manager or the Admin opens the app. A manual rate (e.g. your bank’s) always wins if it is newer.</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Live rates</CardTitle><CardDescription>Free daily rates against USD. The app checks for new rates every hour while Finance, the Sales Manager or the Admin has it open, and saves them when the service publishes new ones (it publishes about once a day). A manual rate (e.g. your bank’s) always wins if it is newer.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {!live ? (
                 <Button variant="outline" onClick={fetchLive} disabled={busy === 'fetch'}>{busy === 'fetch' ? <Loader2 className="animate-spin" /> : <Download />}Fetch live rates</Button>

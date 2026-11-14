@@ -24,15 +24,7 @@ Deploy: Supabase → Edge Functions → Deploy a new function → Via Editor →
 - `supabase/tests/` — database tests for every migration (RLS, numbering, guards). Local Postgres only.
 - In the app: **Company Settings → System check → Run security check** (Super Admin).
 
-## Switching off the old CRM
+## The old CRM
 
-Do these in order. Nothing is deleted at any step, and every step can be undone.
-
-1. Make sure every migration up to `0011_production` is installed (the Dashboard shows a red list to the Super Admin if not).
-2. Tell the team the date. From that day new work happens only in the new platform.
-3. On that day: **Company Settings → System check → Refresh old-CRM archive**. Check **Old CRM Archive** shows the old quotations and invoices.
-4. GitHub → repository **Settings → Secrets and variables → Actions → Variables → New repository variable**: name `LEGACY_MODE`, value `retired`. Then **Actions → Deploy site → Run workflow**.
-   - The main address now opens the new platform.
-   - The old CRM is still at `/legacy/` for emergencies.
-   - To undo: delete the variable and run the workflow again.
-5. After a few weeks with no problems, the old CRM file can be removed from the site. The data stays in Supabase (`crm_records`) and in `legacy_archive`.
+Retired on 12 Nov 2026. The main address now opens the platform (`index.html` only redirects to `/app/`).
+The old one-page CRM file is kept in the git history only. Its data stays in Supabase (`crm_records`) and is readable in **Old CRM Archive**.

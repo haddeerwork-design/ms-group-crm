@@ -13,7 +13,7 @@ import { fetchCompanies, type Company } from '@/lib/crm'
 import {
   addDays, fetchQuotation, fmtDateDMY, lineTotal, renderPolicy, STATUS_LABEL, STATUS_STYLE,
   type Quotation, type QuoteStatus, type QuoteVersion,
-  BRANDS, packLabel, PRODUCT_TYPE_LABEL_AR, unitToTon, unitsLabel, type Brand, type PriceBasis, type QuoteLang, type QuoteQtyUnit,
+  BRANDS, packLabel, PRODUCT_TYPE_LABEL_AR, unitToTon, unitsLabel, basisPerTon, convertBasis, type Brand, type PriceBasis, type QuoteLang, type QuoteQtyUnit,
   kgFromPacking,
 } from '@/lib/quotations'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -87,11 +87,11 @@ function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Li
           key: ++seq, product_id: i.product_id ?? '', packaging_id: i.packaging_id ?? '', description: i.description, packing: i.packing ?? '',
           product_type_label: i.product_type_label ?? '', quantity: s(i.quantity), quantity_unit: i.quantity_unit ?? 'tons',
           net: s(i.net_weight_kg), cpp: s(i.cartons_per_pallet), price: s(i.price_per_ton), price_id: i.price_id, priceNote: '',
-          basis: i.price_basis ?? 'ton', unit_label: i.unit_label ?? '',
+          basis: i.price_basis ?? 'ton', unit_label: i.price_basis === 'kg' || i.price_basis === 'pallet' ? '' : i.unit_label ?? '',
           // show the price as it was typed, in its own currency, with the rate that was saved
           ...((x) => x.input_price && x.input_currency && x.input_currency !== q.currency
             ? { in_ccy: x.input_currency, fx: s(x.fx_rate), fxNote: x.fx_source ? `saved rate · ${x.fx_source}` : 'saved rate',
-                price: i.price_basis === 'unit' ? s(i.price_per_ton) : s(x.input_price), unit_price: i.price_basis === 'unit' ? s(x.input_price) : s(i.unit_price) }
+                price: i.price_basis && i.price_basis !== 'ton' ? s(i.price_per_ton) : s(x.input_price), unit_price: i.price_basis && i.price_basis !== 'ton' ? s(x.input_price) : s(i.unit_price) }
             : { in_ccy: q.currency, fx: '', fxNote: '', unit_price: s(i.unit_price) })(i as typeof i & { input_price?: number | null; input_currency?: string | null; fx_rate?: number | null; fx_source?: string | null }),
         })).map((l, idx) => {
           // jam lines: back to "price per jar" (+ jars per shrink)
@@ -245,8 +245,8 @@ export function QuotationEditor() {
     // prefer prices already in the quotation currency; otherwise use another currency and convert
     const c = [...all.filter((p) => p.sell_currency === currency), ...all.filter((p) => p.sell_currency !== currency)]
     const hit = c.find((p) => p.incoterm === incoterm && (p.packaging_id ?? '') === packagingId) ?? c.find((p) => p.incoterm === incoterm)
-    const fromRow = (r: PriceListRow) => r.price_basis === 'unit' && r.unit_price
-      ? { price: s(r.price_per_ton), basis: 'unit' as PriceBasis, unit_price: s(r.unit_price), unit_label: r.unit_label ?? 'unit', in_ccy: r.sell_currency, fx: '', fxNote: '' }
+    const fromRow = (r: PriceListRow) => r.price_basis && r.price_basis !== 'ton' && r.unit_price
+      ? { price: s(r.price_per_ton), basis: r.price_basis as PriceBasis, unit_price: s(r.unit_price), ...(r.price_basis === 'unit' ? { unit_label: r.unit_label ?? 'unit' } : {}), in_ccy: r.sell_currency, fx: '', fxNote: '' }
       : { price: s(r.price_per_ton), basis: 'ton' as PriceBasis, unit_price: '', in_ccy: r.sell_currency, fx: '', fxNote: '' }
     if (!incoterm) {
       // jams are priced without an Incoterm: take the price for this packing
@@ -339,6 +339,7 @@ export function QuotationEditor() {
     return resolveRate(l.in_ccy, to, base?.rates ?? [])
   }
   const r2 = (x: number) => Math.round(x * 100) / 100
+  const r4 = (x: number) => Math.round(x * 1e4) / 1e4
   const isJam = (l: Line) => prod[l.product_id]?.product_type === 'jam' && l.basis === 'unit'
   /** Weight of one carton/jar: the saved or typed one, else read from the Packing text ("3 kg"). */
   const netOf = (l: Line) => n(l.net) ?? kgFromPacking(l.packing)
@@ -358,9 +359,11 @@ export function QuotationEditor() {
           price_per_ton: tonFinal, price_basis: 'unit', unit_price: unitFinal }),
       }
     }
-    const unitFinal = l.basis === 'unit' && n(l.unit_price) && fx ? r2(n(l.unit_price)! * fx.rate) : null
     const net = netOf(l)
-    const tonFinal = !fx ? null : l.basis === 'unit' ? (unitFinal && net ? unitToTon(unitFinal, net) : null) : n(l.price) ? r2(n(l.price)! * fx.rate) : null
+    // the typed price (per ton / kg / carton / pallet) in the quotation currency, and its per-ton equivalent
+    const perTonFactor = basisPerTon(l.basis, net, n(l.cpp))
+    const unitFinal = l.basis !== 'ton' && n(l.unit_price) && fx ? (l.basis === 'kg' ? r4 : r2)(n(l.unit_price)! * fx.rate) : null
+    const tonFinal = !fx ? null : l.basis !== 'ton' ? (unitFinal && perTonFactor ? r2(unitFinal * perTonFactor) : null) : n(l.price) ? r2(n(l.price)! * fx.rate) : null
     return {
       ...l, fxr: fx, unitFinal, tonFinal, jarFinal: null, effNet: net, effLabel: l.unit_label, k: 1,
       total: lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: net, cartons_per_pallet: n(l.cpp),
@@ -375,6 +378,8 @@ export function QuotationEditor() {
     for (const l of lines) {
       if (!l.description.trim()) { toast.error('Every line needs a product description.'); return null }
       if (isJam(l) && l.sell === 'shrink' && !(Number.isInteger(n(l.per_shrink ?? '')) && n(l.per_shrink ?? '')! > 0)) { toast.error(`“${l.description}”: enter how many jars are in one shrink.`); return null }
+      if (l.basis === 'pallet' && !(netOf(l)! > 0 && n(l.cpp)! > 0)) { toast.error(tl('“{d}”: a price per pallet needs the kg per carton and the cartons per pallet.', { d: l.description })); return null }
+      if (l.basis === 'kg' && !(n(l.unit_price)! > 0)) { toast.error(tl('Enter the price per kg for “{d}”.', { d: l.description })); return null }
       if (l.basis === 'unit') {
         if (!(n(l.unit_price)! > 0)) { toast.error(`Enter the price per ${l.unit_label || 'unit'} for “${l.description}”.`); return null }
         if (!(netOf(l)! > 0)) { toast.error(tl('“{d}”: write the weight of one {u} — e.g. “3 kg” in Packing, or fill “Net kg per {u}”.', { d: l.description, u: tl(l.unit_label || 'carton') })); setFocusKey(l.key); document.getElementById(`line-${l.key}-net`)?.focus(); return null }
@@ -413,10 +418,13 @@ export function QuotationEditor() {
       price_per_ton: l.tonFinal, line_total: l.total,
       price_id: l.price_id, sort_order: i,
       // unit-price fields exist from migration 0013; only sent when used
-      ...(l.basis === 'unit' || quote?.brand || base?.v14 ? { price_basis: l.basis, unit_price: l.basis === 'unit' ? l.unitFinal : null, unit_label: l.basis === 'unit' ? t(l.effLabel ?? '') ?? 'unit' : null } : {}),
+      ...(l.basis !== 'ton' || quote?.brand || base?.v14 ? {
+        price_basis: l.basis, unit_price: l.basis !== 'ton' ? l.unitFinal : null,
+        unit_label: l.basis === 'kg' ? 'kg' : l.basis === 'pallet' ? 'pallet' : l.basis === 'unit' ? t(l.effLabel ?? '') ?? 'unit' : null,
+      } : {}),
       // price as typed + rate (migration 0014)
       ...(base?.v14 ? {
-        input_currency: l.in_ccy, input_price: l.basis === 'unit' ? n(l.unit_price) : n(l.price),
+        input_currency: l.in_ccy, input_price: l.basis !== 'ton' ? n(l.unit_price) : n(l.price),
         fx_rate: l.in_ccy === form.currency ? null : l.fxr?.rate ?? null, fx_source: l.in_ccy === form.currency ? null : l.fxr?.source || l.fxr?.path || null,
         fx_rate_at: l.in_ccy === form.currency ? null : l.fxr?.rate_at || null,
       } : {}),
@@ -672,7 +680,7 @@ export function QuotationEditor() {
                           <Input inputMode="decimal" value={l.quantity} onChange={(e) => updLine(l.key, { quantity: e.target.value })} />
                           <Select value={l.quantity_unit} onChange={(e) => updLine(l.key, { quantity_unit: e.target.value as QuoteQtyUnit })} className="w-[100px]" aria-label="Unit">
                             <option value="tons">tons</option><option value="cartons">cartons</option><option value="pallets">pallets</option>
-                            <option value="units">{unitsLabel(l.unit_label)}</option>
+                            {(l.basis === 'ton' || l.basis === 'unit') && <option value="units">{unitsLabel(l.unit_label)}</option>}
                           </Select>
                         </div>
                       </Field>
@@ -706,22 +714,58 @@ export function QuotationEditor() {
                       )}
                       <Field label={isJam(l) ? 'Price per jar' : 'Price'} hint={l.priceNote} className="sm:col-span-12">
                         <div className="flex gap-1">
-                          {l.basis === 'unit'
+                          {l.basis !== 'ton'
                             ? <Input inputMode="decimal" aria-label="Price" value={l.unit_price} onChange={(e) => updLine(l.key, { unit_price: e.target.value, price_id: null, priceNote: 'Entered manually' })} />
                             : <Input inputMode="decimal" aria-label="Price" value={l.price} onChange={(e) => updLine(l.key, { price: e.target.value, price_id: null, priceNote: 'Entered manually' })} />}
                           <Select value={l.in_ccy} aria-label="Currency of this price" className="w-[84px] shrink-0"
                             onChange={(e) => updLine(l.key, { in_ccy: e.target.value, fx: '', fxNote: '' })}>
                             {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
                           </Select>
-                          {!isJam(l) && <Select value={l.basis} aria-label="Price per" className="w-[104px] shrink-0"
-                            onChange={(e) => updLine(l.key, { basis: e.target.value as PriceBasis, unit_label: l.unit_label || packLabel(p ? activePackaging(p).find((x) => x.id === l.packaging_id) : null), price_id: null, priceNote: '' })}>
-                            <option value="ton">per ton</option><option value="unit">per {l.unit_label || packLabel(p ? activePackaging(p).find((x) => x.id === l.packaging_id) : null)}</option>
-                          </Select>}
                         </div>
+                        {!isJam(l) && (() => {
+                          const packWord = l.unit_label || packLabel(p ? activePackaging(p).find((x) => x.id === l.packaging_id) : null)
+                          const opts: [PriceBasis, string][] = [['ton', 'ton'], ['kg', 'kg'], ['unit', packWord], ['pallet', 'pallet']]
+                          const net = netOf(l), cpp = n(l.cpp)
+                          /** Switch the unit and write the same price for it (1,250 / ton → 1.25 / kg). */
+                          const switchTo = (b: PriceBasis) => {
+                            if (b === l.basis) return
+                            const typed = l.basis === 'ton' ? n(l.price) : n(l.unit_price)
+                            const v = typed != null ? convertBasis(typed, l.basis, b, net, cpp) : null
+                            const val = v == null ? '' : String(Math.round(v * (b === 'kg' ? 1e4 : 100)) / (b === 'kg' ? 1e4 : 100))
+                            const qty = (b === 'kg' || b === 'pallet') && l.quantity_unit === 'units' ? { quantity_unit: (b === 'pallet' ? 'pallets' : 'tons') as QuoteQtyUnit } : {}
+                            updLine(l.key, { basis: b, ...(b === 'ton' ? { price: val } : { unit_price: val }), ...(b === 'unit' ? { unit_label: packWord } : {}), ...qty })
+                            if (typed != null && v == null) toast.message(tl('Fill the kg per carton (and cartons per pallet) to convert the price.'))
+                          }
+                          const conv = l.tonFinal ? opts.map(([b, w]) => ({ b, w, v: convertBasis(l.tonFinal!, 'ton', b, net, cpp) })) : []
+                          return (
+                            <div className="mt-1.5 space-y-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-xs text-muted-foreground">{tl('Price per')}</span>
+                                <div role="radiogroup" aria-label={tl('Price per')} className="inline-flex rounded-lg bg-muted p-0.5">
+                                  {opts.map(([b, w]) => {
+                                    const ok = basisPerTon(b, net, cpp) != null
+                                    return (
+                                      <button key={b} type="button" role="radio" aria-checked={l.basis === b} onClick={() => switchTo(b)}
+                                        data-tip={!ok ? tl(b === 'pallet' ? 'Needs kg per carton and cartons per pallet' : 'Needs the kg per carton') : undefined}
+                                        className={cn('rounded-md px-2.5 py-1 text-xs font-medium transition-colors', l.basis === b ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground', !ok && l.basis !== b && 'opacity-50')}>
+                                        {tl(w)}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                              {conv.length > 0 && (
+                                <p className="text-xs text-muted-foreground" dir="ltr">
+                                  = {conv.filter((c) => c.v != null).map((c, i) => <span key={c.b}>{i ? ' · ' : ''}<b className={cn('tabular-nums', c.b === l.basis ? 'text-foreground' : '')}>{money(c.v, undefined, c.b === 'kg' ? 3 : 2)}</b> / {tl(c.w)}</span>)} <span>{form.currency}</span>
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })()}
                         {l.in_ccy !== form.currency && (
                           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                             {l.fxr ? (
-                              <span>= <b className="text-foreground">{money(isJam(l) ? l.jarFinal : l.basis === 'unit' ? l.unitFinal : l.tonFinal, form.currency)}</b> {isJam(l) ? 'per jar' : l.basis === 'unit' ? `per ${l.unit_label}` : 'per ton'} · 1 {l.in_ccy} = {+l.fxr.rate.toPrecision(6)} {form.currency} <span className="opacity-80">({l.fx ? (l.fxNote || 'typed') : `${l.fxr.source}, ${new Date(l.fxr.rate_at).toLocaleDateString('en-GB')}`})</span></span>
+                              <span>= <b className="text-foreground">{money(isJam(l) ? l.jarFinal : l.basis !== 'ton' ? l.unitFinal : l.tonFinal, form.currency)}</b> {isJam(l) ? 'per jar' : l.basis === 'unit' ? `per ${l.unit_label}` : l.basis === 'kg' ? 'per kg' : l.basis === 'pallet' ? 'per pallet' : 'per ton'} · 1 {l.in_ccy} = {+l.fxr.rate.toPrecision(6)} {form.currency} <span className="opacity-80">({l.fx ? (l.fxNote || 'typed') : `${l.fxr.source}, ${new Date(l.fxr.rate_at).toLocaleDateString('en-GB')}`})</span></span>
                             ) : <span className="text-destructive">No saved rate {l.in_ccy}→{form.currency}.</span>}
                             <label className="flex items-center gap-1">rate
                               <Input inputMode="decimal" className="h-7 w-24 text-xs" placeholder={l.fxr ? String(+l.fxr.rate.toPrecision(6)) : `1 ${l.in_ccy} = ?`} value={l.fx}

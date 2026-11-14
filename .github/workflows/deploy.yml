@@ -1,7 +1,8 @@
-# Builds the new React app and publishes it to GitHub Pages TOGETHER with the
-# current CRM:
-#   https://haddeerwork-design.github.io/ms-group-crm/       -> current CRM (index.html, unchanged)
-#   https://haddeerwork-design.github.io/ms-group-crm/app/   -> new platform
+# Builds the platform and publishes it to GitHub Pages:
+#   https://haddeerwork-design.github.io/ms-group-crm/app/   -> the platform
+#   https://haddeerwork-design.github.io/ms-group-crm/       -> opens the platform (old bookmarks keep working)
+# The old one-page CRM was retired on 12 Nov 2026 (its data stays in Supabase,
+# readable in "Old CRM Archive"; the file is in the git history).
 # Pull requests only BUILD (to check nothing is broken). Publishing happens
 # only from main. If the build fails, nothing is published.
 name: Deploy site
@@ -55,9 +56,6 @@ jobs:
 
       - name: Build new platform
         working-directory: app
-        env:
-          # After the old CRM is switched off its link points to /legacy/ (see README-PLATFORM.md)
-          VITE_LEGACY_CRM_URL: ${{ vars.LEGACY_MODE == 'retired' && 'https://haddeerwork-design.github.io/ms-group-crm/legacy/' || '' }}
         run: npm run build
 
       - name: Smoke test every page and role (fake data, no network)
@@ -67,7 +65,7 @@ jobs:
           npx playwright install --with-deps chromium || npx playwright install chromium
           npm run e2e
 
-      - name: Assemble site (current CRM at root, new platform at /app)
+      - name: Assemble site (platform at /app, main address opens it)
         run: |
           mkdir _site
           shopt -s dotglob
@@ -76,24 +74,8 @@ jobs:
           done
           mkdir -p _site/app
           cp -r app/dist/. _site/app/
-          test -f _site/index.html || (echo "Current CRM index.html is missing!" && exit 1)
+          test -f _site/index.html || (echo "The main address page (index.html) is missing!" && exit 1)
           test -f _site/app/index.html
-
-      # Only when the repository variable LEGACY_MODE is set to "retired":
-      # the old CRM moves to /legacy/ (kept for emergencies) and the main
-      # address opens the new platform. Remove the variable to undo.
-      - name: Switch main address to the new platform
-        if: vars.LEGACY_MODE == 'retired'
-        run: |
-          mkdir -p _site/legacy
-          mv _site/index.html _site/legacy/index.html
-          cat > _site/index.html <<'HTML'
-          <!doctype html><html><head><meta charset="utf-8"><title>MS El-brancy Group</title>
-          <meta http-equiv="refresh" content="0; url=./app/"><script>location.replace('./app/' + location.hash)</script></head>
-          <body><a href="./app/">Open the MS El-brancy platform</a></body></html>
-          HTML
-          ls -la _site _site/legacy
-          ls -la _site _site/app
 
       - uses: actions/upload-pages-artifact@v4
         with:
