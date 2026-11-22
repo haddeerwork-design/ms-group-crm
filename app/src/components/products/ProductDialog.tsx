@@ -1,4 +1,5 @@
 import { T, tr } from '@/lib/i18n'
+import { arabicProductName } from '@/lib/productNamesAr'
 import { useEffect, useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -90,11 +91,24 @@ function duplicateForm(src: Product, categories: Category[]): Form {
   return { ...f, name: `${src.name} (copy)`.slice(0, 120), packaging: f.packaging.map((x) => ({ ...x, id: undefined })) }
 }
 
-export function ProductDialog({ open, onOpenChange, product, duplicateOf, categories, canEdit, onSaved }: {
+export function ProductDialog({ open, onOpenChange, product, duplicateOf, categories, canEdit, onSaved, initialName, initialType }: {
   open: boolean; onOpenChange: (o: boolean) => void; product: Product | null; duplicateOf?: Product | null
-  categories: Category[]; canEdit: boolean; onSaved: () => void
+  categories: Category[]; canEdit: boolean
+  /** Called after saving, with the product's id (new or edited). */
+  onSaved: (id?: string) => void
+  /** New product: a name typed elsewhere (e.g. in a quotation) and the kind of product, to start from. */
+  initialName?: string; initialType?: ProductType
 }) {
-  const initialForm = () => (!product && duplicateOf ? duplicateForm(duplicateOf, categories) : toForm(product, categories))
+  const initialForm = (): Form => {
+    if (!product && duplicateOf) return duplicateForm(duplicateOf, categories)
+    const f = toForm(product, categories)
+    if (!product && initialName?.trim()) { f.name = initialName.trim(); f.name_ar = arabicProductName(initialName) ?? '' }
+    if (!product && initialType) {
+      const c = categories.find((x) => !x.archived_at && x.product_type === initialType)
+      f.product_type = initialType; if (c) f.category_id = c.id
+    }
+    return f
+  }
   const form = useForm<Form>({ resolver: zodResolver(schema), defaultValues: initialForm() })
   const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = form
   const packs = useFieldArray({ control: form.control, name: 'packaging' })
@@ -163,8 +177,18 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
     const failed = results.find((r) => r.error)
     if (failed?.error) toast.error('Product saved, but packaging failed: ' + friendly(failed.error.message))
     else toast.success(product ? 'Product updated' : 'Product added')
-    onSaved()
+    onSaved(id)
     onOpenChange(false)
+  }
+
+  // The Arabic name follows the English one (from the app's dictionary) until someone types their own.
+  const nameAr = watch('name_ar')
+  const [autoAr, setAutoAr] = useState('')
+  useEffect(() => { if (open) setAutoAr(initialName && !product ? arabicProductName(initialName) ?? '' : '') }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  const onEnglishName = (en: string) => {
+    if (nameAr.trim() && nameAr !== autoAr) return // typed by hand: leave it
+    const ar = arabicProductName(en) ?? ''
+    setValue('name_ar', ar); setAutoAr(ar)
   }
 
   return (
@@ -179,8 +203,11 @@ export function ProductDialog({ open, onOpenChange, product, duplicateOf, catego
             <fieldset disabled={!canEdit} className="space-y-6">
               <ProductPhotoPicker path={product?.image_path} change={photo} onChange={setPhoto} disabled={!canEdit} />
               <section className="grid gap-4 sm:grid-cols-2">
-                <Field label="Product name" htmlFor="name" error={errors.name?.message}><Input id="name" {...register('name')} /></Field>
-                <Field label="Arabic name (for Arabic quotations)" htmlFor="name_ar"><Input id="name_ar" dir="rtl" lang="ar" {...register('name_ar')} /></Field>
+                <Field label="Product name" htmlFor="name" error={errors.name?.message}><Input id="name" autoFocus={!product} {...register('name', { onChange: (e) => onEnglishName(e.target.value) })} /></Field>
+                <Field label="Arabic name (for Arabic quotations)" htmlFor="name_ar"
+                  hint={nameAr && nameAr === autoAr ? 'Written by the app from the English name — check it' : undefined}>
+                  <Input id="name_ar" dir="rtl" lang="ar" {...register('name_ar')} />
+                </Field>
                 <Field label="Category" htmlFor="category_id" error={errors.category_id?.message}>
                   <Select id="category_id" {...register('category_id', {
                     onChange: (e) => { const c = categories.find((x) => x.id === e.target.value); if (c) setValue('product_type', c.product_type) },

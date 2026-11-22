@@ -4,7 +4,7 @@ import { ArrowLeft, Check, ChevronDown, Copy, FileText, History, Loader2, Pencil
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
+import { CATALOG_MANAGERS, QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
 import { activePackaging, packOptionLabel, packsFor, fetchCatalog, PRODUCT_TYPE_LABEL, type Category, type Product } from '@/lib/catalog'
 import { CURRENCIES, INCOTERMS, resolveRate, type Incoterm, type Rate } from '@/lib/pricing'
 import { fetchLatestRates, fetchPriceList, isExpired, money, type PriceListRow } from '@/lib/prices'
@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { StickyActions } from '@/components/ui/sticky-actions'
 import { SendDialog } from '@/components/sales/SendDialog'
+import { ProductDialog } from '@/components/products/ProductDialog'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
 import { T, tr, useT } from '@/lib/i18n'
 import { AWAIT_DAYS } from '@/lib/analytics'
@@ -141,6 +142,16 @@ export function QuotationEditor() {
   const [error, setError] = useState<string | null>(null)
 
   const prod = useMemo(() => Object.fromEntries((base?.products ?? []).map((p) => [p.id, p])), [base])
+  // add / edit a product without leaving the quotation
+  const canManageCatalog = hasRole(...CATALOG_MANAGERS)
+  const [prodDlg, setProdDlg] = useState<{ key: number; product: Product | null; name?: string } | null>(null)
+  const [pendingPick, setPendingPick] = useState<{ key: number; id: string; keepPrice: boolean } | null>(null)
+  async function productSaved(id?: string) {
+    const dlg = prodDlg
+    try { const cat = await fetchCatalog(); setBase((b) => (b ? { ...b, ...cat } : b)) } catch { /* the list refreshes next time */ }
+    // a new product goes straight into the line; an edited one refreshes its packing and name there
+    if (id && dlg) setPendingPick({ key: dlg.key, id, keepPrice: !!dlg.product })
+  }
   const status: QuoteStatus = quote?.status ?? 'draft'
   const editableStatus = status === 'draft' || status === 'revised'
   const mine = !quote || quote.created_by === session?.user.id
@@ -259,6 +270,21 @@ export function QuotationEditor() {
     if (other) return { ...fromRow(other), price_id: other.id, priceNote: other.incoterm ? `⚠ Price list has ${other.incoterm}, not ${incoterm}` : 'Price list (no Incoterm set)' }
     return { price: '', price_id: null, priceNote: `No ${incoterm} price — enter it`, in_ccy: currency, fx: '', fxNote: '' }
   }
+  useEffect(() => {
+    if (!pendingPick || !prod[pendingPick.id]) return
+    const l = lines.find((x) => x.key === pendingPick.key)
+    if (pendingPick.keepPrice && l?.product_id === pendingPick.id) {
+      // edited product: keep the line's price, refresh only what comes from the product
+      const p = prod[pendingPick.id]
+      const packs = packsFor(p, l.variety ?? '')
+      const pk = packs.find((x) => x.id === l.packaging_id) ?? packs[0]
+      const name = form?.language === 'ar' && p.name_ar ? p.name_ar : p.name
+      updLine(l.key, { packaging_id: pk?.id ?? '', packing: pk?.label ?? l.packing, net: s(pk?.net_weight_kg) || l.net, cpp: s(pk?.cartons_per_pallet) || l.cpp,
+        description: l.variety ? `${name} — ${l.variety}` : name })
+    } else pickProduct(pendingPick.key, pendingPick.id)
+    setPendingPick(null)
+  }, [pendingPick, prod]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function pickProduct(key: number, productId: string, packagingId?: string, variety?: string) {
     const p = prod[productId]
     if (!p || !form) return updLine(key, { product_id: '', variety: '' })
@@ -626,11 +652,23 @@ export function QuotationEditor() {
                   <div key={l.key} className="rounded-md border border-border p-3">
                     <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-12">
                       <Field label="Product" className="sm:col-span-4">
-                        <Select id={`line-${l.key}-product`} value={l.product_id} onChange={(e) => pickProduct(l.key, e.target.value)}>
-                          <option value="">Choose… (or type below)</option>
-                          {p && !forBrand(p) && <option value={p.id}>{p.name} (other letterhead)</option>}
-                          {grouped.map(({ c, items }) => <optgroup key={c.id} label={c.name}>{items.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</optgroup>)}
-                        </Select>
+                        <div className="flex gap-1.5">
+                          <div className="min-w-0 flex-1">
+                            <Select id={`line-${l.key}-product`} value={l.product_id} onChange={(e) => {
+                              if (e.target.value === '__new__') return setProdDlg({ key: l.key, product: null, name: l.product_id ? '' : l.description })
+                              pickProduct(l.key, e.target.value)
+                            }}>
+                              <option value="">Choose… (or type below)</option>
+                              {canManageCatalog && <option value="__new__">{tl('+ Add a new product…')}</option>}
+                              {p && !forBrand(p) && <option value={p.id}>{p.name} (other letterhead)</option>}
+                              {grouped.map(({ c, items }) => <optgroup key={c.id} label={c.name}>{items.map((x) => <option key={x.id} value={x.id}>{x.name_ar ? `${x.name} · ${x.name_ar}` : x.name}</option>)}</optgroup>)}
+                            </Select>
+                          </div>
+                          {canManageCatalog && p && (
+                            <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={tl('Edit this product')} data-tip={tl('Edit this product')}
+                              onClick={() => setProdDlg({ key: l.key, product: p })}><Pencil /></Button>
+                          )}
+                        </div>
                       </Field>
                       {p && p.varieties.length > 0 && (
                         <Field label="Variety" className="sm:col-span-3">
@@ -823,6 +861,10 @@ export function QuotationEditor() {
           )}
         </div>
       </div>
+      {base && prodDlg && (
+        <ProductDialog open={!!prodDlg} onOpenChange={(o) => { if (!o) setProdDlg(null) }} product={prodDlg.product} categories={base.categories}
+          canEdit={canManageCatalog} onSaved={productSaved} initialName={prodDlg.name} initialType={form?.brand === 'prime_roots' ? 'jam' : undefined} />
+      )}
       {quote && form && <SendDialog open={sendOpen} onOpenChange={setSendOpen} email={form.customer_email} phone={form.customer_phone}
         doc={{ kind: 'quotation', number: quote.number, version: quote.version, lang: form.language, contactName: form.customer_name || null, company: form.customer_company,
           validUntil: quote.valid_until, sender: profile?.full_name, brandName: form.brand === 'prime_roots' ? 'Prime Roots' : 'MS El-brancy Group' }}
