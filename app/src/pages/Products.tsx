@@ -1,4 +1,4 @@
-import { BookOpen, AlertTriangle, Leaf, Package } from 'lucide-react'
+import { BookOpen, AlertTriangle, Languages, Leaf, Package } from 'lucide-react'
 import { StatCard } from '@/components/analytics/dash'
 import { useT } from '@/lib/i18n'
 import { T, TV } from '@/lib/i18n'
@@ -22,6 +22,7 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
 import { ProductDialog } from '@/components/products/ProductDialog'
+import { ArabicNamesDialog } from '@/components/products/ArabicNamesDialog'
 import { CategoriesDialog } from '@/components/products/CategoriesDialog'
 import { cn } from '@/lib/utils'
 import { usePersistentState } from '@/lib/usePersistentState'
@@ -53,6 +54,7 @@ export function Products() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dupOpen, setDupOpen] = useState(false)
   const [catsOpen, setCatsOpen] = useState(false)
+  const [arOpen, setArOpen] = useState(false)
 
   const load = () => fetchCatalog().then(setData).catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
@@ -79,6 +81,7 @@ export function Products() {
   const activeCount = data?.products.filter((p) => !p.archived_at).length ?? 0
   const dupGroups = useMemo(() => duplicateGroups(data?.products ?? []), [data])
   const anyPhoto = useMemo(() => (data?.products ?? []).some((p) => p.image_path), [data])
+  const noArabic = useMemo(() => (data?.products ?? []).filter((p) => !p.archived_at && !p.name_ar?.trim()).length, [data])
   const canMerge = hasRole('super_admin', 'sales_manager')
 
   async function toggleArchive(p: Product) {
@@ -100,6 +103,7 @@ export function Products() {
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => window.open(`${location.pathname}#/catalog/print`, '_blank')} data-tip={tl('Product catalog with photos, ready to print or save as PDF')}><BookOpen />Catalog PDF</Button>
             {canEdit && canMerge && dupGroups.length > 0 && <Button variant="outline" onClick={() => setDupOpen(true)}><Merge /><TV k="Duplicates ({n})" v={{ n: dupGroups.length }} /></Button>}
+            {canEdit && noArabic > 0 && <Button variant="outline" onClick={() => setArOpen(true)} data-tip={tl('Write the missing Arabic product names')}><Languages /><TV k="Arabic names ({n})" v={{ n: noArabic }} /></Button>}
             {canEdit && <Button variant="outline" onClick={() => setCatsOpen(true)}><FolderCog />Categories</Button>}
             {canEdit && <Button onClick={() => open(null)}><Plus />Add product</Button>}
           </div>
@@ -171,7 +175,7 @@ export function Products() {
                       {anyPhoto && <Thumb path={p.image_path} />}
                       <button type="button" className="min-w-0 flex-1 text-start" onClick={() => open(p)}>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{p.name}</span>
+                          <span className="font-medium">{p.name}</span>{p.name_ar && <span className="text-sm text-muted-foreground" dir="rtl" lang="ar">{p.name_ar}</span>}
                           <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}><T>{PRODUCT_TYPE_LABEL[p.product_type]}</T></span>
                         </div>
                         <div className="mt-0.5 text-xs text-muted-foreground">{catById[p.category_id]?.name}{pk ? ` · ${pk.label}` : ''}{seasonLabel(p) ? ` · ${seasonLabel(p)}` : ''}</div>
@@ -203,7 +207,7 @@ export function Products() {
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
                             {anyPhoto && <Thumb path={p.image_path} />}
-                            <span className="font-medium">{p.name}</span>
+                            <span className="font-medium">{p.name}</span>{p.name_ar && <span className="text-sm text-muted-foreground" dir="rtl" lang="ar">{p.name_ar}</span>}
                             <span className={cn('rounded-full border px-1.5 py-px text-[10px] font-medium', TYPE_STYLE[p.product_type])}><T>{PRODUCT_TYPE_LABEL[p.product_type]}</T></span>
                           </div>
                           {p.varieties.length > 0 && <div className="text-xs text-muted-foreground">{p.varieties.join(' · ')}</div>}
@@ -253,6 +257,7 @@ export function Products() {
 
       {data && (
         <>
+          <ArabicNamesDialog open={arOpen} onOpenChange={setArOpen} products={data.products} onSaved={load} />
           <ProductDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setDupOf(null) }} product={editing} duplicateOf={dupOf} categories={data.categories} canEdit={canEdit} onSaved={load} />
           {data && <DuplicatesDialog open={dupOpen} onOpenChange={setDupOpen} groups={dupGroups} categories={data.categories} onMerged={() => { load() }} />}
       <CategoriesDialog open={catsOpen} onOpenChange={setCatsOpen} categories={data.categories} counts={counts} onSaved={load} />
