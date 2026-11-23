@@ -36,6 +36,7 @@ export type QuoteShipping = {
   shipping_mode?: ShipMode | null; freight_basis?: FreightBasis | null; freight_rate?: number | null; freight_currency?: string | null
   freight_fx?: number | null; freight_containers?: number | null; freight_display?: FreightDisplay | null; freight_total?: number | null
   shipping_rate_id?: string | null
+  destination_country?: string | null // ISO code (0023)
 }
 
 /** Letterheads a quotation can be printed on. */
@@ -237,6 +238,7 @@ export type QuoteDestination = {
   shipping_mode: ShipMode | null; freight_basis: FreightBasis | null; freight_rate: number | null; freight_currency: string | null
   freight_fx: number | null; freight_containers: number | null; freight_total: number | null; freight_per_ton: number | null
   shipping_rate_id: string | null
+  country?: string | null // ISO code
 }
 export type DestLayout = 'columns' | 'tables'
 

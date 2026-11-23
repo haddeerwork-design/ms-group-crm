@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
 import { CURRENCIES, INCOTERMS } from '@/lib/pricing'
 import { BRANDS, fetchQuotation, fmtDateDMY, lineTons, withFreight, type Brand } from '@/lib/quotations'
-import { freightLineLabel } from '@/lib/shipping'
+import { freightLineLabel, placeLabel, type ShipMode } from '@/lib/shipping'
 import { fetchCompanies, type Company } from '@/lib/crm'
 import { fetchProforma, lineAmount, PI_STATUS, PI_STYLE, type PIStatus, type PriceUnit, type Proforma, type QtyUnitPI } from '@/lib/proformas'
 import { money } from '@/lib/prices'
@@ -40,6 +40,9 @@ const fromCompany = (co: Company): Partial<Head> => Object.fromEntries(Object.en
 }).filter(([, v]) => v)) as Partial<Head>
 /** The port we usually load from is remembered on this device. */
 const PI_DEFAULTS = 'ms_pi_defaults'
+/** Remembered per mode: the sea port and the airport we usually ship from are different. */
+const remembered = (): Record<string, string> => { try { const r = JSON.parse(localStorage.getItem(PI_DEFAULTS) || '{}'); return { ...(r.port_of_loading ? { sea: r.port_of_loading } : {}), ...r } } catch { return {} } }
+const loadingFor = (mode: string) => remembered()[mode || 'sea'] ?? ''
 
 export function ProformaEditor() {
   const { id } = useParams()
@@ -74,7 +77,7 @@ export function ProformaEditor() {
         const base = Object.fromEntries(HEAD.map((k) => [k, ''])) as Head
         base.currency = 'USD'; base.incoterm = 'CIF'; base.issue_date = new Date().toISOString().slice(0, 10); base.shipment_mode = 'sea'
         base.bank_details = bank.data?.bank_details ?? ''
-        try { base.port_of_loading = (JSON.parse(localStorage.getItem(PI_DEFAULTS) || '{}') as { port_of_loading?: string }).port_of_loading ?? '' } catch { /* ignore */ }
+        base.port_of_loading = loadingFor(base.shipment_mode)
         const coParam = params.get('company') ? cos.find((c) => c.id === params.get('company')) : undefined
         if (coParam) { Object.assign(base, fromCompany(coParam)); setMeta({ quotation_id: null, company_id: coParam.id }) }
         let ls: Line[] = []
@@ -92,7 +95,7 @@ export function ProformaEditor() {
             customer_email: q.customer_email ?? '', customer_phone: q.customer_phone ?? '', incoterm: q.incoterm ?? 'CIF', currency: q.currency,
             destination: q.destination ?? '', port_of_discharge: q.destination ?? '', payment_terms: q.payment_terms ?? '',
             // shipping from the quotation; a separate freight line becomes the proforma's other charges
-            ...(q.shipping_mode ? { shipment_mode: q.shipping_mode } : {}),
+            ...(q.shipping_mode ? { shipment_mode: q.shipping_mode, port_of_loading: loadingFor(q.shipping_mode) } : {}),
             ...(q.shipping_mode && q.freight_display !== 'in_prices' && q.freight_total ? {
               other_charges_label: freightLineLabel('en', q.shipping_mode, q.freight_basis ?? null, q.freight_containers ?? null, null), other_charges: String(q.freight_total),
             } : {}),
@@ -166,7 +169,7 @@ export function ProformaEditor() {
     setBusy(null)
     if (r.error) { toast.error('Saved, but lines failed: ' + r.error.message); return pid }
     setDirty(false); toast.success('Proforma saved')
-    try { if (h.port_of_loading.trim()) localStorage.setItem(PI_DEFAULTS, JSON.stringify({ port_of_loading: h.port_of_loading.trim() })) } catch { /* ignore */ }
+    try { if (h.port_of_loading.trim()) localStorage.setItem(PI_DEFAULTS, JSON.stringify({ ...remembered(), [h.shipment_mode || 'sea']: h.port_of_loading.trim() })) } catch { /* ignore */ }
     if (isNew) nav(`/proformas/${pid}`, { replace: true }); else load()
     return pid
   }
@@ -256,8 +259,13 @@ export function ProformaEditor() {
             <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-3">
               <Field label="Incoterm"><Select value={h.incoterm} onChange={upd('incoterm')}>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}</Select></Field>
               {inp('destination', 'Named place')}
-              <Field label="Mode"><Select value={h.shipment_mode} onChange={upd('shipment_mode')}><option value="">—</option><option value="sea">Sea</option><option value="air">Air</option><option value="land">Land</option></Select></Field>
-              {inp('port_of_loading', 'Port of loading')}{inp('port_of_discharge', 'Port of discharge')}{inp('estimated_shipment', 'Estimated shipment', { type: 'date' })}
+              <Field label="Mode"><Select value={h.shipment_mode} onChange={(e) => {
+                const m = e.target.value
+                // the place we load from follows the mode (port ↔ airport), unless it was typed for this proforma
+                const swap = !h.port_of_loading.trim() || h.port_of_loading === loadingFor(h.shipment_mode)
+                setH((x) => x && ({ ...x, shipment_mode: m, ...(swap ? { port_of_loading: loadingFor(m) } : {}) })); setDirty(true)
+              }}><option value="">—</option><option value="sea">Sea</option><option value="air">Air</option><option value="land">Land</option></Select></Field>
+              {inp('port_of_loading', placeLabel(h.shipment_mode as ShipMode, 'from'))}{inp('port_of_discharge', placeLabel(h.shipment_mode as ShipMode) === 'Destination' ? 'Port of discharge' : placeLabel(h.shipment_mode as ShipMode))}{inp('estimated_shipment', 'Estimated shipment', { type: 'date' })}
               {inp('container_details', 'Containers', { placeholder: "e.g. 2 × 40' Reefer" }, 'sm:col-span-3')}
             </fieldset>
           </CardContent></Card>

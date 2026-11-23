@@ -18,7 +18,7 @@ import {
   kgFromPacking,
 } from '@/lib/quotations'
 import {
-  basesFor, defaultBasis, freightFromRate, modeOfRate, needsShipping, quoteFreight, ratesFor, sellerPaysFreight, seaOnlyTerm, SHIP_MODE_LABEL, SHIP_MODES,
+  basesFor, defaultBasis, placeLabel, placePlaceholder, placeSuggestions, freightFromRate, modeOfRate, needsShipping, quoteFreight, ratesFor, sellerPaysFreight, seaOnlyTerm, SHIP_MODE_LABEL, SHIP_MODES,
   type FreightBasis, type FreightDisplay, type SavedRate, type ShipMode,
 } from '@/lib/shipping'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,6 +32,7 @@ import { StickyActions } from '@/components/ui/sticky-actions'
 import { SendDialog } from '@/components/sales/SendDialog'
 import { ProductDialog } from '@/components/products/ProductDialog'
 import { useLeaveGuard } from '@/lib/useLeaveGuard'
+import { countryFromText, countryName, countryOptions, usePlaces } from '@/lib/places'
 import { T, tr, useT } from '@/lib/i18n'
 import { AWAIT_DAYS } from '@/lib/analytics'
 import { Empty, ErrorState, Loading } from '@/components/ui/states'
@@ -41,9 +42,9 @@ const s = (v: unknown) => (v == null ? '' : String(v))
 const n = (v: string) => (v.trim() === '' || !isFinite(Number(v)) ? null : Number(v))
 const t = (v: string) => (v.trim() === '' ? null : v.trim())
 const today = () => new Date().toISOString().slice(0, 10)
-const companyFields = (co: Company, destination = '') => ({
-  // the destination starts as the buyer's country; it can be changed to a port
-  ...(!destination.trim() && co.country ? { destination: co.country } : {}),
+const companyFields = (co: Company, destCountry = '') => ({
+  // the destination country starts as the buyer's country, so its ports / airports are listed
+  ...(!destCountry && countryFromText(co.country) ? { destination_country: countryFromText(co.country)! } : {}),
   customer_company: co.name, customer_country: co.country ?? '', customer_email: co.email ?? '', customer_phone: co.phone ?? co.whatsapp ?? '',
   ...(co.preferred_incoterm ? { incoterm: co.preferred_incoterm } : {}), ...(co.preferred_payment_terms ? { payment_terms: co.preferred_payment_terms } : {}),
 })
@@ -70,11 +71,12 @@ type Form = {
   shipping_mode: ShipMode | ''; freight_basis: FreightBasis; freight_rate: string; freight_currency: string; freight_fx: string
   freight_containers: string; freight_display: FreightDisplay; shipping_rate_id: string
   destinations_layout: DestLayout // several destinations: price columns or a table each (migration 0023)
+  destination_country: string // ISO code: lists that country's ports / airports
 }
 /** Another destination of the quotation (the first one is the quotation's own Destination). */
-type Dest = Pick<Form, 'destination' | 'incoterm' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'shipping_rate_id'> & { key: number }
+type Dest = Pick<Form, 'destination' | 'destination_country' | 'incoterm' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'shipping_rate_id'> & { key: number }
 const destFromRow = (d: QuoteDestination, currency: string): Dest => ({
-  key: ++seq, destination: d.destination, incoterm: d.incoterm ?? 'CIF', shipping_mode: d.shipping_mode ?? '', freight_basis: d.freight_basis ?? defaultBasis(d.shipping_mode ?? 'sea'),
+  key: ++seq, destination: d.destination, destination_country: d.country ?? '', incoterm: d.incoterm ?? 'CIF', shipping_mode: d.shipping_mode ?? '', freight_basis: d.freight_basis ?? defaultBasis(d.shipping_mode ?? 'sea'),
   freight_rate: s(d.freight_rate), freight_currency: d.freight_currency ?? currency, freight_fx: s(d.freight_fx), freight_containers: s(d.freight_containers), shipping_rate_id: d.shipping_rate_id ?? '',
 })
 type Settings = { quotation_policy: string[] | null; quotation_validity_days: number | null; quotation_production_time: string | null
@@ -97,10 +99,11 @@ type Remembered = Partial<Pick<Form, 'currency' | 'incoterm' | 'language' | 'shi
 function remembered(): Remembered { try { return JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '{}') as Remembered } catch { return {} } }
 const MODE_ICON = { sea: Ship, air: Plane, land: Truck } as const
 const BASIS_LABEL: Record<FreightBasis, string> = { per_kg: 'per kg', per_container: 'per container', total: 'total' }
-const shippingFromQuote = (q: Quotation, currency: string): Pick<Form, 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'freight_display' | 'shipping_rate_id'> => ({
+const shippingFromQuote = (q: Quotation, currency: string): Pick<Form, 'destination_country' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'freight_display' | 'shipping_rate_id'> => ({
   shipping_mode: q.shipping_mode ?? '', freight_basis: q.freight_basis ?? defaultBasis(q.shipping_mode ?? 'sea'), freight_rate: s(q.freight_rate),
   freight_currency: q.freight_currency ?? currency, freight_fx: s(q.freight_fx), freight_containers: s(q.freight_containers),
   freight_display: q.freight_display ?? 'line', shipping_rate_id: q.shipping_rate_id ?? '',
+  destination_country: q.destination_country ?? countryFromText(q.customer_country) ?? '',
 })
 
 const Step = ({ n }: { n: number }) => <span className="me-2 inline-grid size-6 place-items-center rounded-full bg-primary/10 align-[2px] text-xs font-semibold text-primary">{n}</span>
@@ -220,7 +223,7 @@ export function QuotationEditor() {
           production_time: settings.quotation_production_time ?? '', policy: '', show_quantities: false, notes: '', plan_id: null, company_id: '',
           brand: params.get('brand') === 'prime_roots' ? 'prime_roots' : 'ms_elbrancy', language: 'en',
           shipping_mode: '', freight_basis: 'per_container', freight_rate: '', freight_currency: 'USD', freight_fx: '', freight_containers: '', freight_display: 'line', shipping_rate_id: '',
-          destinations_layout: 'columns',
+          destinations_layout: 'columns', destination_country: '',
         }
         // start from the choices used last time on this device
         const mem = remembered()
@@ -300,15 +303,22 @@ export function QuotationEditor() {
   }
 
   const upd = (patch: Partial<Form>) => { setForm((f) => f && ({ ...f, ...patch })); setDirty(true) }
+  function changeIncoterm(inc: Incoterm) {
+    if (!form || !base) return
+    const policyWasDefault = form.policy === policyFrom(base.settings, form)
+    // FOB / CFR / CIF are sea terms: pick sea for them when no shipping was chosen yet
+    const ship = !form.shipping_mode && seaOnlyTerm(inc) ? { shipping_mode: 'sea' as ShipMode, freight_basis: defaultBasis('sea') } : {}
+    upd({ incoterm: inc, ...ship, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, incoterm: inc }) } : {}) })
+  }
   const updDest = (key: number, patch: Partial<Dest>) => { setDests((ds) => ds.map((d) => (d.key === key ? { ...d, ...patch } : d))); setDirty(true) }
   const addDest = () => {
     if (!form) return
     const key = ++seq
     // start like the first destination: same Incoterm, shipping and freight currency
-    setDests((ds) => [...ds, { key, destination: '', incoterm: form.incoterm === 'EXW' ? 'CIF' : form.incoterm, shipping_mode: form.shipping_mode, freight_basis: form.freight_basis,
+    setDests((ds) => [...ds, { key, destination: '', destination_country: form.destination_country, incoterm: form.incoterm === 'EXW' ? 'CIF' : form.incoterm, shipping_mode: form.shipping_mode, freight_basis: form.freight_basis,
       freight_rate: '', freight_currency: form.freight_currency, freight_fx: '', freight_containers: form.freight_containers, shipping_rate_id: '' }])
     setDirty(true)
-    setTimeout(() => document.getElementById(`d${key}-name`)?.focus(), 50)
+    setTimeout(() => document.getElementById(`d${key}-place`)?.focus(), 50)
   }
   const updLine = (key: number, patch: Partial<Line>) => { setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l))); setDirty(true) }
 
@@ -524,7 +534,7 @@ export function QuotationEditor() {
       if (freightOn && n(form.freight_rate) && freight.perTon == null) { toast.error(tl('With several destinations the freight goes inside the prices: enter the quantity of every product.')); return null }
       for (const [i, c] of destCalc.entries()) {
         const name = c.d.destination.trim() || tl('Destination {n}', { n: i + 2 })
-        if (!c.d.destination.trim()) { toast.error(tl('Write the name of destination {n} (port or airport), or remove it.', { n: i + 2 })); document.getElementById(`d${c.d.key}-name`)?.focus(); return null }
+        if (!c.d.destination.trim()) { toast.error(tl('Write the name of destination {n} (port or airport), or remove it.', { n: i + 2 })); document.getElementById(`d${c.d.key}-place`)?.focus(); return null }
         if (!c.on || !n(c.d.freight_rate)) continue
         if (c.d.freight_basis === 'per_container' && !(n(c.d.freight_containers)! > 0)) { toast.error(`${name}: ${tl('Enter how many containers.')}`); document.getElementById(`d${c.d.key}-freight-containers`)?.focus(); return null }
         if (!c.fx) { toast.error(`${name}: ${tl('Enter the rate 1 {a} = ? {b} for the freight (or add it in Pricing → Exchange rates).', { a: c.d.freight_currency, b: form.currency })}`); return null }
@@ -540,7 +550,7 @@ export function QuotationEditor() {
       freight_containers: hasFreight && form.freight_basis === 'per_container' ? n(form.freight_containers) : null,
       freight_display: multi && freightOn ? 'in_prices' : form.freight_display, freight_total: hasFreight ? freight.total : null,
       shipping_rate_id: hasFreight && form.shipping_rate_id ? form.shipping_rate_id : null,
-      ...(base?.v23 ? { destinations_layout: form.destinations_layout } : {}),
+      ...(base?.v23 ? { destinations_layout: form.destinations_layout, destination_country: form.destination_country || null } : {}),
     } : {}
     const vd = n(form.validity_days)
     const row = {
@@ -594,7 +604,7 @@ export function QuotationEditor() {
       const rows = destCalc.map((c, i) => {
         const has = c.on && !!n(c.d.freight_rate)
         return {
-          quotation_id: qid, sort_order: i + 1, destination: c.d.destination.trim(), incoterm: c.d.incoterm,
+          quotation_id: qid, sort_order: i + 1, destination: c.d.destination.trim(), country: c.d.destination_country || null, incoterm: c.d.incoterm,
           shipping_mode: c.d.shipping_mode || null, freight_basis: has ? c.d.freight_basis : null, freight_rate: has ? n(c.d.freight_rate) : null,
           freight_currency: has ? c.d.freight_currency : null, freight_fx: has && c.d.freight_currency !== form.currency ? c.fx?.rate ?? null : null,
           freight_containers: has && c.d.freight_basis === 'per_container' ? n(c.d.freight_containers) : null,
@@ -730,7 +740,7 @@ export function QuotationEditor() {
                 <Field label="Company (from CRM)" className="sm:col-span-2 lg:col-span-3" hint="Choosing a company fills the buyer fields and adds this quotation to its timeline.">
                   <Select value={form.company_id} onChange={(e) => {
                     const co = base.companies.find((x) => x.id === e.target.value)
-                    upd(co ? { company_id: co.id, ...companyFields(co, form.destination) } : { company_id: '' })
+                    upd(co ? { company_id: co.id, ...companyFields(co, form.destination_country) } : { company_id: '' })
                   }}>
                     <option value="">— Not linked —</option>
                     {base.companies.filter((x) => !x.archived_at || x.id === form.company_id).map((x) => <option key={x.id} value={x.id}>{x.name}{x.country ? ` — ${x.country}` : ''}</option>)}
@@ -738,16 +748,16 @@ export function QuotationEditor() {
                 </Field>
                 <Field label="Contact name"><Input value={form.customer_name} onChange={(e) => upd({ customer_name: e.target.value })} /></Field>
                 <Field label="Company"><Input value={form.customer_company} onChange={(e) => upd({ customer_company: e.target.value })} /></Field>
-                <Field label="Country"><Input value={form.customer_country} onChange={(e) => upd({ customer_country: e.target.value })} /></Field>
-                <Field label="Destination"><Input value={form.destination} onChange={(e) => upd({ destination: e.target.value })} /></Field>
+                <Field label="Country"><Input value={form.customer_country} onChange={(e) => {
+                  const v = e.target.value
+                  // the destination country follows the buyer's country until it is chosen on its own
+                  const follow = !form.destination_country || form.destination_country === countryFromText(form.customer_country)
+                  upd({ customer_country: v, ...(follow ? { destination_country: countryFromText(v) ?? '' } : {}) })
+                }} /></Field>
+                {/* with shipping, the destination (country + port / airport) is chosen in the Shipping box */}
+                {!shipOn && <Field label="Destination"><Input value={form.destination} onChange={(e) => upd({ destination: e.target.value })} /></Field>}
                 {form.brand !== 'prime_roots' && <Field label="Incoterm">
-                  <Select value={form.incoterm} onChange={(e) => {
-                    const inc = e.target.value as Incoterm
-                    const policyWasDefault = form.policy === policyFrom(base.settings, form)
-                    // FOB / CFR / CIF are sea terms: pick sea for them when no shipping was chosen yet
-                    const ship = !form.shipping_mode && seaOnlyTerm(inc) ? { shipping_mode: 'sea' as ShipMode, freight_basis: defaultBasis('sea') } : {}
-                    upd({ incoterm: inc, ...ship, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, incoterm: inc }) } : {}) })
-                  }}>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}</Select>
+                  <Select value={form.incoterm} onChange={(e) => changeIncoterm(e.target.value as Incoterm)}>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}</Select>
                 </Field>}
                 <Field label="Quotation currency" hint="Prices typed in another currency are converted to this one.">
                   <Select value={form.currency} onChange={(e) => {
@@ -758,17 +768,17 @@ export function QuotationEditor() {
                   }}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>
                 </Field>
                 {shipOn && <ShippingBox form={form} upd={upd} freight={freight} freightFx={freightFx} freightOn={freightOn} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg}
+                  onIncoterm={changeIncoterm}
                   title={multi ? `${tl('Destination {n}', { n: 1 })}: ${form.destination.trim() || '…'}` : undefined} showDisplay={!multi}
                   note={multi && freightOn ? <p className="text-xs text-muted-foreground">{tl('With several destinations, each destination’s freight goes inside its own prices.')}</p> : undefined} />}
                 {base.v23 && form.brand !== 'prime_roots' && <>
                   {destCalc.map((c, i) => (
                     <ShippingBox key={c.d.key} idp={`d${c.d.key}-`} form={{ ...c.d, currency: form.currency, freight_display: 'in_prices' }} upd={(p) => updDest(c.d.key, p)}
                       freight={c.fr} freightFx={c.fx} freightOn={c.on} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg} showDisplay={false}
+                      onIncoterm={(i) => updDest(c.d.key, { incoterm: i })}
                       header={
                         <div className="flex flex-wrap items-end gap-2">
-                          <Field label={tl('Destination {n}', { n: i + 2 })} className="min-w-[180px] flex-1">
-                            <Input id={`d${c.d.key}-name`} value={c.d.destination} placeholder={tl('Port or airport, e.g. Dubai (Jebel Ali)')} onChange={(e) => updDest(c.d.key, { destination: e.target.value })} />
-                          </Field>
+                          <div className="flex-1 pb-2 text-sm font-semibold">{tl('Destination {n}', { n: i + 2 })}{c.d.destination.trim() ? `: ${c.d.destination.trim()}` : ''}</div>
                           <Field label="Incoterm" className="w-[110px]">
                             <Select value={c.d.incoterm} onChange={(e) => updDest(c.d.key, { incoterm: e.target.value as Incoterm })}>{INCOTERMS.filter((x) => x !== 'EXW').map((x) => <option key={x}>{x}</option>)}</Select>
                           </Field>
@@ -1104,16 +1114,30 @@ export function QuotationEditor() {
 
 type FreightCalc = ReturnType<typeof quoteFreight>
 /** Shipping method and freight cost of the quotation. */
-type ShipFields = Pick<Form, 'destination' | 'incoterm' | 'currency' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'shipping_rate_id' | 'freight_display'>
-function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRates, totalNetKg, idp = '', showDisplay = true, title, header, note }: {
+type ShipFields = Pick<Form, 'destination' | 'destination_country' | 'incoterm' | 'currency' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'shipping_rate_id' | 'freight_display'>
+/** The same deal for any mode: FOB → FCA, CFR → CPT, CIF → CIP. */
+const SEA_TO_ANY = { FOB: 'FCA', CFR: 'CPT', CIF: 'CIP' } as const
+function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRates, totalNetKg, idp = '', showDisplay = true, title, header, note, onIncoterm }: {
   form: ShipFields; upd: (p: Partial<ShipFields>) => void; freight: FreightCalc; freightFx: { rate: number; source: string; rate_at: string } | null
   freightOn: boolean; rates: SavedRate[]; canAddRates: boolean; totalNetKg: number | null
   /** for several boxes on one page: unique element ids */ idp?: string
   showDisplay?: boolean; title?: string; header?: React.ReactNode; note?: React.ReactNode
+  /** switch to the any-mode twin of a sea term (CIF → CIP) */ onIncoterm?: (i: Incoterm) => void
 }) {
-  const { t } = useT()
+  const { t, lang } = useT()
   const mode = form.shipping_mode || null
   const saved = mode ? ratesFor(rates, mode, form.destination) : []
+  const countries = useMemo(() => countryOptions(lang), [lang])
+  const places = usePlaces(form.destination_country || null)
+  // your saved rates' places first (for this country, if one is chosen), then the country's ports / airports
+  const cName = form.destination_country ? countryName(form.destination_country).toLowerCase() : ''
+  const fromRates = placeSuggestions(rates, mode).filter((x) => !cName || x.toLowerCase().endsWith(cName) || countryFromText(x.split(', ').pop()) === form.destination_country)
+  const fromList = places && (mode === 'sea' || mode === 'air') ? places[mode] : []
+  const suggestions = [...new Set([...fromRates, ...fromList])]
+  const placeHint = fromList.length
+    ? t(mode === 'air' ? '{n} airports in {c} — type to search or pick from the list' : '{n} ports in {c} — type to search or pick from the list', { n: fromList.length, c: countryName(form.destination_country, lang) })
+    : form.destination_country && places && (mode === 'sea' || mode === 'air') ? t('None in the list — type the name.')
+    : !form.destination_country && mode !== 'land' ? t('Choose the country to see its ports and airports.') : undefined
   const bases = mode ? basesFor(mode) : []
   const setMode = (m: ShipMode) => upd({ shipping_mode: m, shipping_rate_id: '', ...(bases.length && basesFor(m).includes(form.freight_basis) ? {} : { freight_basis: defaultBasis(m) }) })
   const pickRate = (id: string) => {
@@ -1145,11 +1169,28 @@ function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRa
         {!mode && <span className="text-xs text-muted-foreground"><T>Choose how it ships.</T></span>}
       </div>
       {mode && mode !== 'sea' && seaOnlyTerm(form.incoterm) && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">{t('{i} is a sea term. For air or land, CPT or CIP is the usual choice.', { i: form.incoterm })}</p>
+        <p className="flex flex-wrap items-center gap-x-2 text-xs text-amber-700 dark:text-amber-300">{t('{i} is a sea term. For air or land, CPT or CIP is the usual choice.', { i: form.incoterm })}
+          {onIncoterm && <button type="button" className="font-medium underline underline-offset-2" onClick={() => onIncoterm(SEA_TO_ANY[form.incoterm as 'FOB' | 'CFR' | 'CIF'])}>{t('Use {i}', { i: SEA_TO_ANY[form.incoterm as 'FOB' | 'CFR' | 'CIF'] })}</button>}
+        </p>
       )}
       {mode && !freightOn && (
         <p className="text-xs text-muted-foreground">{t('Under {i} the buyer pays the freight, so only the shipping method is printed.', { i: form.incoterm })}</p>
       )}
+      {/* where to: the country, then its port / airport (listed from public data + your saved rates) */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label="Destination country">
+          <Select value={form.destination_country} onChange={(e) => upd({ destination_country: e.target.value })}>
+            <option value="">{t('Choose…')}</option>
+            {form.destination_country && !countries.some((c) => c.code === form.destination_country) && <option value={form.destination_country}>{form.destination_country}</option>}
+            {countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+          </Select>
+        </Field>
+        <Field label={placeLabel(mode)} hint={placeHint}>
+          <Input id={`${idp}place`} value={form.destination} list={suggestions.length ? `${idp}places` : undefined} autoComplete="off"
+            placeholder={t(mode ? placePlaceholder(mode) : 'Port or airport, e.g. Dubai (Jebel Ali)')} onChange={(e) => upd({ destination: e.target.value })} />
+          <datalist id={`${idp}places`}>{suggestions.map((x) => <option key={x} value={x} />)}</datalist>
+        </Field>
+      </div>
       {freightOn && mode && (
         <>
           {saved.length > 0 ? (
