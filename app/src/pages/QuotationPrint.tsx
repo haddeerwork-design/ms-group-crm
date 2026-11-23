@@ -25,7 +25,7 @@ export function QuotationPrint() {
         const src = v ? versions.find((x) => String(x.version) === v)?.snapshot : null
         if (v && !src) throw new Error(`Version ${v} not found`)
         const q = src ?? quote
-        setDoc({ ...q, items: (src ? src.items : quote.quotation_items) ?? [] })
+        setDoc({ ...q, items: (src ? src.items : quote.quotation_items) ?? [], destinations: (src ? src.destinations : quote.quotation_destinations) ?? [] })
         document.title = `${q.number}${q.version > 1 ? ' rev ' + q.version : ''}`
       }).catch((e) => setError(e.message))
   }, [id, v])

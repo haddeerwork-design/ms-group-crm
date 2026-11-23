@@ -64,3 +64,19 @@ it('per-ton from kg / ton / carton', async () => {
   expect(perTon(148, 'pack', 2.1)).toBe(70476.19)
   expect(perTon(148, 'pack', null)).toBeNull()
 })
+
+describe('several destinations', () => {
+  it('swaps the line freight for the destination freight', async () => {
+    const { withFreight, destinationTotal } = await import('./quotations')
+    // 1,125 / ton of which 125 is freight to Jeddah; Dubai freight is 100 / ton
+    const ton = { price_per_ton: 1125, freight_per_ton: 125, quantity: 48, quantity_unit: 'tons' as const, net_weight_kg: 4, cartons_per_pallet: 100 }
+    expect(withFreight(ton, 100)).toEqual({ price_per_ton: 1100, unit_price: null })
+    // per carton of 4 kg: 4.5 includes 0.5 freight (125/ton); Dubai 100/ton → 0.4
+    const carton = { ...ton, price_basis: 'unit' as const, unit_price: 4.5 }
+    expect(withFreight(carton, 100).unit_price).toBe(4.4)
+    // per kg: 1.125 → 1.1
+    expect(withFreight({ ...ton, price_basis: 'kg' as const, unit_price: 1.125 }, 100).unit_price).toBe(1.1)
+    expect(destinationTotal([ton], 100)).toBe(52800)
+    expect(destinationTotal([{ ...ton, quantity: null }], 100)).toBeNull()
+  })
+})

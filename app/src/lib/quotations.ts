@@ -54,8 +54,11 @@ export type Quotation = {
   sent_at: string | null; created_at: string; created_by: string; updated_at: string
   brand?: Brand | null
   quotation_items?: QuoteItem[]
+  // 0023: the other destinations and how the PDF shows them
+  destinations_layout?: DestLayout | null
+  quotation_destinations?: QuoteDestination[]
 } & QuoteShipping
-export type QuoteVersion = { id: number; quotation_id: string; version: number; status: QuoteStatus; snapshot: Quotation & { items: QuoteItem[] }; created_at: string }
+export type QuoteVersion = { id: number; quotation_id: string; version: number; status: QuoteStatus; snapshot: Quotation & { items: QuoteItem[]; destinations?: QuoteDestination[] }; created_at: string }
 
 export async function fetchQuotations() {
   const { data, error } = await supabase.from('quotations').select('*, quotation_items(line_total)').order('created_at', { ascending: false })
@@ -63,14 +66,17 @@ export async function fetchQuotations() {
   return (data ?? []) as (Quotation & { quotation_items: { line_total: number | null }[] })[]
 }
 export async function fetchQuotation(id: string) {
-  const [q, v] = await Promise.all([
+  const [q, v, d] = await Promise.all([
     supabase.from('quotations').select('*, quotation_items(*)').eq('id', id).single(),
     supabase.from('quotation_versions').select('*').eq('quotation_id', id).order('version', { ascending: false }),
+    // the table exists from migration 0023; before that there are simply no other destinations
+    supabase.from('quotation_destinations').select('*').eq('quotation_id', id).order('sort_order'),
   ])
   if (q.error) throw q.error
   if (v.error) throw v.error
   const quote = q.data as Quotation
   quote.quotation_items = (quote.quotation_items ?? []).sort((a, b) => a.sort_order - b.sort_order)
+  quote.quotation_destinations = d.error ? [] : (d.data ?? []) as QuoteDestination[]
   return { quote, versions: (v.data ?? []) as QuoteVersion[] }
 }
 
@@ -220,4 +226,40 @@ export function basisPerTon(basis: PriceBasis, netKg: number | null, cartonsPerP
 export function convertBasis(value: number, from: PriceBasis, to: PriceBasis, netKg: number | null, cpp: number | null): number | null {
   const a = basisPerTon(from, netKg, cpp), b = basisPerTon(to, netKg, cpp)
   return a == null || b == null ? null : (value * a) / b
+}
+
+// ---------------------------------------------------------------------
+// Several destinations (migration 0023)
+// ---------------------------------------------------------------------
+/** Another destination of the quotation (the first one is on the quotation itself). */
+export type QuoteDestination = {
+  id?: string; quotation_id?: string; sort_order: number; destination: string; incoterm: Incoterm | null
+  shipping_mode: ShipMode | null; freight_basis: FreightBasis | null; freight_rate: number | null; freight_currency: string | null
+  freight_fx: number | null; freight_containers: number | null; freight_total: number | null; freight_per_ton: number | null
+  shipping_rate_id: string | null
+}
+export type DestLayout = 'columns' | 'tables'
+
+type Priced = Parameters<typeof lineTons>[0] & { price_per_ton: number; price_basis?: PriceBasis | null; unit_price?: number | null; freight_per_ton?: number | null }
+/** A line's prices for another destination: the product price (without this line's own freight) + that destination's freight per ton. */
+export function withFreight(i: Priced, freightPerTon: number | null | undefined) {
+  const own = i.freight_per_ton ?? 0, add = freightPerTon ?? 0
+  const price_per_ton = Math.round((i.price_per_ton - own + add) * 100) / 100
+  let unit_price = i.unit_price ?? null
+  if (unit_price != null && i.price_basis && i.price_basis !== 'ton') {
+    const f = basisPerTon(i.price_basis, i.net_weight_kg, i.cartons_per_pallet)
+    if (f) { const d = i.price_basis === 'kg' ? 1e4 : 100; unit_price = Math.round((unit_price + (add - own) / f) * d) / d }
+  }
+  return { price_per_ton, unit_price }
+}
+/** Total of all lines for a destination (null while a quantity is missing). */
+export function destinationTotal(items: Priced[], freightPerTon: number | null | undefined): number | null {
+  if (!items.length) return null
+  let sum = 0
+  for (const i of items) {
+    const t = lineTotal({ ...i, ...withFreight(i, freightPerTon) })
+    if (t == null) return null
+    sum += t
+  }
+  return Math.round(sum * 100) / 100
 }

@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
 import { CURRENCIES, INCOTERMS } from '@/lib/pricing'
-import { BRANDS, fetchQuotation, fmtDateDMY, lineTons, type Brand } from '@/lib/quotations'
+import { BRANDS, fetchQuotation, fmtDateDMY, lineTons, withFreight, type Brand } from '@/lib/quotations'
 import { freightLineLabel } from '@/lib/shipping'
 import { fetchCompanies, type Company } from '@/lib/crm'
 import { fetchProforma, lineAmount, PI_STATUS, PI_STYLE, type PIStatus, type PriceUnit, type Proforma, type QtyUnitPI } from '@/lib/proformas'
@@ -80,7 +80,13 @@ export function ProformaEditor() {
         let ls: Line[] = []
         const qid = params.get('quotation')
         if (qid) {
-          const { quote: q } = await fetchQuotation(qid)
+          const { quote: q0 } = await fetchQuotation(qid)
+          // several destinations: the one the buyer chose replaces the first (its own Incoterm, shipping and freight in the prices)
+          const d = params.get('dest') ? (q0.quotation_destinations ?? []).find((x) => x.id === params.get('dest')) : undefined
+          const q = d ? {
+            ...q0, incoterm: d.incoterm, destination: d.destination, shipping_mode: d.shipping_mode, freight_display: 'in_prices' as const, freight_total: d.freight_total,
+            quotation_items: (q0.quotation_items ?? []).map((i) => ({ ...i, ...withFreight(i, d.freight_per_ton), freight_per_ton: d.freight_per_ton })),
+          } : q0
           Object.assign(base, {
             customer_company: q.customer_company ?? '', customer_name: q.customer_name ?? '', customer_country: q.customer_country ?? '',
             customer_email: q.customer_email ?? '', customer_phone: q.customer_phone ?? '', incoterm: q.incoterm ?? 'CIF', currency: q.currency,
