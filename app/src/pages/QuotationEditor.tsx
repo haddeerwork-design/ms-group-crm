@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, Copy, FileText, History, Loader2, Pencil, Plus, Printer, RotateCcw, Save, Send, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Copy, FileText, History, Loader2, Pencil, Plane, Plus, Printer, RotateCcw, Save, Send, Ship, Trash2, Truck, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { CATALOG_MANAGERS, QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
+import { CATALOG_MANAGERS, CONTAINER_MANAGERS, QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
 import { activePackaging, packOptionLabel, packsFor, fetchCatalog, PRODUCT_TYPE_LABEL, type Category, type Product } from '@/lib/catalog'
 import { CURRENCIES, INCOTERMS, resolveRate, type Incoterm, type Rate } from '@/lib/pricing'
 import { fetchLatestRates, fetchPriceList, isExpired, money, type PriceListRow } from '@/lib/prices'
 import { fetchPlan } from '@/lib/containers'
 import { fetchCompanies, type Company } from '@/lib/crm'
 import {
-  addDays, fetchQuotation, fmtDateDMY, lineTotal, renderPolicy, STATUS_LABEL, STATUS_STYLE,
+  addDays, fetchQuotation, fmtDateDMY, lineTons, lineTotal, renderPolicy, STATUS_LABEL, STATUS_STYLE,
   type Quotation, type QuoteStatus, type QuoteVersion,
   BRANDS, packLabel, PRODUCT_TYPE_LABEL_AR, unitToTon, unitsLabel, basisPerTon, convertBasis, type Brand, type PriceBasis, type QuoteLang, type QuoteQtyUnit,
   kgFromPacking,
 } from '@/lib/quotations'
+import {
+  basesFor, defaultBasis, freightFromRate, modeOfRate, needsShipping, quoteFreight, ratesFor, sellerPaysFreight, seaOnlyTerm, SHIP_MODE_LABEL, SHIP_MODES,
+  type FreightBasis, type FreightDisplay, type SavedRate, type ShipMode,
+} from '@/lib/shipping'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,7 +39,9 @@ const s = (v: unknown) => (v == null ? '' : String(v))
 const n = (v: string) => (v.trim() === '' || !isFinite(Number(v)) ? null : Number(v))
 const t = (v: string) => (v.trim() === '' ? null : v.trim())
 const today = () => new Date().toISOString().slice(0, 10)
-const companyFields = (co: Company) => ({
+const companyFields = (co: Company, destination = '') => ({
+  // the destination starts as the buyer's country; it can be changed to a port
+  ...(!destination.trim() && co.country ? { destination: co.country } : {}),
   customer_company: co.name, customer_country: co.country ?? '', customer_email: co.email ?? '', customer_phone: co.phone ?? co.whatsapp ?? '',
   ...(co.preferred_incoterm ? { incoterm: co.preferred_incoterm } : {}), ...(co.preferred_payment_terms ? { payment_terms: co.preferred_payment_terms } : {}),
 })
@@ -58,6 +64,9 @@ type Form = {
   destination: string; incoterm: Incoterm; currency: string; payment_terms: string; issue_date: string
   validity_days: string; production_time: string; policy: string; show_quantities: boolean; notes: string; plan_id: string | null; company_id: string
   brand: Brand; language: QuoteLang
+  // shipping (migration 0022)
+  shipping_mode: ShipMode | ''; freight_basis: FreightBasis; freight_rate: string; freight_currency: string; freight_fx: string
+  freight_containers: string; freight_display: FreightDisplay; shipping_rate_id: string
 }
 type Settings = { quotation_policy: string[] | null; quotation_validity_days: number | null; quotation_production_time: string | null
   quotation_policy_ar?: string[] | null; quotation_production_time_ar?: string | null
@@ -73,6 +82,18 @@ function parseShrink(packing: string): { k: number; jar: string } | null {
   return null
 }
 
+/** The choices a person repeats on every quotation are remembered on this device. */
+const DEFAULTS_KEY = 'ms_quote_defaults'
+type Remembered = Partial<Pick<Form, 'currency' | 'incoterm' | 'language' | 'shipping_mode' | 'freight_display'>>
+function remembered(): Remembered { try { return JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '{}') as Remembered } catch { return {} } }
+const MODE_ICON = { sea: Ship, air: Plane, land: Truck } as const
+const BASIS_LABEL: Record<FreightBasis, string> = { per_kg: 'per kg', per_container: 'per container', total: 'total' }
+const shippingFromQuote = (q: Quotation, currency: string): Pick<Form, 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'freight_display' | 'shipping_rate_id'> => ({
+  shipping_mode: q.shipping_mode ?? '', freight_basis: q.freight_basis ?? defaultBasis(q.shipping_mode ?? 'sea'), freight_rate: s(q.freight_rate),
+  freight_currency: q.freight_currency ?? currency, freight_fx: s(q.freight_fx), freight_containers: s(q.freight_containers),
+  freight_display: q.freight_display ?? 'line', shipping_rate_id: q.shipping_rate_id ?? '',
+})
+
 const Step = ({ n }: { n: number }) => <span className="me-2 inline-grid size-6 place-items-center rounded-full bg-primary/10 align-[2px] text-xs font-semibold text-primary">{n}</span>
 
 function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Line[] } {
@@ -83,6 +104,7 @@ function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Li
           validity_days: s(q.validity_days), production_time: q.production_time ?? '', policy: q.policy_lines.join('\n'),
           show_quantities: q.show_quantities, notes: q.notes ?? '', plan_id: q.plan_id, company_id: (q as Quotation & { company_id?: string | null }).company_id ?? '',
           brand: q.brand ?? 'ms_elbrancy', language: (q as Quotation & { language?: QuoteLang }).language ?? 'en',
+          ...shippingFromQuote(q, q.currency),
         }
         const lines: Line[] = (q.quotation_items ?? []).map((i) => ({
           key: ++seq, product_id: i.product_id ?? '', packaging_id: i.packaging_id ?? '', description: i.description, packing: i.packing ?? '',
@@ -93,7 +115,10 @@ function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Li
           ...((x) => x.input_price && x.input_currency && x.input_currency !== q.currency
             ? { in_ccy: x.input_currency, fx: s(x.fx_rate), fxNote: x.fx_source ? `saved rate · ${x.fx_source}` : 'saved rate',
                 price: i.price_basis && i.price_basis !== 'ton' ? s(i.price_per_ton) : s(x.input_price), unit_price: i.price_basis && i.price_basis !== 'ton' ? s(x.input_price) : s(i.unit_price) }
-            : { in_ccy: q.currency, fx: '', fxNote: '', unit_price: s(i.unit_price) })(i as typeof i & { input_price?: number | null; input_currency?: string | null; fx_rate?: number | null; fx_source?: string | null }),
+            // freight inside the price: show the product price as typed (without the freight)
+            : i.freight_per_ton && x.input_price
+              ? { in_ccy: q.currency, fx: '', fxNote: '', price: i.price_basis && i.price_basis !== 'ton' ? s(i.price_per_ton) : s(x.input_price), unit_price: i.price_basis && i.price_basis !== 'ton' ? s(x.input_price) : s(i.unit_price) }
+              : { in_ccy: q.currency, fx: '', fxNote: '', unit_price: s(i.unit_price) })(i as typeof i & { input_price?: number | null; input_currency?: string | null; fx_rate?: number | null; fx_source?: string | null }),
         })).map((l, idx) => {
           // jam lines: back to "price per jar" (+ jars per shrink)
           const pr = products.find((x) => x.id === l.product_id)
@@ -121,7 +146,7 @@ export function QuotationEditor() {
   const nav = useNavigate()
   const { hasRole, session, profile } = useAuth()
   const { t: tl } = useT()
-  const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings; companies: Company[]; rates: Rate[]; v14: boolean } | null>(null)
+  const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings; companies: Company[]; rates: Rate[]; v14: boolean; v22: boolean; shipRates: SavedRate[] } | null>(null)
   const [quote, setQuote] = useState<Quotation | null>(null)
   const [versions, setVersions] = useState<QuoteVersion[]>([])
   const [form, setForm] = useState<Form | null>(null)
@@ -165,20 +190,34 @@ export function QuotationEditor() {
 
   const load = useCallback(async () => {
     try {
-      const [cat, prices, companies, st, rates] = await Promise.all([fetchCatalog(), fetchPriceList(), fetchCompanies().catch(() => [] as Company[]),
-        supabase.from('company_settings').select('*').eq('id', 1).single(), fetchLatestRates().catch(() => [] as Rate[])])
+      const [cat, prices, companies, st, rates, v22q, sr] = await Promise.all([fetchCatalog(), fetchPriceList(), fetchCompanies().catch(() => [] as Company[]),
+        supabase.from('company_settings').select('*').eq('id', 1).single(), fetchLatestRates().catch(() => [] as Rate[]),
+        // shipping fields exist from migration 0022
+        supabase.from('quotations').select('freight_display').limit(1),
+        supabase.from('shipping_rates').select('id, mode, rate_per_container, rate_per_kg, additional_fees, currency, destination_country, destination_port, container_type, carrier, valid_until, archived_at')])
       if (st.error) throw st.error
       const settings = st.data as Settings
       // Language / currency fields exist from migration 0014.
       const v14 = 'quotation_policy_ar' in (st.data as object)
-      setBase({ ...cat, prices, settings, companies, rates: rates as Rate[], v14 })
+      const v22 = !v22q.error
+      setBase({ ...cat, prices, settings, companies, rates: rates as Rate[], v14, v22, shipRates: (sr.data ?? []) as SavedRate[] })
       if (isNew) {
         const f: Form = {
           customer_name: '', customer_company: '', customer_country: '', customer_email: '', customer_phone: '', destination: '',
           incoterm: 'CIF', currency: 'USD', payment_terms: '', issue_date: today(), validity_days: s(settings.quotation_validity_days),
           production_time: settings.quotation_production_time ?? '', policy: '', show_quantities: false, notes: '', plan_id: null, company_id: '',
           brand: params.get('brand') === 'prime_roots' ? 'prime_roots' : 'ms_elbrancy', language: 'en',
+          shipping_mode: '', freight_basis: 'per_container', freight_rate: '', freight_currency: 'USD', freight_fx: '', freight_containers: '', freight_display: 'line', shipping_rate_id: '',
         }
+        // start from the choices used last time on this device
+        const mem = remembered()
+        if (mem.currency) f.currency = f.freight_currency = mem.currency
+        if (mem.incoterm) f.incoterm = mem.incoterm
+        if (mem.language && v14) f.language = mem.language
+        if (mem.freight_display) f.freight_display = mem.freight_display
+        if (mem.shipping_mode) { f.shipping_mode = mem.shipping_mode; f.freight_basis = defaultBasis(mem.shipping_mode) }
+        if (f.language === 'ar') f.production_time = settings.quotation_production_time_ar ?? f.production_time
+        if (!f.shipping_mode && seaOnlyTerm(f.incoterm)) f.shipping_mode = 'sea'
         const companyId = params.get('company')
         const co = companyId ? companies.find((x) => x.id === companyId) : undefined
         if (co) Object.assign(f, companyFields(co))
@@ -380,9 +419,8 @@ export function QuotationEditor() {
       const effLabel = l.sell === 'shrink' ? 'shrink' : 'jar'
       const tonFinal = unitFinal && effNet ? unitToTon(unitFinal, effNet) : null
       return {
-        ...l, fxr: fx, unitFinal, tonFinal, jarFinal, effNet, effLabel, k,
-        total: lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? 'units' : null, net_weight_kg: effNet, cartons_per_pallet: null,
-          price_per_ton: tonFinal, price_basis: 'unit', unit_price: unitFinal }),
+        ...l, fxr: fx, unitFinal, tonFinal, jarFinal, effNet, effLabel, k, factor: effNet ? 1000 / effNet : null,
+        tons: lineTons({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? 'units' : null, net_weight_kg: effNet, cartons_per_pallet: null }),
       }
     }
     const net = netOf(l)
@@ -391,12 +429,36 @@ export function QuotationEditor() {
     const unitFinal = l.basis !== 'ton' && n(l.unit_price) && fx ? (l.basis === 'kg' ? r4 : r2)(n(l.unit_price)! * fx.rate) : null
     const tonFinal = !fx ? null : l.basis !== 'ton' ? (unitFinal && perTonFactor ? r2(unitFinal * perTonFactor) : null) : n(l.price) ? r2(n(l.price)! * fx.rate) : null
     return {
-      ...l, fxr: fx, unitFinal, tonFinal, jarFinal: null, effNet: net, effLabel: l.unit_label, k: 1,
-      total: lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: net, cartons_per_pallet: n(l.cpp),
-        price_per_ton: tonFinal, price_basis: l.basis, unit_price: unitFinal }),
+      ...l, fxr: fx, unitFinal, tonFinal, jarFinal: null, effNet: net, effLabel: l.unit_label, k: 1, factor: perTonFactor,
+      tons: lineTons({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: net, cartons_per_pallet: n(l.cpp) }),
     }
   })
-  const grand = computed.length && computed.every((l) => l.total != null) ? computed.reduce((a, l) => a + (l.total ?? 0), 0) : null
+
+  // Shipping: shown for every Incoterm but EXW; its cost only when we pay the freight (CFR, CIF, CPT, CIP, DAP, DDP).
+  const shipOn = !!form && !!base?.v22 && form.brand !== 'prime_roots' && needsShipping(form.incoterm)
+  const freightOn = shipOn && !!form!.shipping_mode && sellerPaysFreight(form!.incoterm)
+  const freightFx = !form || form.freight_currency === form.currency ? (form ? { rate: 1, source: '', rate_at: '', path: '' } : null)
+    : n(form.freight_fx)! > 0 ? { rate: n(form.freight_fx)!, source: 'typed by you', rate_at: new Date().toISOString(), path: '' }
+    : resolveRate(form.freight_currency, form.currency, base?.rates ?? [])
+  const totalNetKg = computed.length && computed.every((l) => l.tons != null) ? computed.reduce((a, l) => a + l.tons! * 1000, 0) : null
+  const freight = quoteFreight({
+    basis: freightOn ? form!.freight_basis : null, rate: n(form?.freight_rate ?? ''), fx: freightFx?.rate ?? null,
+    containers: n(form?.freight_containers ?? ''), netKg: totalNetKg,
+  })
+  const inPrices = freightOn && form!.freight_display === 'in_prices'
+  // the price that is saved and printed: the product price, plus its freight share when the freight goes inside the prices
+  const priced = computed.map((l) => {
+    const fpt = inPrices && freight.perTon ? freight.perTon : 0
+    const tonSave = l.tonFinal != null ? r2(l.tonFinal + fpt) : null
+    const unitSave = l.unitFinal != null && (isJam(l) || l.basis !== 'ton') ? (l.factor ? (l.basis === 'kg' ? r4 : r2)(l.unitFinal + fpt / l.factor) : null) : l.unitFinal
+    const total = isJam(l)
+      ? lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? 'units' : null, net_weight_kg: l.effNet, cartons_per_pallet: null, price_per_ton: tonSave, price_basis: 'unit', unit_price: unitSave })
+      : lineTotal({ quantity: n(l.quantity), quantity_unit: n(l.quantity) ? l.quantity_unit : null, net_weight_kg: l.effNet, cartons_per_pallet: n(l.cpp), price_per_ton: tonSave, price_basis: l.basis, unit_price: unitSave })
+    return { ...l, fpt, tonSave, unitSave, total }
+  })
+  const goods = priced.length && priced.every((l) => l.total != null) ? priced.reduce((a, l) => a + (l.total ?? 0), 0) : null
+  const freightLine = freightOn && !inPrices ? freight.total : null
+  const grand = goods != null ? r2(goods + (freightLine ?? 0)) : null
 
   async function save(): Promise<string | null> {
     if (!form) return null
@@ -413,6 +475,22 @@ export function QuotationEditor() {
       if (l.in_ccy !== form.currency && !rateFor(l)) { toast.error(`“${l.description}”: enter the rate 1 ${l.in_ccy} = ? ${form.currency} (or add it in Pricing → Exchange rates).`); return null }
       if ((l.quantity_unit === 'units' || l.quantity_unit === 'cartons') && n(l.quantity) && !(netOf(l)! > 0)) { toast.error(tl('“{d}”: write the weight of one {u} — e.g. “3 kg” in Packing, or fill “Net kg per {u}”.', { d: l.description, u: tl(l.unit_label || 'carton') })); document.getElementById(`line-${l.key}-net`)?.focus(); return null }
     }
+    if (freightOn) {
+      if (n(form.freight_rate) != null && !(n(form.freight_rate)! > 0)) { toast.error(tl('The freight amount must be more than 0.')); return null }
+      if (n(form.freight_rate) && form.freight_basis === 'per_container' && !(n(form.freight_containers)! > 0)) { toast.error(tl('Enter how many containers.')); document.getElementById('freight-containers')?.focus(); return null }
+      if (n(form.freight_rate) && !freightFx) { toast.error(tl('Enter the rate 1 {a} = ? {b} for the freight (or add it in Pricing → Exchange rates).', { a: form.freight_currency, b: form.currency })); return null }
+      if (inPrices && n(form.freight_rate) && freight.perTon == null) { toast.error(tl('To put the freight inside the prices, enter the quantity of every product — or show the freight as a separate line.')); return null }
+    }
+    const hasFreight = freightOn && !!n(form.freight_rate)
+    const shipping = base?.v22 ? {
+      shipping_mode: shipOn && form.shipping_mode ? form.shipping_mode : null,
+      freight_basis: hasFreight ? form.freight_basis : null, freight_rate: hasFreight ? n(form.freight_rate) : null,
+      freight_currency: hasFreight ? form.freight_currency : null,
+      freight_fx: hasFreight && form.freight_currency !== form.currency ? freightFx?.rate ?? null : null,
+      freight_containers: hasFreight && form.freight_basis === 'per_container' ? n(form.freight_containers) : null,
+      freight_display: form.freight_display, freight_total: hasFreight ? freight.total : null,
+      shipping_rate_id: hasFreight && form.shipping_rate_id ? form.shipping_rate_id : null,
+    } : {}
     const vd = n(form.validity_days)
     const row = {
       customer_name: t(form.customer_name), customer_company: t(form.customer_company), customer_country: t(form.customer_country),
@@ -423,6 +501,7 @@ export function QuotationEditor() {
       notes: t(form.notes), plan_id: form.plan_id, company_id: form.company_id || null,
       ...(form.brand !== 'ms_elbrancy' || quote?.brand || base?.v14 ? { brand: form.brand } : {}),
       ...(base?.v14 ? { language: form.language } : {}),
+      ...shipping,
     }
     setBusy('save')
     let qid = quote?.id ?? null
@@ -436,16 +515,17 @@ export function QuotationEditor() {
       if (r.error) { setBusy(null); toast.error(r.error.message); return null }
       qid = r.data.id
     }
-    const items = computed.map((l, i) => ({
+    const items = priced.map((l, i) => ({
       quotation_id: qid, product_id: l.product_id || null, packaging_id: l.packaging_id || null, description: l.description.trim(),
       packing: isJam(l) && l.sell === 'shrink' && l.k ? shrinkPacking(l.k, l.packing.trim(), form.language) : t(l.packing),
       product_type_label: t(l.product_type_label), quantity: n(l.quantity), quantity_unit: n(l.quantity) ? (isJam(l) ? 'units' : l.quantity_unit) : null,
       net_weight_kg: l.effNet, cartons_per_pallet: n(l.cpp) ? Math.round(n(l.cpp)!) : null,
-      price_per_ton: l.tonFinal, line_total: l.total,
+      price_per_ton: l.tonSave, line_total: l.total,
       price_id: l.price_id, sort_order: i,
+      ...(base?.v22 ? { freight_per_ton: l.fpt || null } : {}),
       // unit-price fields exist from migration 0013; only sent when used
       ...(l.basis !== 'ton' || quote?.brand || base?.v14 ? {
-        price_basis: l.basis, unit_price: l.basis !== 'ton' ? l.unitFinal : null,
+        price_basis: l.basis, unit_price: l.basis !== 'ton' ? l.unitSave : null,
         unit_label: l.basis === 'kg' ? 'kg' : l.basis === 'pallet' ? 'pallet' : l.basis === 'unit' ? t(l.effLabel ?? '') ?? 'unit' : null,
       } : {}),
       // price as typed + rate (migration 0014)
@@ -459,6 +539,7 @@ export function QuotationEditor() {
     setBusy(null)
     if (r.error) { toast.error('Saved, but the products failed: ' + r.error.message); return qid }
     setDirty(false); dropDraft()
+    try { localStorage.setItem(DEFAULTS_KEY, JSON.stringify({ currency: form.currency, incoterm: form.incoterm, language: form.language, freight_display: form.freight_display, ...(form.shipping_mode ? { shipping_mode: form.shipping_mode } : {}) } satisfies Remembered)) } catch { /* ignore */ }
     toast.success('Quotation saved')
     if (isNew) nav(`/quotations/${qid}`, { replace: true })
     else load()
@@ -480,6 +561,8 @@ export function QuotationEditor() {
     setBusy(null)
     if (error) return toast.error(error.message)
     toast.success(tr('Quotation: {status}', { status: tr(STATUS_LABEL[st]) }))
+    // accepted → the next step is the proforma: one tap
+    if (st === 'accepted') toast.message(tr('Next step: the proforma invoice.'), { duration: 10000, action: { label: tr('Create proforma'), onClick: () => nav(`/proformas/new?quotation=${qid}`) } })
     if (form?.company_id && (st === 'sent' || st === 'accepted' || st === 'rejected')) {
       await supabase.from('activities').insert({ company_id: form.company_id, kind: 'quotation', summary: `Quotation ${quote?.number ?? ''} ${STATUS_LABEL[st].toLowerCase()}`, created_by: session?.user.id })
       if (st === 'sent') await supabase.from('companies').update({ lead_status: 'quotation_sent', last_contact_date: today() }).eq('id', form.company_id).in('lead_status', ['new_lead', 'contacted', 'interested'])
@@ -570,20 +653,10 @@ export function QuotationEditor() {
             <CardHeader><CardTitle><Step n={1} />Buyer & terms</CardTitle><CardDescription>Buyer details print as “To:” only when filled (your PDF has none).</CardDescription></CardHeader>
             <CardContent>
               <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Language" hint="Language of the printed quotation.">
-                  <Select value={form.language} disabled={!base.v14} onChange={(e) => switchLanguage(e.target.value as QuoteLang)}>
-                    <option value="en">English</option><option value="ar">العربية (Arabic)</option>
-                  </Select>
-                </Field>
-                <Field label="Letterhead" className="sm:col-span-1 lg:col-span-2" hint="Which company the quotation is printed under.">
-                  <Select value={form.brand} onChange={(e) => switchBrand(e.target.value as Brand)}>
-                    {(Object.keys(BRANDS) as Brand[]).map((b) => <option key={b} value={b}>{BRANDS[b].label}</option>)}
-                  </Select>
-                </Field>
                 <Field label="Company (from CRM)" className="sm:col-span-2 lg:col-span-3" hint="Choosing a company fills the buyer fields and adds this quotation to its timeline.">
                   <Select value={form.company_id} onChange={(e) => {
                     const co = base.companies.find((x) => x.id === e.target.value)
-                    upd(co ? { company_id: co.id, ...companyFields(co) } : { company_id: '' })
+                    upd(co ? { company_id: co.id, ...companyFields(co, form.destination) } : { company_id: '' })
                   }}>
                     <option value="">— Not linked —</option>
                     {base.companies.filter((x) => !x.archived_at || x.id === form.company_id).map((x) => <option key={x.id} value={x.id}>{x.name}{x.country ? ` — ${x.country}` : ''}</option>)}
@@ -597,7 +670,9 @@ export function QuotationEditor() {
                   <Select value={form.incoterm} onChange={(e) => {
                     const inc = e.target.value as Incoterm
                     const policyWasDefault = form.policy === policyFrom(base.settings, form)
-                    upd({ incoterm: inc, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, incoterm: inc }) } : {}) })
+                    // FOB / CFR / CIF are sea terms: pick sea for them when no shipping was chosen yet
+                    const ship = !form.shipping_mode && seaOnlyTerm(inc) ? { shipping_mode: 'sea' as ShipMode, freight_basis: defaultBasis('sea') } : {}
+                    upd({ incoterm: inc, ...ship, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, incoterm: inc }) } : {}) })
                   }}>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}</Select>
                 </Field>}
                 <Field label="Quotation currency" hint="Prices typed in another currency are converted to this one.">
@@ -608,12 +683,23 @@ export function QuotationEditor() {
                     upd({ currency: e.target.value, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, currency: e.target.value }) } : {}) })
                   }}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>
                 </Field>
+                {shipOn && <ShippingBox form={form} upd={upd} freight={freight} freightFx={freightFx} freightOn={freightOn} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg} />}
                 <Field label="Date"><Input type="date" value={form.issue_date} onChange={(e) => upd({ issue_date: e.target.value })} /></Field>
                 <Field label="Valid for (days)" hint={n(form.validity_days) ? `until ${fmtDateDMY(addDays(form.issue_date, n(form.validity_days)!))}` : undefined}>
                   <Input inputMode="numeric" value={form.validity_days} onChange={(e) => {
                     const policyWasDefault = form.policy === policyFrom(base.settings, form)
                     upd({ validity_days: e.target.value, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, validity_days: e.target.value }) } : {}) })
                   }} />
+                </Field>
+                <Field label="Language" hint="Language of the printed quotation.">
+                  <Select value={form.language} disabled={!base.v14} onChange={(e) => switchLanguage(e.target.value as QuoteLang)}>
+                    <option value="en">English</option><option value="ar">العربية (Arabic)</option>
+                  </Select>
+                </Field>
+                <Field label="Letterhead" className="sm:col-span-1 lg:col-span-2" hint="Which company the quotation is printed under.">
+                  <Select value={form.brand} onChange={(e) => switchBrand(e.target.value as Brand)}>
+                    {(Object.keys(BRANDS) as Brand[]).map((b) => <option key={b} value={b}>{BRANDS[b].label}</option>)}
+                  </Select>
                 </Field>
                 <div className="sm:col-span-2 lg:col-span-3">
                   <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more}
@@ -646,7 +732,7 @@ export function QuotationEditor() {
                 Print quantity and total columns
               </label>
               {!lines.length && !canEdit && <Empty title="No products yet" />}
-              {computed.map((l) => {
+              {priced.map((l) => {
                 const p = prod[l.product_id]
                 return (
                   <div key={l.key} className="rounded-md border border-border p-3">
@@ -800,6 +886,11 @@ export function QuotationEditor() {
                             </div>
                           )
                         })()}
+                        {l.fpt > 0 && l.tonSave != null && (
+                          <p className="mt-1 text-xs text-primary" dir="auto">
+                            {tl('+ freight {f} / ton → printed price {p} / ton', { f: money(l.fpt, form.currency), p: money(l.tonSave, form.currency) })}
+                          </p>
+                        )}
                         {l.in_ccy !== form.currency && (
                           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                             {l.fxr ? (
@@ -822,7 +913,12 @@ export function QuotationEditor() {
                   <Plus className="size-4" />{tl(form.brand === 'prime_roots' ? (lines.length ? 'Add another jam' : 'Add a jam') : (lines.length ? 'Add another product' : 'Add a product'))}
                 </button>
               )}
-              {lines.length > 0 && <div className="flex justify-end text-sm">{tl('Total:')} <b className="ms-2 tabular-nums">{grand != null ? money(grand, form.currency) : tl('enter all quantities to see the total')}</b></div>}
+              {lines.length > 0 && (
+                <div className="flex flex-wrap items-baseline justify-end gap-x-2 text-sm">
+                  {freightLine != null && goods != null && <span className="text-muted-foreground tabular-nums">{tl('Products')} {money(goods, form.currency)} + {tl('Freight')} {money(freightLine, form.currency)} =</span>}
+                  <span>{tl('Total:')} <b className="ms-1 tabular-nums">{grand != null ? money(grand, form.currency) : tl('enter all quantities to see the total')}</b></span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -876,5 +972,125 @@ export function QuotationEditor() {
         </StickyActions>
       )}
     </>
+  )
+}
+
+type FreightCalc = ReturnType<typeof quoteFreight>
+/** Shipping method and freight cost of the quotation. */
+function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRates, totalNetKg }: {
+  form: Form; upd: (p: Partial<Form>) => void; freight: FreightCalc; freightFx: { rate: number; source: string; rate_at: string } | null
+  freightOn: boolean; rates: SavedRate[]; canAddRates: boolean; totalNetKg: number | null
+}) {
+  const { t } = useT()
+  const mode = form.shipping_mode || null
+  const saved = mode ? ratesFor(rates, mode, form.destination) : []
+  const bases = mode ? basesFor(mode) : []
+  const setMode = (m: ShipMode) => upd({ shipping_mode: m, shipping_rate_id: '', ...(bases.length && basesFor(m).includes(form.freight_basis) ? {} : { freight_basis: defaultBasis(m) }) })
+  const pickRate = (id: string) => {
+    const r = rates.find((x) => x.id === id); const f = r && freightFromRate(r)
+    if (!r || !f) return upd({ shipping_rate_id: '' })
+    upd({ shipping_rate_id: id, shipping_mode: modeOfRate(r.mode), freight_basis: f.basis, freight_rate: String(f.rate), freight_currency: f.currency, freight_fx: '',
+      ...(f.basis === 'per_container' && !form.freight_containers ? { freight_containers: '1' } : {}) })
+  }
+  const rateLabel = (r: SavedRate) => {
+    const f = freightFromRate(r)!
+    return `${r.destination_port ? `${r.destination_port}, ` : ''}${r.destination_country}${r.container_type ? ` · ${r.container_type}` : ''}${r.carrier ? ` · ${r.carrier}` : ''} — ${money(f.rate, f.currency, f.basis === 'per_kg' ? 3 : 2)} ${t(BASIS_LABEL[f.basis])}`
+  }
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3 sm:col-span-2 lg:col-span-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-sm font-medium"><T>Shipping</T></span>
+        <div role="radiogroup" aria-label={t('Shipping')} className="inline-flex rounded-lg bg-muted p-0.5">
+          {SHIP_MODES.map((m) => {
+            const Icon = MODE_ICON[m]
+            return (
+              <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)}
+                className={cn('inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors', mode === m ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+                <Icon className="size-4" />{t(SHIP_MODE_LABEL[m])}
+              </button>
+            )
+          })}
+        </div>
+        {!mode && <span className="text-xs text-muted-foreground"><T>Choose how it ships.</T></span>}
+      </div>
+      {mode && mode !== 'sea' && seaOnlyTerm(form.incoterm) && (
+        <p className="text-xs text-amber-700 dark:text-amber-300">{t('{i} is a sea term. For air or land, CPT or CIP is the usual choice.', { i: form.incoterm })}</p>
+      )}
+      {mode && !freightOn && (
+        <p className="text-xs text-muted-foreground">{t('Under {i} the buyer pays the freight, so only the shipping method is printed.', { i: form.incoterm })}</p>
+      )}
+      {freightOn && mode && (
+        <>
+          {saved.length > 0 ? (
+            <Field label="Use a saved rate" hint="From Shipping & Logistics. The ones for this destination come first.">
+              <Select value={form.shipping_rate_id} onChange={(e) => pickRate(e.target.value)}>
+                <option value="">{t('— Type the freight yourself —')}</option>
+                {saved.map((r) => <option key={r.id} value={r.id}>{rateLabel(r)}</option>)}
+              </Select>
+            </Field>
+          ) : canAddRates && (
+            <p className="text-xs text-muted-foreground"><T>Tip: save your forwarders’ rates in Shipping & Logistics and pick them here next time.</T></p>
+          )}
+          <div className="flex flex-wrap items-end gap-2">
+            <Field label="Freight cost" className="min-w-[200px] flex-1">
+              <div className="flex gap-1">
+                <Input id="freight-rate" inputMode="decimal" value={form.freight_rate} placeholder="0" onChange={(e) => upd({ freight_rate: e.target.value, shipping_rate_id: '' })} />
+                <Select value={form.freight_currency} aria-label={t('Currency')} className="w-[84px] shrink-0" onChange={(e) => upd({ freight_currency: e.target.value, freight_fx: '', shipping_rate_id: '' })}>
+                  {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+                </Select>
+              </div>
+            </Field>
+            <div role="radiogroup" aria-label={t('Freight is')} className="mb-0.5 inline-flex h-10 items-center rounded-lg bg-muted p-0.5">
+              {bases.map((b) => (
+                <button key={b} type="button" role="radio" aria-checked={form.freight_basis === b} onClick={() => upd({ freight_basis: b, shipping_rate_id: '', ...(b === 'per_container' && !form.freight_containers ? { freight_containers: '1' } : {}) })}
+                  className={cn('h-full rounded-md px-3 text-xs font-medium transition-colors', form.freight_basis === b ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+                  {t(BASIS_LABEL[b])}
+                </button>
+              ))}
+            </div>
+            {form.freight_basis === 'per_container' && (
+              <Field label={mode === 'land' ? 'Trucks / containers' : 'Containers'} className="w-[130px]">
+                <Input id="freight-containers" inputMode="numeric" value={form.freight_containers} onChange={(e) => upd({ freight_containers: e.target.value })} />
+              </Field>
+            )}
+          </div>
+          {form.freight_currency !== form.currency && n(form.freight_rate) != null && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+              {freightFx ? <span>1 {form.freight_currency} = {+freightFx.rate.toPrecision(6)} {form.currency} <span className="opacity-80">({form.freight_fx ? t('typed by you') : freightFx.source})</span></span>
+                : <span className="text-destructive">{t('No saved rate {a}→{b}.', { a: form.freight_currency, b: form.currency })}</span>}
+              <label className="flex items-center gap-1"><T>rate</T>
+                <Input inputMode="decimal" className="h-7 w-24 text-xs" placeholder={`1 ${form.freight_currency} = ?`} value={form.freight_fx} onChange={(e) => upd({ freight_fx: e.target.value })} aria-label={t('Exchange rate')} />
+              </label>
+            </div>
+          )}
+          {mode === 'air' && form.freight_basis === 'per_kg' && (
+            <p className="text-xs text-muted-foreground"><T>Worked out on the net weight. Airlines charge the gross (or volume) weight — if you know the final amount, choose “total”.</T></p>
+          )}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <span className="text-xs font-medium text-muted-foreground"><T>On the quotation:</T></span>
+            {(['line', 'in_prices'] as const).map((d) => (
+              <label key={d} className="flex items-center gap-1.5">
+                <input type="radio" name="freight_display" className="size-4 accent-[#23856B]" checked={form.freight_display === d} onChange={() => upd({ freight_display: d })} />
+                <T>{d === 'line' ? 'Separate freight line' : 'Inside the product prices'}</T>
+              </label>
+            ))}
+          </div>
+          {n(form.freight_rate) != null && (
+            <p className="rounded-md bg-card px-3 py-2 text-sm" role="status">
+              {freight.total != null || freight.perTon != null ? (
+                <>
+                  <T>Freight</T>:{' '}
+                  {freight.total != null && <b className="tabular-nums" dir="ltr">{money(freight.total, form.currency)}</b>}
+                  {freight.total != null && freight.perTon != null && ' · '}
+                  {freight.perTon != null && <span className="tabular-nums" dir="ltr">{money(freight.perTon, form.currency)} / {t('ton')}</span>}
+                  {totalNetKg != null && <span className="text-muted-foreground"> · {t('{n} t net', { n: +(totalNetKg / 1000).toFixed(3) })}</span>}
+                </>
+              ) : null}
+              {freight.missing && <span className="block text-xs text-muted-foreground">{t(freight.missing)}</span>}
+            </p>
+          )}
+        </>
+      )}
+    </div>
   )
 }

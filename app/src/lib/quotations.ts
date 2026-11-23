@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import type { Incoterm } from './pricing'
 import type { QtyUnit } from './planner'
+import type { FreightBasis, FreightDisplay, ShipMode } from './shipping'
 
 export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'revised'
 export const STATUS_LABEL: Record<QuoteStatus, string> = {
@@ -27,6 +28,14 @@ export type QuoteItem = {
   price_per_ton: number; line_total: number | null; price_id: string | null; sort_order: number
   // added in 0013 (missing on older rows / before the migration)
   price_basis?: PriceBasis | null; unit_price?: number | null; unit_label?: string | null
+  // added in 0022: the freight share inside this line's price (freight shown "inside the prices")
+  freight_per_ton?: number | null
+}
+/** Shipping on a quotation (migration 0022; missing on older rows). */
+export type QuoteShipping = {
+  shipping_mode?: ShipMode | null; freight_basis?: FreightBasis | null; freight_rate?: number | null; freight_currency?: string | null
+  freight_fx?: number | null; freight_containers?: number | null; freight_display?: FreightDisplay | null; freight_total?: number | null
+  shipping_rate_id?: string | null
 }
 
 /** Letterheads a quotation can be printed on. */
@@ -45,7 +54,7 @@ export type Quotation = {
   sent_at: string | null; created_at: string; created_by: string; updated_at: string
   brand?: Brand | null
   quotation_items?: QuoteItem[]
-}
+} & QuoteShipping
 export type QuoteVersion = { id: number; quotation_id: string; version: number; status: QuoteStatus; snapshot: Quotation & { items: QuoteItem[] }; created_at: string }
 
 export async function fetchQuotations() {

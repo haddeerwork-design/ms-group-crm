@@ -1,4 +1,4 @@
-import { T } from '@/lib/i18n'
+import { T, tr } from '@/lib/i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Ban, FileText, Loader2, Pencil, Plus, Printer, Save, Send, Stamp, Trash2 } from 'lucide-react'
@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/auth'
 import { QUOTE_EDIT_ALL, QUOTE_WRITERS } from '@/lib/roles'
 import { CURRENCIES, INCOTERMS } from '@/lib/pricing'
 import { BRANDS, fetchQuotation, fmtDateDMY, lineTons, type Brand } from '@/lib/quotations'
+import { freightLineLabel } from '@/lib/shipping'
+import { fetchCompanies, type Company } from '@/lib/crm'
 import { fetchProforma, lineAmount, PI_STATUS, PI_STYLE, type PIStatus, type PriceUnit, type Proforma, type QtyUnitPI } from '@/lib/proformas'
 import { money } from '@/lib/prices'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +33,13 @@ const HEAD = ['customer_company', 'customer_name', 'customer_address', 'customer
   'port_of_loading', 'port_of_discharge', 'shipment_mode', 'container_details', 'estimated_shipment', 'payment_terms', 'other_charges_label', 'other_charges',
   'bank_details', 'terms', 'notes', 'issue_date'] as const
 type Head = Record<(typeof HEAD)[number], string>
+/** Buyer fields from a CRM company; empty ones are left as they are. */
+const fromCompany = (co: Company): Partial<Head> => Object.fromEntries(Object.entries({
+  customer_company: co.name, customer_country: co.country, customer_email: co.email, customer_phone: co.phone ?? co.whatsapp,
+  customer_address: [co.address, co.city].filter(Boolean).join(', ') || null,
+}).filter(([, v]) => v)) as Partial<Head>
+/** The port we usually load from is remembered on this device. */
+const PI_DEFAULTS = 'ms_pi_defaults'
 
 export function ProformaEditor() {
   const { id } = useParams()
@@ -50,6 +59,7 @@ export function ProformaEditor() {
   const [sendOpen, setSendOpen] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [companies, setCompanies] = useState<Company[]>([])
 
   const status: PIStatus = pi?.status ?? 'draft'
   const editable = status === 'draft' || status === 'revised'
@@ -58,11 +68,15 @@ export function ProformaEditor() {
 
   const load = useCallback(async () => {
     try {
-      const bank = await supabase.from('company_settings').select('bank_details').eq('id', 1).single()
+      const [bank, cos] = await Promise.all([supabase.from('company_settings').select('bank_details').eq('id', 1).single(), fetchCompanies().catch(() => [] as Company[])])
+      setCompanies(cos)
       if (isNew) {
         const base = Object.fromEntries(HEAD.map((k) => [k, ''])) as Head
         base.currency = 'USD'; base.incoterm = 'CIF'; base.issue_date = new Date().toISOString().slice(0, 10); base.shipment_mode = 'sea'
         base.bank_details = bank.data?.bank_details ?? ''
+        try { base.port_of_loading = (JSON.parse(localStorage.getItem(PI_DEFAULTS) || '{}') as { port_of_loading?: string }).port_of_loading ?? '' } catch { /* ignore */ }
+        const coParam = params.get('company') ? cos.find((c) => c.id === params.get('company')) : undefined
+        if (coParam) { Object.assign(base, fromCompany(coParam)); setMeta({ quotation_id: null, company_id: coParam.id }) }
         let ls: Line[] = []
         const qid = params.get('quotation')
         if (qid) {
@@ -70,9 +84,18 @@ export function ProformaEditor() {
           Object.assign(base, {
             customer_company: q.customer_company ?? '', customer_name: q.customer_name ?? '', customer_country: q.customer_country ?? '',
             customer_email: q.customer_email ?? '', customer_phone: q.customer_phone ?? '', incoterm: q.incoterm ?? 'CIF', currency: q.currency,
-            destination: q.destination ?? '', payment_terms: q.payment_terms ?? '',
+            destination: q.destination ?? '', port_of_discharge: q.destination ?? '', payment_terms: q.payment_terms ?? '',
+            // shipping from the quotation; a separate freight line becomes the proforma's other charges
+            ...(q.shipping_mode ? { shipment_mode: q.shipping_mode } : {}),
+            ...(q.shipping_mode && q.freight_display !== 'in_prices' && q.freight_total ? {
+              other_charges_label: freightLineLabel('en', q.shipping_mode, q.freight_basis ?? null, q.freight_containers ?? null, null), other_charges: String(q.freight_total),
+            } : {}),
           })
-          setMeta({ quotation_id: q.id, company_id: (q as unknown as { company_id?: string | null }).company_id ?? null })
+          const qco = (q as unknown as { company_id?: string | null }).company_id ?? null
+          setMeta({ quotation_id: q.id, company_id: qco })
+          // the address is not on the quotation: take it from the CRM company
+          const co = qco ? cos.find((c) => c.id === qco) : undefined
+          if (co && !base.customer_address) base.customer_address = fromCompany(co).customer_address ?? ''
           setBrand(q.brand ?? 'ms_elbrancy')
           ls = (q.quotation_items ?? []).map((i) => {
             if (i.price_basis === 'unit' && i.unit_price) {
@@ -137,6 +160,7 @@ export function ProformaEditor() {
     setBusy(null)
     if (r.error) { toast.error('Saved, but lines failed: ' + r.error.message); return pid }
     setDirty(false); toast.success('Proforma saved')
+    try { if (h.port_of_loading.trim()) localStorage.setItem(PI_DEFAULTS, JSON.stringify({ port_of_loading: h.port_of_loading.trim() })) } catch { /* ignore */ }
     if (isNew) nav(`/proformas/${pid}`, { replace: true }); else load()
     return pid
   }
@@ -153,6 +177,8 @@ export function ProformaEditor() {
     if (error) return toast.error(error.message)
     if (st === 'issued' && meta.company_id) await supabase.from('activities').insert({ company_id: meta.company_id, kind: 'quotation', summary: `Proforma ${pi?.number ?? ''} issued`, created_by: session?.user.id })
     toast.success(`Proforma ${PI_STATUS[st].toLowerCase()}`); load()
+    // issued → the next step is the order: one tap
+    if (st === 'issued') toast.message(tr('Next step: the order.'), { duration: 10000, action: { label: tr('Create order'), onClick: () => nav(`/orders/new?proforma=${pid}`) } })
   }
   async function printIt(version?: number) {
     let pid = pi?.id ?? null
@@ -200,13 +226,24 @@ export function ProformaEditor() {
         <div className="space-y-4 lg:col-span-2">
           <Card><CardHeader><CardTitle>Buyer</CardTitle></CardHeader><CardContent>
             <fieldset disabled={!canEdit} className="grid gap-3 sm:grid-cols-3">
+              <Field label="Company (from CRM)" className="sm:col-span-3" hint="Choosing a company fills the buyer fields and adds this proforma to its timeline.">
+                <Select value={meta.company_id ?? ''} onChange={(e) => {
+                  const co = companies.find((c) => c.id === e.target.value)
+                  setMeta((m) => ({ ...m, company_id: co?.id ?? null }))
+                  if (co) setH((x) => x && ({ ...x, ...fromCompany(co) }))
+                  setDirty(true)
+                }}>
+                  <option value="">— Not linked —</option>
+                  {companies.filter((c) => !c.archived_at || c.id === meta.company_id).map((c) => <option key={c.id} value={c.id}>{c.name}{c.country ? ` — ${c.country}` : ''}</option>)}
+                </Select>
+              </Field>
+              {inp('customer_company', 'Company')}{inp('customer_name', 'Contact')}{inp('customer_country', 'Country')}
+              {inp('customer_address', 'Address', {}, 'sm:col-span-3')}{inp('customer_email', 'Email')}{inp('customer_phone', 'Phone')}{inp('issue_date', 'Date', { type: 'date' })}
               <Field label="Letterhead" hint="Which company the proforma is printed under." className="sm:col-span-3">
                 <Select value={brand} onChange={(e) => { setBrand(e.target.value as Brand); setDirty(true) }}>
                   {(Object.keys(BRANDS) as Brand[]).map((b) => <option key={b} value={b}>{BRANDS[b].label}</option>)}
                 </Select>
               </Field>
-              {inp('customer_company', 'Company')}{inp('customer_name', 'Contact')}{inp('customer_country', 'Country')}
-              {inp('customer_address', 'Address', {}, 'sm:col-span-3')}{inp('customer_email', 'Email')}{inp('customer_phone', 'Phone')}{inp('issue_date', 'Date', { type: 'date' })}
             </fieldset>
           </CardContent></Card>
           <Card><CardHeader><CardTitle>Shipment</CardTitle></CardHeader><CardContent>
