@@ -18,7 +18,7 @@ import {
   kgFromPacking,
 } from '@/lib/quotations'
 import {
-  basesFor, defaultBasis, freightFromRate, modeOfRate, needsShipping, quoteFreight, ratesFor, sellerPaysFreight, seaOnlyTerm, SHIP_MODE_LABEL, SHIP_MODES,
+  basesFor, defaultBasis, placeLabel, placePlaceholder, placeSuggestions, freightFromRate, modeOfRate, needsShipping, quoteFreight, ratesFor, sellerPaysFreight, seaOnlyTerm, SHIP_MODE_LABEL, SHIP_MODES,
   type FreightBasis, type FreightDisplay, type SavedRate, type ShipMode,
 } from '@/lib/shipping'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -96,6 +96,7 @@ const DEFAULTS_KEY = 'ms_quote_defaults'
 type Remembered = Partial<Pick<Form, 'currency' | 'incoterm' | 'language' | 'shipping_mode' | 'freight_display'>>
 function remembered(): Remembered { try { return JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '{}') as Remembered } catch { return {} } }
 const MODE_ICON = { sea: Ship, air: Plane, land: Truck } as const
+const PLACE_WORD: Record<ShipMode, string> = { sea: 'Port', air: 'Airport', land: 'City / border' }
 const BASIS_LABEL: Record<FreightBasis, string> = { per_kg: 'per kg', per_container: 'per container', total: 'total' }
 const shippingFromQuote = (q: Quotation, currency: string): Pick<Form, 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'freight_display' | 'shipping_rate_id'> => ({
   shipping_mode: q.shipping_mode ?? '', freight_basis: q.freight_basis ?? defaultBasis(q.shipping_mode ?? 'sea'), freight_rate: s(q.freight_rate),
@@ -300,6 +301,13 @@ export function QuotationEditor() {
   }
 
   const upd = (patch: Partial<Form>) => { setForm((f) => f && ({ ...f, ...patch })); setDirty(true) }
+  function changeIncoterm(inc: Incoterm) {
+    if (!form || !base) return
+    const policyWasDefault = form.policy === policyFrom(base.settings, form)
+    // FOB / CFR / CIF are sea terms: pick sea for them when no shipping was chosen yet
+    const ship = !form.shipping_mode && seaOnlyTerm(inc) ? { shipping_mode: 'sea' as ShipMode, freight_basis: defaultBasis('sea') } : {}
+    upd({ incoterm: inc, ...ship, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, incoterm: inc }) } : {}) })
+  }
   const updDest = (key: number, patch: Partial<Dest>) => { setDests((ds) => ds.map((d) => (d.key === key ? { ...d, ...patch } : d))); setDirty(true) }
   const addDest = () => {
     if (!form) return
@@ -739,15 +747,14 @@ export function QuotationEditor() {
                 <Field label="Contact name"><Input value={form.customer_name} onChange={(e) => upd({ customer_name: e.target.value })} /></Field>
                 <Field label="Company"><Input value={form.customer_company} onChange={(e) => upd({ customer_company: e.target.value })} /></Field>
                 <Field label="Country"><Input value={form.customer_country} onChange={(e) => upd({ customer_country: e.target.value })} /></Field>
-                <Field label="Destination"><Input value={form.destination} onChange={(e) => upd({ destination: e.target.value })} /></Field>
+                {/* the name follows the shipping: a port by sea, an airport by air */}
+                <Field label={shipOn ? placeLabel(form.shipping_mode) : 'Destination'}>
+                  <Input value={form.destination} list={shipOn && form.shipping_mode ? `places-${form.shipping_mode}` : undefined}
+                    placeholder={shipOn ? tl(placePlaceholder(form.shipping_mode)) : undefined} onChange={(e) => upd({ destination: e.target.value })} />
+                </Field>
+                {SHIP_MODES.map((m) => <datalist key={m} id={`places-${m}`}>{placeSuggestions(base.shipRates, m).map((x) => <option key={x} value={x} />)}</datalist>)}
                 {form.brand !== 'prime_roots' && <Field label="Incoterm">
-                  <Select value={form.incoterm} onChange={(e) => {
-                    const inc = e.target.value as Incoterm
-                    const policyWasDefault = form.policy === policyFrom(base.settings, form)
-                    // FOB / CFR / CIF are sea terms: pick sea for them when no shipping was chosen yet
-                    const ship = !form.shipping_mode && seaOnlyTerm(inc) ? { shipping_mode: 'sea' as ShipMode, freight_basis: defaultBasis('sea') } : {}
-                    upd({ incoterm: inc, ...ship, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, incoterm: inc }) } : {}) })
-                  }}>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}</Select>
+                  <Select value={form.incoterm} onChange={(e) => changeIncoterm(e.target.value as Incoterm)}>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}</Select>
                 </Field>}
                 <Field label="Quotation currency" hint="Prices typed in another currency are converted to this one.">
                   <Select value={form.currency} onChange={(e) => {
@@ -758,16 +765,19 @@ export function QuotationEditor() {
                   }}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>
                 </Field>
                 {shipOn && <ShippingBox form={form} upd={upd} freight={freight} freightFx={freightFx} freightOn={freightOn} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg}
+                  onIncoterm={changeIncoterm}
                   title={multi ? `${tl('Destination {n}', { n: 1 })}: ${form.destination.trim() || '…'}` : undefined} showDisplay={!multi}
                   note={multi && freightOn ? <p className="text-xs text-muted-foreground">{tl('With several destinations, each destination’s freight goes inside its own prices.')}</p> : undefined} />}
                 {base.v23 && form.brand !== 'prime_roots' && <>
                   {destCalc.map((c, i) => (
                     <ShippingBox key={c.d.key} idp={`d${c.d.key}-`} form={{ ...c.d, currency: form.currency, freight_display: 'in_prices' }} upd={(p) => updDest(c.d.key, p)}
                       freight={c.fr} freightFx={c.fx} freightOn={c.on} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg} showDisplay={false}
+                      onIncoterm={(i) => updDest(c.d.key, { incoterm: i })}
                       header={
                         <div className="flex flex-wrap items-end gap-2">
-                          <Field label={tl('Destination {n}', { n: i + 2 })} className="min-w-[180px] flex-1">
-                            <Input id={`d${c.d.key}-name`} value={c.d.destination} placeholder={tl('Port or airport, e.g. Dubai (Jebel Ali)')} onChange={(e) => updDest(c.d.key, { destination: e.target.value })} />
+                          <Field label={`${tl('Destination {n}', { n: i + 2 })}${c.d.shipping_mode ? ` · ${tl(PLACE_WORD[c.d.shipping_mode])}` : ''}`} className="min-w-[180px] flex-1">
+                            <Input id={`d${c.d.key}-name`} value={c.d.destination} list={c.d.shipping_mode ? `places-${c.d.shipping_mode}` : undefined}
+                              placeholder={tl(c.d.shipping_mode ? placePlaceholder(c.d.shipping_mode) : 'Port or airport, e.g. Dubai (Jebel Ali)')} onChange={(e) => updDest(c.d.key, { destination: e.target.value })} />
                           </Field>
                           <Field label="Incoterm" className="w-[110px]">
                             <Select value={c.d.incoterm} onChange={(e) => updDest(c.d.key, { incoterm: e.target.value as Incoterm })}>{INCOTERMS.filter((x) => x !== 'EXW').map((x) => <option key={x}>{x}</option>)}</Select>
@@ -1105,11 +1115,14 @@ export function QuotationEditor() {
 type FreightCalc = ReturnType<typeof quoteFreight>
 /** Shipping method and freight cost of the quotation. */
 type ShipFields = Pick<Form, 'destination' | 'incoterm' | 'currency' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'shipping_rate_id' | 'freight_display'>
-function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRates, totalNetKg, idp = '', showDisplay = true, title, header, note }: {
+/** The same deal for any mode: FOB → FCA, CFR → CPT, CIF → CIP. */
+const SEA_TO_ANY = { FOB: 'FCA', CFR: 'CPT', CIF: 'CIP' } as const
+function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRates, totalNetKg, idp = '', showDisplay = true, title, header, note, onIncoterm }: {
   form: ShipFields; upd: (p: Partial<ShipFields>) => void; freight: FreightCalc; freightFx: { rate: number; source: string; rate_at: string } | null
   freightOn: boolean; rates: SavedRate[]; canAddRates: boolean; totalNetKg: number | null
   /** for several boxes on one page: unique element ids */ idp?: string
   showDisplay?: boolean; title?: string; header?: React.ReactNode; note?: React.ReactNode
+  /** switch to the any-mode twin of a sea term (CIF → CIP) */ onIncoterm?: (i: Incoterm) => void
 }) {
   const { t } = useT()
   const mode = form.shipping_mode || null
@@ -1145,7 +1158,9 @@ function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRa
         {!mode && <span className="text-xs text-muted-foreground"><T>Choose how it ships.</T></span>}
       </div>
       {mode && mode !== 'sea' && seaOnlyTerm(form.incoterm) && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">{t('{i} is a sea term. For air or land, CPT or CIP is the usual choice.', { i: form.incoterm })}</p>
+        <p className="flex flex-wrap items-center gap-x-2 text-xs text-amber-700 dark:text-amber-300">{t('{i} is a sea term. For air or land, CPT or CIP is the usual choice.', { i: form.incoterm })}
+          {onIncoterm && <button type="button" className="font-medium underline underline-offset-2" onClick={() => onIncoterm(SEA_TO_ANY[form.incoterm as 'FOB' | 'CFR' | 'CIF'])}>{t('Use {i}', { i: SEA_TO_ANY[form.incoterm as 'FOB' | 'CFR' | 'CIF'] })}</button>}
+        </p>
       )}
       {mode && !freightOn && (
         <p className="text-xs text-muted-foreground">{t('Under {i} the buyer pays the freight, so only the shipping method is printed.', { i: form.incoterm })}</p>

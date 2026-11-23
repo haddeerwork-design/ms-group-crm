@@ -81,3 +81,20 @@ describe('printed text', () => {
     expect(shippingNote('ar', { mode: 'land', basis: 'total', rateText: '900$', display: 'line', destination: null, paysFreight: true })).toBe('الشحن البري: 900$ إجمالي الشحنة.')
   })
 })
+
+describe('place names follow the mode', async () => {
+  const { placeLabel, placeSuggestions } = await import('./shipping')
+  it('labels', () => {
+    expect(placeLabel('air')).toBe('Destination airport')
+    expect(placeLabel('sea')).toBe('Destination port')
+    expect(placeLabel('')).toBe('Destination')
+    expect(placeLabel('air', 'from')).toBe('Airport of departure')
+  })
+  it('suggests the places of your saved rates for that mode only', () => {
+    const list = placeSuggestions([
+      rate({ destination_port: 'Jeddah' }), rate({ id: 'x', destination_port: 'Jeddah' }),
+      rate({ mode: 'air', destination_port: 'DXB', destination_country: 'UAE' }), rate({ destination_port: null, destination_country: 'Oman' }),
+    ], 'sea')
+    expect(list).toEqual(['Jeddah, Saudi Arabia', 'Oman'])
+  })
+})

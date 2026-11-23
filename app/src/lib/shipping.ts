@@ -131,3 +131,25 @@ export function shippingNote(lang: Lang, q: {
     ? `الشحن ${MODE_WORD.ar[q.mode]}${dest ? ` حتى ${dest}` : ''}: ${q.rateText} ${per}.`
     : `${BY.en[q.mode].replace('By', 'Freight by')}${dest ? ` to ${dest}` : ''}: ${q.rateText} ${per}.`
 }
+
+// ---------------------------------------------------------------------
+// Place names follow the shipping mode: a port by sea, an airport by air
+// ---------------------------------------------------------------------
+type ModeOrNone = ShipMode | '' | null | undefined
+export function placeLabel(mode: ModeOrNone, side: 'to' | 'from' = 'to'): string {
+  if (side === 'from') return mode === 'air' ? 'Airport of departure' : mode === 'land' ? 'Place of loading' : 'Port of loading'
+  return mode === 'sea' ? 'Destination port' : mode === 'air' ? 'Destination airport' : mode === 'land' ? 'Destination city / border' : 'Destination'
+}
+export function placePlaceholder(mode: ModeOrNone): string {
+  return mode === 'air' ? 'e.g. Dubai International (DXB)' : mode === 'land' ? 'e.g. Riyadh' : mode === 'sea' ? 'e.g. Jebel Ali, Dubai' : ''
+}
+/** Ports / airports already in your saved rates for this mode, to pick while typing. */
+export function placeSuggestions(rates: SavedRate[], mode: ModeOrNone): string[] {
+  if (!mode) return []
+  const out = new Set<string>()
+  for (const r of rates) {
+    if (r.archived_at || modeOfRate(r.mode) !== mode) continue
+    out.add(r.destination_port ? `${r.destination_port}, ${r.destination_country}` : r.destination_country)
+  }
+  return [...out].sort((a, b) => a.localeCompare(b))
+}

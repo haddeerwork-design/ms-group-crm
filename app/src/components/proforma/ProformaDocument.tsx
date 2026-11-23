@@ -42,8 +42,8 @@ export function ProformaDocument({ p, company: settings }: { p: PrintablePI; com
   const total = subtotal + (p.other_charges ?? 0)
   const pg = pages(p.items, shrink)
   const ship: [string, string | null][] = [
-    ['Incoterm', p.incoterm ? `${p.incoterm}${p.destination ? ' ' + p.destination : ''}` : null], ['Port of loading', p.port_of_loading],
-    ['Port of discharge', p.port_of_discharge], ['Shipment', [p.shipment_mode && p.shipment_mode.toUpperCase(), p.container_details].filter(Boolean).join(' · ') || null],
+    ['Incoterm', p.incoterm ? `${p.incoterm}${p.destination ? ' ' + p.destination : ''}` : null], [p.shipment_mode === 'air' ? 'Airport of departure' : p.shipment_mode === 'land' ? 'Place of loading' : 'Port of loading', p.port_of_loading],
+    [p.shipment_mode === 'air' ? 'Airport of destination' : p.shipment_mode === 'land' ? 'Place of delivery' : 'Port of discharge', p.port_of_discharge], ['Shipment', [p.shipment_mode && p.shipment_mode.toUpperCase(), p.container_details].filter(Boolean).join(' · ') || null],
     ['Estimated shipment', p.estimated_shipment ? fmtDateDMY(p.estimated_shipment) : null],
   ]
   return (
