@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BRANDS, fmtDateDMY, fmtPrice, lineTons, policySections, QUOTE_TEXT, unitWord, type Brand, type QuoteItem, type QuoteLang } from '@/lib/quotations'
+import { BRANDS, fmtDateDMY, fmtPrice, lineTons, policySections, QUOTE_TEXT, unitWord, type Brand, type QuoteItem, type QuoteLang, type QuoteShipping } from '@/lib/quotations'
+import { freightLineLabel, sellerPaysFreight, shippingNote } from '@/lib/shipping'
+import type { Incoterm } from '@/lib/pricing'
 
 /** Data needed to print. Works for the live quotation and for saved versions. */
 export type PrintableQuote = {
@@ -8,7 +10,7 @@ export type PrintableQuote = {
   customer_name: string | null; customer_company: string | null; customer_country: string | null
   policy_lines: string[]; show_quantities: boolean; items: QuoteItem[]
   brand?: Brand | null; language?: QuoteLang | null
-}
+} & QuoteShipping
 type Company = { company_name: string; slogan: string | null }
 
 export const letterheadUrl = (b?: Brand | null) => `${import.meta.env.BASE_URL}${BRANDS[b ?? 'ms_elbrancy'].letterhead}`
@@ -59,7 +61,7 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
   const ref = useRef<HTMLDivElement>(null)
   const maxMm = MAX_CONTENT_MM[q.brand ?? 'ms_elbrancy']
   // content or fonts changed → start optimistic again and re-measure
-  const key = JSON.stringify([q.items.length, q.policy_lines, q.language, q.brand, q.show_quantities, hasCustomer])
+  const key = JSON.stringify([q.items.length, q.policy_lines, q.language, q.brand, q.show_quantities, hasCustomer, q.shipping_mode, q.freight_display, q.freight_total])
   useEffect(() => { setShrink(0); setDense(0) }, [key])
   useEffect(() => { document.fonts?.ready.then(() => { setShrink(0); setDense(0); setFontsTick((x) => x + 1) }) }, [])
   useLayoutEffect(() => {
@@ -74,8 +76,17 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
   const titled = sections.some((x) => x.title)
   const { pages, compact } = paginate(q.items, shrink)
   const showQty = q.show_quantities
-  const total = showQty && q.items.length && q.items.every((i) => i.line_total != null)
+  // freight: its own line (added to the total) or already inside the prices; a sentence under the table says which
+  const mode = q.shipping_mode ?? null
+  const freightRow = mode && q.freight_display !== 'in_prices' && q.freight_total != null && q.freight_basis ? q.freight_total : null
+  const goods = showQty && q.items.length && q.items.every((i) => i.line_total != null)
     ? q.items.reduce((s, i) => s + (i.line_total ?? 0), 0) : null
+  const total = goods != null ? Math.round((goods + (freightRow ?? 0)) * 100) / 100 : null
+  const shipText = mode ? shippingNote(lang, {
+    mode, basis: q.freight_basis ?? null, display: q.freight_display ?? 'line', destination: q.destination,
+    rateText: q.freight_rate && q.freight_currency ? fmtPrice(q.freight_rate, q.freight_currency) : null,
+    paysFreight: sellerPaysFreight(q.incoterm as Incoterm | null),
+  }) : null
   let lastRowsPage = -1
   pages.forEach((p, i) => { if (p.rows.length) lastRowsPage = i })
   const cols = showQty ? ['30%', '16%', '12%', '12%', '14%', '16%'] : ['44%', '15%', '17%', '24%']
@@ -123,12 +134,16 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
                       </tr>
                     )
                   })}
+                  {showQty && pi === lastRowsPage && freightRow != null && mode && (
+                    <tr className="q-freight"><td className="l" colSpan={5}>{freightLineLabel(lang, mode, q.freight_basis ?? null, q.freight_containers ?? null, q.destination)}</td><td>{M(freightRow)}</td></tr>
+                  )}
                   {showQty && pi === lastRowsPage && (
                     <tr className="q-total"><td className="l" colSpan={5}>{T.total}{q.incoterm ? ` (${q.incoterm}${q.destination ? ' ' + q.destination : ''})` : ''}</td><td>{M(total)}</td></tr>
                   )}
                 </tbody>
               </table>
             )}
+            {shipText && pi === Math.max(lastRowsPage, 0) && <p className="q-ship">{shipText}</p>}
 
             {pg.policy && (
               <>
@@ -187,6 +202,9 @@ export const QUOTE_PRINT_CSS = `
 .quote-doc td.l { text-align: start; padding-inline-start: 5mm }
 .quote-doc table.compact td { padding: 2.2mm 3mm }
 .quote-doc tr.q-total td { background: #eef4f1; color: var(--q-primary, #145a3c) }
+.quote-doc tr.q-freight td { font-weight: 600 }
+.q-ship { margin: 3mm 0 0; font-size: 9.5pt; font-weight: 700; color: var(--q-primary, #145a3c) }
+.quote-doc.dense-1 .q-ship { margin-top: 2mm }
 .q-policy { margin-top: 12mm }
 .q-policy.tight { margin-top: 6mm }
 .q-policy .t { font-size: 9.5pt; font-weight: 700; color: var(--q-primary, #176b4b) }

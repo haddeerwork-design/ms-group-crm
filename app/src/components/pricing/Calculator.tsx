@@ -1,6 +1,6 @@
 import { T, TV, tr, useT } from '@/lib/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ArrowLeftRight, History, Info, Loader2, Save } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, History, Info, Loader2, Plane, Save, Ship, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -12,6 +12,7 @@ import {
 } from '@/lib/pricing'
 import { fetchVersions, isExpired, money, type PriceListRow, type PriceVersion } from '@/lib/prices'
 import { usePersistentState } from '@/lib/usePersistentState'
+import { calcFreightPerTon, freightFromRate, ratesFor, SHIP_MODE_LABEL, SHIP_MODES, type CalcFreightUnit, type SavedRate, type ShipMode } from '@/lib/shipping'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -302,6 +303,10 @@ export function PriceCalculator({ products, categories, rates, list = [], initia
               <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
                 {ALL_COMPONENTS.map((c) => {
                   const m = COMPONENTS[c], on = included.has(c)
+                  if (c === 'freight' && on) return (
+                    <FreightHelper key={`freight-${s.productId}-${origin?.at ?? ''}`} className="sm:col-span-2" value={s.costs.freight} currency={s.sellCurrency} destination={s.destination} rates={rates}
+                      onChange={(v) => set({ costs: { ...s.costs, freight: v } })} />
+                  )
                   return (
                     <Field key={c} label={`${t(m.label)} (${m.ccy === 'cost' ? s.costCurrency : s.sellCurrency} ${t(m.unit)})`} className={cn(!on && 'opacity-45')}
                       hint={!on ? t('Buyer pays under {i}', { i: s.incoterm }) : undefined}>
@@ -494,3 +499,89 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
 }
 
 const round = (v: number, d: number) => Math.round(v * 10 ** d) / 10 ** d
+
+const FREIGHT_UNIT_LABEL: Record<CalcFreightUnit, string> = { ton: 'per ton', kg: 'per kg', container: 'per container', shipment: 'whole shipment' }
+const MODE_ICONS = { sea: Ship, air: Plane, land: Truck } as const
+/** Freight as the forwarder quoted it (per kg, per container, for the shipment) → per ton for the price. */
+function FreightHelper({ value, currency, destination, rates, onChange, className }: {
+  value: string; currency: string; destination: string; rates: Rate[]; onChange: (perTon: string) => void; className?: string
+}) {
+  const { t } = useT()
+  const [mode, setMode] = usePersistentState<ShipMode>('calc_freight_mode', 'sea')
+  const [unit, setUnit] = useState<CalcFreightUnit>('ton')
+  const [amount, setAmount] = useState('')
+  const [tons, setTons] = useState('')
+  const [saved, setSaved] = useState<SavedRate[]>([])
+  const [note, setNote] = useState('')
+  useEffect(() => {
+    supabase.from('shipping_rates').select('id, mode, rate_per_container, rate_per_kg, additional_fees, currency, destination_country, destination_port, container_type, carrier, valid_until, archived_at')
+      .then(({ data }) => setSaved((data ?? []) as SavedRate[]))
+  }, [])
+  const units: CalcFreightUnit[] = mode === 'air' ? ['kg', 'ton', 'shipment'] : ['container', 'ton', 'kg', 'shipment']
+  const needsTons = unit === 'container' || unit === 'shipment'
+  const push = (u: CalcFreightUnit, a: string, tn: string) => {
+    if (u === 'ton') return onChange(a)
+    const v = calcFreightPerTon(u, num(a), num(tn))
+    onChange(v == null ? '' : roundForInput(v))
+  }
+  const choose = (u: CalcFreightUnit) => { setUnit(u); setNote(''); if (u === 'ton') { setAmount('') } else push(u, amount, tons) }
+  const pick = (id: string) => {
+    const r = saved.find((x) => x.id === id); const f = r && freightFromRate(r)
+    if (!r || !f) return
+    const fx = resolveRate(f.currency, currency, rates)
+    if (!fx) { toast.warning(t('No exchange rate between {a} and {b} yet, so the numbers were not converted. Add it in “Exchange rates”.', { a: f.currency, b: currency })); return }
+    const u: CalcFreightUnit = f.basis === 'per_kg' ? 'kg' : 'container'
+    const a = roundForInput(f.rate * fx.rate)
+    setUnit(u); setAmount(a); setNote(`${money(f.rate, f.currency, f.basis === 'per_kg' ? 3 : 2)} ${t(f.basis === 'per_kg' ? 'per kg' : 'per container')}${f.currency !== currency ? ` → ${currency}` : ''}`)
+    push(u, a, tons)
+  }
+  const list = ratesFor(saved, mode, destination)
+  const perTon = num(value)
+  return (
+    <div className={cn('space-y-2 rounded-lg border border-border p-3', className)}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-medium">{t('Freight')} <span className="font-normal text-muted-foreground">({currency})</span></span>
+        <div role="radiogroup" aria-label={t('Shipping')} className="inline-flex rounded-lg bg-muted p-0.5">
+          {SHIP_MODES.map((m) => {
+            const Icon = MODE_ICONS[m]
+            return (
+              <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => { setMode(m); if (m === 'air' && unit === 'container') choose('kg') }}
+                className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium', mode === m ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+                <Icon className="size-3.5" />{t(SHIP_MODE_LABEL[m])}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      {list.length > 0 && (
+        <Select aria-label={t('Use a saved rate')} value="" onChange={(e) => pick(e.target.value)}>
+          <option value="">{t('Use a saved rate…')}</option>
+          {list.map((r) => { const f = freightFromRate(r)!; return <option key={r.id} value={r.id}>{`${r.destination_port ? `${r.destination_port}, ` : ''}${r.destination_country}${r.container_type ? ` · ${r.container_type}` : ''} — ${money(f.rate, f.currency, f.basis === 'per_kg' ? 3 : 2)} ${t(f.basis === 'per_kg' ? 'per kg' : 'per container')}`}</option> })}
+        </Select>
+      )}
+      <div className="flex flex-wrap gap-1">
+        {units.map((u) => (
+          <button key={u} type="button" onClick={() => choose(u)} aria-pressed={unit === u}
+            className={cn('rounded-md border px-2.5 py-1 text-xs font-medium', unit === u ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:text-foreground')}>
+            {t(FREIGHT_UNIT_LABEL[u])}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label={t('Freight {u}', { u: t(FREIGHT_UNIT_LABEL[unit]) })} hint={note || undefined}>
+          <Input inputMode="decimal" value={unit === 'ton' ? value : amount} onChange={(e) => { setNote(''); if (unit === 'ton') onChange(e.target.value); else { setAmount(e.target.value); push(unit, e.target.value, tons) } }} />
+        </Field>
+        {needsTons && (
+          <Field label={unit === 'container' ? 'Net tons in one container' : 'Net tons in the shipment'} hint={unit === 'container' ? 'e.g. 24 — see Container Planner' : undefined}>
+            <Input inputMode="decimal" value={tons} onChange={(e) => { setTons(e.target.value); push(unit, amount, e.target.value) }} />
+          </Field>
+        )}
+      </div>
+      {unit !== 'ton' && (
+        <p className="text-xs text-muted-foreground" role="status">
+          {perTon != null ? <>= <b className="text-foreground tabular-nums" dir="ltr">{money(perTon, currency)}</b> {t('per ton')}</> : needsTons ? t('Enter the tons to work out the freight per ton.') : null}
+        </p>
+      )}
+    </div>
+  )
+}

@@ -36,14 +36,19 @@ const SECTIONS: { title: string; items: string[] }[] = [
   { title: 'Products و Pricing', items: [
     'كل منتج ليه packaging وموسم. الأسعار بتتحفظ كنسخ (history) ومش بتتمسح.',
     'سعر الصرف بيدخله الشخص المسؤول بإيده مع تاريخه؛ السيستم بيحذّرك لو قديم. مفيش أرقام بتتألف.',
+    'في الـ Calculator اكتب الشحن زي ما الـ forwarder قالهولك: للكيلو أو للحاوية أو للشحنة كلها، أو اختار سعر محفوظ، والسيستم بيحوّله لسعر الطن.',
   ] },
   { title: 'Container Planner و Quotations', items: [
     'الـ planner بيحسب الكراتين والباليتات والوزن على حسب الـ packaging وسعة الـ container اللي انت مدخلها.',
     'الـ quotation بتطلع على letterhead الشركة وتتطبع PDF. بعد ما تتبعت متتعدلش؛ لو محتاج تغيير اعمل Revise وبيتحفظ نسخة.',
-    'لما العميل يوافق (Accepted) تقدر تعمل منها Proforma invoice بزرار واحد.',
+    'لما العميل يوافق (Accepted) بيظهرلك على طول زرار Create proforma.',
+    'الشحن: لو الـ Incoterm مش EXW اختار بحري أو جوي أو بري. في CFR وCIF وCPT وCIP وDAP وDDP اكتب تكلفة الشحن (للكيلو أو للحاوية أو إجمالي)، أو اختار سعر محفوظ من Shipping & Logistics، واختار يطلع سطر لوحده أو يدخل جوه أسعار المنتجات.',
+    'الـ quotation الجديدة بتبدأ بآخر عملة وIncoterm ولغة وطريقة شحن استخدمتهم على نفس الجهاز. ولما تختار الشركة، الـ Destination بيتملي ببلدها.',
   ] },
   { title: 'Proforma Invoices و Orders', items: [
-    'الـ proforma بعد ما تتعمل Issue تقدر تحوّلها Order.',
+    'اختار الشركة من الـ CRM وبيانات العميل كلها (حتى العنوان) بتتملي لوحدها. والـ Port of loading بيتفتكر من آخر مرة.',
+    'الـ proforma اللي جاية من quotation بتاخد طريقة الشحن وميناء الوصول، وسطر الشحن بيتحط في Other charges.',
+    'بعد ما تعمل Issue بيظهرلك على طول زرار Create order.',
     'الـ order بيمشي في مراحل من Confirmed لحد Completed. اللوجيستيكس بيعدّل بيانات الشحن والمرحلة بس.',
     'ارفع المستندات (Invoice، Packing list، Phyto…) جوه الـ order. الملفات private ومحدش يشوفها غير اللي ليه صلاحية.',
   ] },
