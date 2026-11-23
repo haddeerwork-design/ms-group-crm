@@ -13,6 +13,7 @@
 --     'columns' = one table, a price column per destination
 --     'tables'  = one table section per destination
 --   Sent versions keep their destinations (set_quotation_status updated).
+--   destination_country / country = ISO country code of each destination.
 --
 -- Security: same rules as quotation lines — read if you can read the
 -- quotation, change only while it is a draft/revision you may edit.
@@ -112,6 +113,14 @@ begin
 end $$;
 revoke all on function public.set_quotation_status(uuid, public.app_quote_status) from anon;
 grant execute on function public.set_quotation_status(uuid, public.app_quote_status) to authenticated;
+
+-- The country of each destination (ISO code, e.g. AE), so the app can list its ports / airports.
+alter table public.quotations add column if not exists destination_country text;
+alter table public.quotations drop constraint if exists quotations_dest_country_chk;
+alter table public.quotations add constraint quotations_dest_country_chk check (destination_country is null or destination_country ~ '^[A-Z]{2}$');
+alter table public.quotation_destinations add column if not exists country text;
+alter table public.quotation_destinations drop constraint if exists quotation_destinations_country_chk;
+alter table public.quotation_destinations add constraint quotation_destinations_country_chk check (country is null or country ~ '^[A-Z]{2}$');
 
 insert into public.app_migrations (version) values ('0023_quote_destinations') on conflict do nothing;
 

@@ -19,6 +19,12 @@ do $$ begin
     raise exception 'FAIL freight basis without a rate';
   exception when check_violation then null;
   end;
+  update public.quotation_destinations set country = 'AE';
+  begin
+    update public.quotation_destinations set country = 'Emirates';
+    raise exception 'FAIL country must be a 2-letter code';
+  exception when check_violation then null;
+  end;
   raise notice 'PASS owner adds destinations; bad freight refused';
 end $$;
 

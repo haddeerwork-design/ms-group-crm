@@ -1694,4 +1694,9 @@ export const AR: Record<string, string> = {
   'e.g. Riyadh': 'مثلاً Riyadh',
   'e.g. Jebel Ali, Dubai': 'مثلاً Jebel Ali, Dubai',
   'Use {i}': 'استخدم {i}',
+  'Destination country': 'دولة الوصول',
+  '{n} airports in {c} — type to search or pick from the list': '{n} مطار في {c} — اكتب للبحث أو اختار من القايمة',
+  '{n} ports in {c} — type to search or pick from the list': '{n} ميناء في {c} — اكتب للبحث أو اختار من القايمة',
+  'None in the list — type the name.': 'مفيش في القايمة — اكتب الاسم.',
+  'Choose the country to see its ports and airports.': 'اختار الدولة عشان تظهرلك موانيها ومطاراتها.',
 }
