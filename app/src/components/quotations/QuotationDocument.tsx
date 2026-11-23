@@ -1,5 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BRANDS, fmtDateDMY, fmtPrice, lineTons, policySections, QUOTE_TEXT, unitWord, type Brand, type QuoteItem, type QuoteLang, type QuoteShipping } from '@/lib/quotations'
+import {
+  BRANDS, destinationTotal, fmtDateDMY, fmtPrice, lineTons, lineTotal, policySections, QUOTE_TEXT, unitWord, withFreight,
+  type Brand, type DestLayout, type QuoteDestination, type QuoteItem, type QuoteLang, type QuoteShipping,
+} from '@/lib/quotations'
 import { freightLineLabel, sellerPaysFreight, shippingNote } from '@/lib/shipping'
 import type { Incoterm } from '@/lib/pricing'
 
@@ -10,6 +13,7 @@ export type PrintableQuote = {
   customer_name: string | null; customer_company: string | null; customer_country: string | null
   policy_lines: string[]; show_quantities: boolean; items: QuoteItem[]
   brand?: Brand | null; language?: QuoteLang | null
+  destinations?: QuoteDestination[]; destinations_layout?: DestLayout | null
 } & QuoteShipping
 type Company = { company_name: string; slogan: string | null }
 
@@ -61,7 +65,7 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
   const ref = useRef<HTMLDivElement>(null)
   const maxMm = MAX_CONTENT_MM[q.brand ?? 'ms_elbrancy']
   // content or fonts changed → start optimistic again and re-measure
-  const key = JSON.stringify([q.items.length, q.policy_lines, q.language, q.brand, q.show_quantities, hasCustomer, q.shipping_mode, q.freight_display, q.freight_total])
+  const key = JSON.stringify([q.items.length, q.policy_lines, q.language, q.brand, q.show_quantities, hasCustomer, q.shipping_mode, q.freight_display, q.freight_total, q.destinations?.length, q.destinations_layout])
   useEffect(() => { setShrink(0); setDense(0) }, [key])
   useEffect(() => { document.fonts?.ready.then(() => { setShrink(0); setDense(0); setFontsTick((x) => x + 1) }) }, [])
   useLayoutEffect(() => {
@@ -74,22 +78,45 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
   })
   const sections = policySections(q.policy_lines)
   const titled = sections.some((x) => x.title)
-  const { pages, compact } = paginate(q.items, shrink)
   const showQty = q.show_quantities
+  // Several destinations: the first is the quotation's own; the others carry their own freight per ton.
+  const extras = q.destinations ?? []
+  const multi = extras.length > 0
+  const layout: DestLayout = q.destinations_layout ?? 'columns'
+  const noteFor = (m: QuoteShipping['shipping_mode'], inc: string | null, dest: string | null, basis: QuoteShipping['freight_basis'], rate: number | null | undefined) => m
+    ? shippingNote(lang, { mode: m, basis: basis ?? null, rateText: rate ? '·' : null, display: 'in_prices', destination: dest, paysFreight: sellerPaysFreight(inc as Incoterm | null) }) : null
+  const dests = multi ? [
+    { label: [q.incoterm, q.destination].filter(Boolean).join(' '), fpt: null as number | null, primary: true, note: noteFor(q.shipping_mode, q.incoterm, q.destination, q.freight_basis, q.freight_rate) },
+    ...extras.map((d) => ({ label: [d.incoterm, d.destination].filter(Boolean).join(' '), fpt: d.freight_per_ton ?? 0, primary: false, note: noteFor(d.shipping_mode, d.incoterm, d.destination, d.freight_basis, d.freight_rate) })),
+  ] : []
+  const priceOf = (it: QuoteItem, di: number): QuoteItem => (!multi || dests[di].primary ? it : { ...it, ...withFreight(it, dests[di].fpt), line_total: lineTotal({ ...it, ...withFreight(it, dests[di].fpt) }) })
+  const destTotal = (di: number) => dests[di].primary
+    ? (q.items.length && q.items.every((i) => i.line_total != null) ? q.items.reduce((a, i) => a + (i.line_total ?? 0), 0) : null)
+    : destinationTotal(q.items, dests[di].fpt)
+  type Row = { k: 'item'; it: QuoteItem; d: number } | { k: 'head'; d: number } | { k: 'total'; d: number }
+  const rows: Row[] = multi && layout === 'tables'
+    ? dests.flatMap((_, d) => [{ k: 'head' as const, d }, ...q.items.map((it) => ({ k: 'item' as const, it, d })), ...(showQty ? [{ k: 'total' as const, d }] : [])])
+    : q.items.map((it) => ({ k: 'item' as const, it, d: 0 }))
+  const { pages, compact } = paginate(rows, shrink)
+  const byColumns = multi && layout === 'columns'
   // freight: its own line (added to the total) or already inside the prices; a sentence under the table says which
   const mode = q.shipping_mode ?? null
-  const freightRow = mode && q.freight_display !== 'in_prices' && q.freight_total != null && q.freight_basis ? q.freight_total : null
+  const freightRow = !multi && mode && q.freight_display !== 'in_prices' && q.freight_total != null && q.freight_basis ? q.freight_total : null
   const goods = showQty && q.items.length && q.items.every((i) => i.line_total != null)
     ? q.items.reduce((s, i) => s + (i.line_total ?? 0), 0) : null
   const total = goods != null ? Math.round((goods + (freightRow ?? 0)) * 100) / 100 : null
-  const shipText = mode ? shippingNote(lang, {
+  const shipText = mode && !multi ? shippingNote(lang, {
     mode, basis: q.freight_basis ?? null, display: q.freight_display ?? 'line', destination: q.destination,
     rateText: q.freight_rate && q.freight_currency ? fmtPrice(q.freight_rate, q.freight_currency) : null,
     paysFreight: sellerPaysFreight(q.incoterm as Incoterm | null),
   }) : null
   let lastRowsPage = -1
   pages.forEach((p, i) => { if (p.rows.length) lastRowsPage = i })
-  const cols = showQty ? ['30%', '16%', '12%', '12%', '14%', '16%'] : ['44%', '15%', '17%', '24%']
+  const fixed = showQty ? [26, 13, 10, 10] : [30, 15, 12]
+  const cols = byColumns
+    ? [...fixed.map((w) => `${w}%`), ...dests.map(() => `${(100 - fixed.reduce((a, b) => a + b, 0)) / dests.length}%`)]
+    : showQty ? ['30%', '16%', '12%', '12%', '14%', '16%'] : ['44%', '15%', '17%', '24%']
+  const span = cols.length
 
   return (
     <div ref={ref} dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang} className={'quote-doc brand-' + (q.brand ?? 'ms_elbrancy') + ' lang-' + lang + (dense ? ' dense-1' : '') + (dense > 1 ? ' dense-2' : '')} style={{ ['--q-primary' as string]: brand.primary, ['--q-heading' as string]: brand.heading }}>
@@ -119,31 +146,40 @@ export function QuotationDocument({ q, company: settings }: { q: PrintableQuote;
                 <colgroup>{cols.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
                 <thead><tr>
                   <th>{T.description}</th><th>{T.packing}</th><th>{T.type}</th>
-                  {showQty && <th>{T.quantity}</th>}<th>{anyUnit ? T.price : T.pricePerTon}</th>{showQty && <th>{T.total}</th>}
+                  {showQty && <th>{T.quantity}</th>}
+                  {byColumns ? dests.map((d, di) => <th key={di}>{d.label}</th>)
+                    : <><th>{anyUnit ? T.price : T.pricePerTon}</th>{showQty && <th>{T.total}</th>}</>}
                 </tr></thead>
                 <tbody>
-                  {pg.rows.map((it, i) => {
+                  {pg.rows.map((r, i) => {
+                    if (r.k === 'head') return <tr key={i} className="q-dest"><td className="l" colSpan={span}>{dests[r.d].label}{dests[r.d].note ? ` — ${dests[r.d].note}` : ''}</td></tr>
+                    if (r.k === 'total') return <tr key={i} className="q-total"><td className="l" colSpan={span - 1}>{T.total} ({dests[r.d].label})</td><td>{M(destTotal(r.d))}</td></tr>
+                    const it = priceOf(r.it, r.d)
                     return (
                       <tr key={i}>
                         <td className="l">{it.description}</td>
                         <td>{it.packing}</td>
                         <td>{it.product_type_label}</td>
                         {showQty && <td>{qtyCell(it)}</td>}
-                        <td>{priceCell(it)}</td>
-                        {showQty && <td>{M(it.line_total)}</td>}
+                        {byColumns ? dests.map((_, di) => <td key={di}>{priceCell(priceOf(r.it, di))}</td>)
+                          : <><td>{priceCell(it)}</td>{showQty && <td>{M(it.line_total)}</td>}</>}
                       </tr>
                     )
                   })}
-                  {showQty && pi === lastRowsPage && freightRow != null && mode && (
+                  {!multi && showQty && pi === lastRowsPage && freightRow != null && mode && (
                     <tr className="q-freight"><td className="l" colSpan={5}>{freightLineLabel(lang, mode, q.freight_basis ?? null, q.freight_containers ?? null, q.destination)}</td><td>{M(freightRow)}</td></tr>
                   )}
-                  {showQty && pi === lastRowsPage && (
+                  {!multi && showQty && pi === lastRowsPage && (
                     <tr className="q-total"><td className="l" colSpan={5}>{T.total}{q.incoterm ? ` (${q.incoterm}${q.destination ? ' ' + q.destination : ''})` : ''}</td><td>{M(total)}</td></tr>
+                  )}
+                  {byColumns && showQty && pi === lastRowsPage && (
+                    <tr className="q-total"><td className="l" colSpan={span - dests.length}>{T.total}</td>{dests.map((_, di) => <td key={di}>{M(destTotal(di))}</td>)}</tr>
                   )}
                 </tbody>
               </table>
             )}
             {shipText && pi === Math.max(lastRowsPage, 0) && <p className="q-ship">{shipText}</p>}
+            {byColumns && pi === Math.max(lastRowsPage, 0) && dests.filter((d) => d.note).map((d, di) => <p key={di} className="q-ship"><bdi>{d.label}</bdi>: {d.note}</p>)}
 
             {pg.policy && (
               <>
@@ -203,6 +239,8 @@ export const QUOTE_PRINT_CSS = `
 .quote-doc table.compact td { padding: 2.2mm 3mm }
 .quote-doc tr.q-total td { background: #eef4f1; color: var(--q-primary, #145a3c) }
 .quote-doc tr.q-freight td { font-weight: 600 }
+.quote-doc tr.q-dest td { background: #e3efe9; color: var(--q-primary, #145a3c); font-size: 10pt; padding-top: 2.5mm; padding-bottom: 2.5mm }
+.q-ship + .q-ship { margin-top: 1mm }
 .q-ship { margin: 3mm 0 0; font-size: 9.5pt; font-weight: 700; color: var(--q-primary, #145a3c) }
 .quote-doc.dense-1 .q-ship { margin-top: 2mm }
 .q-policy { margin-top: 12mm }

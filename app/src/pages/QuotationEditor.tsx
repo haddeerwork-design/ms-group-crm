@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Check, ChevronDown, Copy, FileText, History, Loader2, Pencil, Plane, Plus, Printer, RotateCcw, Save, Send, Ship, Trash2, Truck, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ import {
   addDays, fetchQuotation, fmtDateDMY, lineTons, lineTotal, renderPolicy, STATUS_LABEL, STATUS_STYLE,
   type Quotation, type QuoteStatus, type QuoteVersion,
   BRANDS, packLabel, PRODUCT_TYPE_LABEL_AR, unitToTon, unitsLabel, basisPerTon, convertBasis, type Brand, type PriceBasis, type QuoteLang, type QuoteQtyUnit,
+  destinationTotal, type DestLayout, type QuoteDestination,
   kgFromPacking,
 } from '@/lib/quotations'
 import {
@@ -21,6 +22,7 @@ import {
   type FreightBasis, type FreightDisplay, type SavedRate, type ShipMode,
 } from '@/lib/shipping'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -67,7 +69,14 @@ type Form = {
   // shipping (migration 0022)
   shipping_mode: ShipMode | ''; freight_basis: FreightBasis; freight_rate: string; freight_currency: string; freight_fx: string
   freight_containers: string; freight_display: FreightDisplay; shipping_rate_id: string
+  destinations_layout: DestLayout // several destinations: price columns or a table each (migration 0023)
 }
+/** Another destination of the quotation (the first one is the quotation's own Destination). */
+type Dest = Pick<Form, 'destination' | 'incoterm' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'shipping_rate_id'> & { key: number }
+const destFromRow = (d: QuoteDestination, currency: string): Dest => ({
+  key: ++seq, destination: d.destination, incoterm: d.incoterm ?? 'CIF', shipping_mode: d.shipping_mode ?? '', freight_basis: d.freight_basis ?? defaultBasis(d.shipping_mode ?? 'sea'),
+  freight_rate: s(d.freight_rate), freight_currency: d.freight_currency ?? currency, freight_fx: s(d.freight_fx), freight_containers: s(d.freight_containers), shipping_rate_id: d.shipping_rate_id ?? '',
+})
 type Settings = { quotation_policy: string[] | null; quotation_validity_days: number | null; quotation_production_time: string | null
   quotation_policy_ar?: string[] | null; quotation_production_time_ar?: string | null
   prime_roots_terms?: string[] | null; prime_roots_terms_ar?: string[] | null; prime_roots_validity_days?: number | null }
@@ -96,7 +105,7 @@ const shippingFromQuote = (q: Quotation, currency: string): Pick<Form, 'shipping
 
 const Step = ({ n }: { n: number }) => <span className="me-2 inline-grid size-6 place-items-center rounded-full bg-primary/10 align-[2px] text-xs font-semibold text-primary">{n}</span>
 
-function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Line[] } {
+function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Line[]; dests: Dest[] } {
         const form: Form = {
           customer_name: q.customer_name ?? '', customer_company: q.customer_company ?? '', customer_country: q.customer_country ?? '',
           customer_email: q.customer_email ?? '', customer_phone: q.customer_phone ?? '', destination: q.destination ?? '',
@@ -104,7 +113,7 @@ function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Li
           validity_days: s(q.validity_days), production_time: q.production_time ?? '', policy: q.policy_lines.join('\n'),
           show_quantities: q.show_quantities, notes: q.notes ?? '', plan_id: q.plan_id, company_id: (q as Quotation & { company_id?: string | null }).company_id ?? '',
           brand: q.brand ?? 'ms_elbrancy', language: (q as Quotation & { language?: QuoteLang }).language ?? 'en',
-          ...shippingFromQuote(q, q.currency),
+          ...shippingFromQuote(q, q.currency), destinations_layout: q.destinations_layout ?? 'columns',
         }
         const lines: Line[] = (q.quotation_items ?? []).map((i) => ({
           key: ++seq, product_id: i.product_id ?? '', packaging_id: i.packaging_id ?? '', description: i.description, packing: i.packing ?? '',
@@ -136,7 +145,7 @@ function quoteToForm(q: Quotation, products: Product[]): { form: Form; lines: Li
           const v = pr?.varieties.find((x) => l.description.toLowerCase().endsWith(` — ${x.toLowerCase()}`))
           return v ? { ...l, variety: v } : l
         })
-        return { form, lines: withVariety }
+        return { form, lines: withVariety, dests: (q.quotation_destinations ?? []).map((d) => destFromRow(d, q.currency)) }
 }
 
 export function QuotationEditor() {
@@ -146,7 +155,7 @@ export function QuotationEditor() {
   const nav = useNavigate()
   const { hasRole, session, profile } = useAuth()
   const { t: tl } = useT()
-  const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings; companies: Company[]; rates: Rate[]; v14: boolean; v22: boolean; shipRates: SavedRate[] } | null>(null)
+  const [base, setBase] = useState<{ products: Product[]; categories: Category[]; prices: PriceListRow[]; settings: Settings; companies: Company[]; rates: Rate[]; v14: boolean; v22: boolean; v23: boolean; shipRates: SavedRate[] } | null>(null)
   const [quote, setQuote] = useState<Quotation | null>(null)
   const [versions, setVersions] = useState<QuoteVersion[]>([])
   const [form, setForm] = useState<Form | null>(null)
@@ -155,13 +164,14 @@ export function QuotationEditor() {
   const [more, setMore] = useState(false)
   // Draft safety net: unsaved edits are kept in this browser and offered back after a crash or a closed tab.
   const draftKey = `ms_qdraft:${isNew ? 'new' : id}`
-  const [draft, setDraft] = useState<{ at: string; form: Form; lines: Line[] } | null>(null)
+  const [draft, setDraft] = useState<{ at: string; form: Form; lines: Line[]; dests?: Dest[] } | null>(null)
+  const [dests, setDests] = useState<Dest[]>([])
   const dropDraft = useCallback(() => { try { localStorage.removeItem(draftKey) } catch { /* ignore */ } setDraft(null) }, [draftKey])
   useEffect(() => {
     if (!dirty || !form) return
-    const h = setTimeout(() => { try { localStorage.setItem(draftKey, JSON.stringify({ at: new Date().toISOString(), form, lines })) } catch { /* ignore */ } }, 800)
+    const h = setTimeout(() => { try { localStorage.setItem(draftKey, JSON.stringify({ at: new Date().toISOString(), form, lines, dests })) } catch { /* ignore */ } }, 800)
     return () => clearTimeout(h)
-  }, [dirty, form, lines, draftKey])
+  }, [dirty, form, lines, dests, draftKey])
   const [busy, setBusy] = useState<string | null>(null)
   const [sendOpen, setSendOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -190,17 +200,19 @@ export function QuotationEditor() {
 
   const load = useCallback(async () => {
     try {
-      const [cat, prices, companies, st, rates, v22q, sr] = await Promise.all([fetchCatalog(), fetchPriceList(), fetchCompanies().catch(() => [] as Company[]),
+      const [cat, prices, companies, st, rates, v22q, sr, v23q] = await Promise.all([fetchCatalog(), fetchPriceList(), fetchCompanies().catch(() => [] as Company[]),
         supabase.from('company_settings').select('*').eq('id', 1).single(), fetchLatestRates().catch(() => [] as Rate[]),
         // shipping fields exist from migration 0022
         supabase.from('quotations').select('freight_display').limit(1),
-        supabase.from('shipping_rates').select('id, mode, rate_per_container, rate_per_kg, additional_fees, currency, destination_country, destination_port, container_type, carrier, valid_until, archived_at')])
+        supabase.from('shipping_rates').select('id, mode, rate_per_container, rate_per_kg, additional_fees, currency, destination_country, destination_port, container_type, carrier, valid_until, archived_at'),
+        // several destinations exist from migration 0023
+        supabase.from('quotation_destinations').select('id').limit(1)])
       if (st.error) throw st.error
       const settings = st.data as Settings
       // Language / currency fields exist from migration 0014.
       const v14 = 'quotation_policy_ar' in (st.data as object)
       const v22 = !v22q.error
-      setBase({ ...cat, prices, settings, companies, rates: rates as Rate[], v14, v22, shipRates: (sr.data ?? []) as SavedRate[] })
+      setBase({ ...cat, prices, settings, companies, rates: rates as Rate[], v14, v22, v23: v22 && !v23q.error, shipRates: (sr.data ?? []) as SavedRate[] })
       if (isNew) {
         const f: Form = {
           customer_name: '', customer_company: '', customer_country: '', customer_email: '', customer_phone: '', destination: '',
@@ -208,6 +220,7 @@ export function QuotationEditor() {
           production_time: settings.quotation_production_time ?? '', policy: '', show_quantities: false, notes: '', plan_id: null, company_id: '',
           brand: params.get('brand') === 'prime_roots' ? 'prime_roots' : 'ms_elbrancy', language: 'en',
           shipping_mode: '', freight_basis: 'per_container', freight_rate: '', freight_currency: 'USD', freight_fx: '', freight_containers: '', freight_display: 'line', shipping_rate_id: '',
+          destinations_layout: 'columns',
         }
         // start from the choices used last time on this device
         const mem = remembered()
@@ -222,6 +235,7 @@ export function QuotationEditor() {
         const co = companyId ? companies.find((x) => x.id === companyId) : undefined
         if (co) Object.assign(f, companyFields(co))
         let ls: Line[] = []
+        let ds: Dest[] = []
         const planId = params.get('plan')
         if (planId) {
           const p = await fetchPlan(planId)
@@ -252,15 +266,16 @@ export function QuotationEditor() {
             company_id: '', issue_date: today(), notes: '', plan_id: null,
           })
           ls = r.lines.map((l) => ({ ...l, key: ++seq }))
+          ds = r.dests
           if (co) Object.assign(f, companyFields(co))
           toast.success(tr('Copied from {n}. Choose the buyer, and check the prices are still current.', { n: src.number }))
         }
-        setForm(f); setLines(ls); setDirty(!!planId || !!fromId)
+        setForm(f); setLines(ls); setDests(ds); setDirty(!!planId || !!fromId)
       } else {
         const { quote: q, versions: vs } = await fetchQuotation(id!)
         setQuote(q); setVersions(vs)
         const r = quoteToForm(q, cat.products)
-        setForm(r.form); setLines(r.lines)
+        setForm(r.form); setLines(r.lines); setDests(r.dests)
         setDirty(false)
       }
     } catch (e) { setError((e as Error).message) }
@@ -280,11 +295,21 @@ export function QuotationEditor() {
   }, [form, quote, isNew, draftKey])
   function restoreDraft() {
     if (!draft) return
-    setForm(draft.form); setLines(draft.lines.map((l) => ({ ...l, key: ++seq }))); setDirty(true); setDraft(null)
+    setForm(draft.form); setLines(draft.lines.map((l) => ({ ...l, key: ++seq }))); setDests((draft.dests ?? []).map((d) => ({ ...d, key: ++seq }))); setDirty(true); setDraft(null)
     toast.success('Unsaved changes restored. Click Save to keep them.')
   }
 
   const upd = (patch: Partial<Form>) => { setForm((f) => f && ({ ...f, ...patch })); setDirty(true) }
+  const updDest = (key: number, patch: Partial<Dest>) => { setDests((ds) => ds.map((d) => (d.key === key ? { ...d, ...patch } : d))); setDirty(true) }
+  const addDest = () => {
+    if (!form) return
+    const key = ++seq
+    // start like the first destination: same Incoterm, shipping and freight currency
+    setDests((ds) => [...ds, { key, destination: '', incoterm: form.incoterm === 'EXW' ? 'CIF' : form.incoterm, shipping_mode: form.shipping_mode, freight_basis: form.freight_basis,
+      freight_rate: '', freight_currency: form.freight_currency, freight_fx: '', freight_containers: form.freight_containers, shipping_rate_id: '' }])
+    setDirty(true)
+    setTimeout(() => document.getElementById(`d${key}-name`)?.focus(), 50)
+  }
   const updLine = (key: number, patch: Partial<Line>) => { setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l))); setDirty(true) }
 
   function findPrice(productId: string, packagingId: string, incoterm: Incoterm | null, currency: string, variety = '') {
@@ -445,7 +470,17 @@ export function QuotationEditor() {
     basis: freightOn ? form!.freight_basis : null, rate: n(form?.freight_rate ?? ''), fx: freightFx?.rate ?? null,
     containers: n(form?.freight_containers ?? ''), netKg: totalNetKg,
   })
-  const inPrices = freightOn && form!.freight_display === 'in_prices'
+  // several destinations: every destination's freight goes inside its own prices
+  const multi = !!base?.v23 && dests.length > 0
+  const inPrices = freightOn && (form!.freight_display === 'in_prices' || multi)
+  const fxTo = (ccy: string, typed: string) => !form || ccy === form.currency ? { rate: 1, source: '', rate_at: '', path: '' }
+    : n(typed)! > 0 ? { rate: n(typed)!, source: 'typed by you', rate_at: new Date().toISOString(), path: '' } : resolveRate(ccy, form.currency, base?.rates ?? [])
+  const destCalc = dests.map((d) => {
+    const on = !!d.shipping_mode && sellerPaysFreight(d.incoterm)
+    const fx = fxTo(d.freight_currency, d.freight_fx)
+    const fr = quoteFreight({ basis: on ? d.freight_basis : null, rate: n(d.freight_rate), fx: fx?.rate ?? null, containers: n(d.freight_containers), netKg: totalNetKg })
+    return { d, on, fx, fr, fpt: on && n(d.freight_rate) ? fr.perTon : 0 }
+  })
   // the price that is saved and printed: the product price, plus its freight share when the freight goes inside the prices
   const priced = computed.map((l) => {
     const fpt = inPrices && freight.perTon ? freight.perTon : 0
@@ -459,6 +494,10 @@ export function QuotationEditor() {
   const goods = priced.length && priced.every((l) => l.total != null) ? priced.reduce((a, l) => a + (l.total ?? 0), 0) : null
   const freightLine = freightOn && !inPrices ? freight.total : null
   const grand = goods != null ? r2(goods + (freightLine ?? 0)) : null
+  // what each other destination comes to, with its own freight instead of the first one's
+  const asItems = priced.map((l) => ({ price_per_ton: l.tonSave ?? 0, price_basis: isJam(l) ? 'unit' as PriceBasis : l.basis, unit_price: l.unitSave, freight_per_ton: l.fpt,
+    quantity: n(l.quantity), quantity_unit: n(l.quantity) ? (isJam(l) ? 'units' as QuoteQtyUnit : l.quantity_unit) : null, net_weight_kg: l.effNet, cartons_per_pallet: n(l.cpp) }))
+  const destTotals = destCalc.map((c) => (c.fpt == null ? null : destinationTotal(asItems, c.fpt)))
 
   async function save(): Promise<string | null> {
     if (!form) return null
@@ -481,6 +520,17 @@ export function QuotationEditor() {
       if (n(form.freight_rate) && !freightFx) { toast.error(tl('Enter the rate 1 {a} = ? {b} for the freight (or add it in Pricing → Exchange rates).', { a: form.freight_currency, b: form.currency })); return null }
       if (inPrices && n(form.freight_rate) && freight.perTon == null) { toast.error(tl('To put the freight inside the prices, enter the quantity of every product — or show the freight as a separate line.')); return null }
     }
+    if (multi) {
+      if (freightOn && n(form.freight_rate) && freight.perTon == null) { toast.error(tl('With several destinations the freight goes inside the prices: enter the quantity of every product.')); return null }
+      for (const [i, c] of destCalc.entries()) {
+        const name = c.d.destination.trim() || tl('Destination {n}', { n: i + 2 })
+        if (!c.d.destination.trim()) { toast.error(tl('Write the name of destination {n} (port or airport), or remove it.', { n: i + 2 })); document.getElementById(`d${c.d.key}-name`)?.focus(); return null }
+        if (!c.on || !n(c.d.freight_rate)) continue
+        if (c.d.freight_basis === 'per_container' && !(n(c.d.freight_containers)! > 0)) { toast.error(`${name}: ${tl('Enter how many containers.')}`); document.getElementById(`d${c.d.key}-freight-containers`)?.focus(); return null }
+        if (!c.fx) { toast.error(`${name}: ${tl('Enter the rate 1 {a} = ? {b} for the freight (or add it in Pricing → Exchange rates).', { a: c.d.freight_currency, b: form.currency })}`); return null }
+        if (c.fr.perTon == null) { toast.error(`${name}: ${tl(c.fr.missing ?? 'Enter the freight amount.')}`); return null }
+      }
+    }
     const hasFreight = freightOn && !!n(form.freight_rate)
     const shipping = base?.v22 ? {
       shipping_mode: shipOn && form.shipping_mode ? form.shipping_mode : null,
@@ -488,8 +538,9 @@ export function QuotationEditor() {
       freight_currency: hasFreight ? form.freight_currency : null,
       freight_fx: hasFreight && form.freight_currency !== form.currency ? freightFx?.rate ?? null : null,
       freight_containers: hasFreight && form.freight_basis === 'per_container' ? n(form.freight_containers) : null,
-      freight_display: form.freight_display, freight_total: hasFreight ? freight.total : null,
+      freight_display: multi && freightOn ? 'in_prices' : form.freight_display, freight_total: hasFreight ? freight.total : null,
       shipping_rate_id: hasFreight && form.shipping_rate_id ? form.shipping_rate_id : null,
+      ...(base?.v23 ? { destinations_layout: form.destinations_layout } : {}),
     } : {}
     const vd = n(form.validity_days)
     const row = {
@@ -536,8 +587,24 @@ export function QuotationEditor() {
       } : {}),
     }))
     const r = await supabase.from('quotation_items').insert(items)
+    if (r.error) { setBusy(null); toast.error('Saved, but the products failed: ' + r.error.message); return qid }
+    if (base?.v23) {
+      // the other destinations: replaced as a whole, like the lines
+      const del = await supabase.from('quotation_destinations').delete().eq('quotation_id', qid)
+      const rows = destCalc.map((c, i) => {
+        const has = c.on && !!n(c.d.freight_rate)
+        return {
+          quotation_id: qid, sort_order: i + 1, destination: c.d.destination.trim(), incoterm: c.d.incoterm,
+          shipping_mode: c.d.shipping_mode || null, freight_basis: has ? c.d.freight_basis : null, freight_rate: has ? n(c.d.freight_rate) : null,
+          freight_currency: has ? c.d.freight_currency : null, freight_fx: has && c.d.freight_currency !== form.currency ? c.fx?.rate ?? null : null,
+          freight_containers: has && c.d.freight_basis === 'per_container' ? n(c.d.freight_containers) : null,
+          freight_total: has ? c.fr.total : null, freight_per_ton: has ? c.fpt : null, shipping_rate_id: has && c.d.shipping_rate_id ? c.d.shipping_rate_id : null,
+        }
+      })
+      const ins = !del.error && rows.length ? await supabase.from('quotation_destinations').insert(rows) : { error: del.error }
+      if (ins.error) { setBusy(null); toast.error(tl('Saved, but the other destinations failed: {e}', { e: ins.error.message })); return qid }
+    }
     setBusy(null)
-    if (r.error) { toast.error('Saved, but the products failed: ' + r.error.message); return qid }
     setDirty(false); dropDraft()
     try { localStorage.setItem(DEFAULTS_KEY, JSON.stringify({ currency: form.currency, incoterm: form.incoterm, language: form.language, freight_display: form.freight_display, ...(form.shipping_mode ? { shipping_mode: form.shipping_mode } : {}) } satisfies Remembered)) } catch { /* ignore */ }
     toast.success('Quotation saved')
@@ -562,7 +629,7 @@ export function QuotationEditor() {
     if (error) return toast.error(error.message)
     toast.success(tr('Quotation: {status}', { status: tr(STATUS_LABEL[st]) }))
     // accepted → the next step is the proforma: one tap
-    if (st === 'accepted') toast.message(tr('Next step: the proforma invoice.'), { duration: 10000, action: { label: tr('Create proforma'), onClick: () => nav(`/proformas/new?quotation=${qid}`) } })
+    if (st === 'accepted') toast.message(tr('Next step: the proforma invoice.'), { duration: 10000, action: { label: tr('Create proforma'), onClick: () => startProforma(qid!) } })
     if (form?.company_id && (st === 'sent' || st === 'accepted' || st === 'rejected')) {
       await supabase.from('activities').insert({ company_id: form.company_id, kind: 'quotation', summary: `Quotation ${quote?.number ?? ''} ${STATUS_LABEL[st].toLowerCase()}`, created_by: session?.user.id })
       if (st === 'sent') await supabase.from('companies').update({ lead_status: 'quotation_sent', last_contact_date: today() }).eq('id', form.company_id).in('lead_status', ['new_lead', 'contacted', 'interested'])
@@ -584,6 +651,13 @@ export function QuotationEditor() {
       duration: 8000,
       action: { label: 'Undo', onClick: async () => { await supabase.from('tasks').delete().eq('id', data.id); toast.success('Follow-up removed') } },
     })
+  }
+
+  /** Several destinations: the buyer picks one, and the proforma is made for it. */
+  const [destPick, setDestPick] = useState<string | null>(null)
+  function startProforma(qid: string) {
+    if ((quote?.quotation_destinations ?? []).length) setDestPick(qid)
+    else nav(`/proformas/new?quotation=${qid}`)
   }
 
   async function remove() {
@@ -632,7 +706,7 @@ export function QuotationEditor() {
             <Button variant="outline" onClick={() => setStatus('expired')} disabled={!!busy}>Expired</Button>
           </>}
           {canWrite && !editableStatus && <Button variant="outline" onClick={() => setStatus('revised')} disabled={!!busy}><Pencil />Revise</Button>}
-          {canWrite && status === 'accepted' && quote && <Button onClick={() => nav(`/proformas/new?quotation=${quote.id}`)}><FileText />Create proforma</Button>}
+          {canWrite && status === 'accepted' && quote && <Button onClick={() => startProforma(quote.id)}><FileText />Create proforma</Button>}
         </div>
       </div>
 
@@ -683,7 +757,46 @@ export function QuotationEditor() {
                     upd({ currency: e.target.value, ...(policyWasDefault ? { policy: policyFrom(base.settings, { ...form, currency: e.target.value }) } : {}) })
                   }}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>
                 </Field>
-                {shipOn && <ShippingBox form={form} upd={upd} freight={freight} freightFx={freightFx} freightOn={freightOn} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg} />}
+                {shipOn && <ShippingBox form={form} upd={upd} freight={freight} freightFx={freightFx} freightOn={freightOn} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg}
+                  title={multi ? `${tl('Destination {n}', { n: 1 })}: ${form.destination.trim() || '…'}` : undefined} showDisplay={!multi}
+                  note={multi && freightOn ? <p className="text-xs text-muted-foreground">{tl('With several destinations, each destination’s freight goes inside its own prices.')}</p> : undefined} />}
+                {base.v23 && form.brand !== 'prime_roots' && <>
+                  {destCalc.map((c, i) => (
+                    <ShippingBox key={c.d.key} idp={`d${c.d.key}-`} form={{ ...c.d, currency: form.currency, freight_display: 'in_prices' }} upd={(p) => updDest(c.d.key, p)}
+                      freight={c.fr} freightFx={c.fx} freightOn={c.on} rates={base.shipRates} canAddRates={hasRole(...CONTAINER_MANAGERS)} totalNetKg={totalNetKg} showDisplay={false}
+                      header={
+                        <div className="flex flex-wrap items-end gap-2">
+                          <Field label={tl('Destination {n}', { n: i + 2 })} className="min-w-[180px] flex-1">
+                            <Input id={`d${c.d.key}-name`} value={c.d.destination} placeholder={tl('Port or airport, e.g. Dubai (Jebel Ali)')} onChange={(e) => updDest(c.d.key, { destination: e.target.value })} />
+                          </Field>
+                          <Field label="Incoterm" className="w-[110px]">
+                            <Select value={c.d.incoterm} onChange={(e) => updDest(c.d.key, { incoterm: e.target.value as Incoterm })}>{INCOTERMS.filter((x) => x !== 'EXW').map((x) => <option key={x}>{x}</option>)}</Select>
+                          </Field>
+                          {canEdit && <Button type="button" variant="ghost" size="icon" aria-label={tl('Remove this destination')} data-tip={tl('Remove this destination')}
+                            onClick={() => { setDests((ds) => ds.filter((x) => x.key !== c.d.key)); setDirty(true) }}><Trash2 /></Button>}
+                        </div>
+                      }
+                      note={destTotals[i] != null && <p className="text-sm">{tl('Total for this destination:')} <b className="tabular-nums">{money(destTotals[i], form.currency)}</b></p>} />
+                  ))}
+                  {canEdit && (
+                    <button type="button" onClick={addDest}
+                      className="flex items-center justify-center gap-2 rounded-md border border-dashed border-border py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary sm:col-span-2 lg:col-span-3">
+                      <Plus className="size-4" />{tl(multi ? 'Add another destination' : 'Price for another port or airport too')}
+                    </button>
+                  )}
+                  {multi && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:col-span-2 lg:col-span-3">
+                      <span className="text-xs font-medium text-muted-foreground">{tl('In the PDF:')}</span>
+                      {(['columns', 'tables'] as const).map((v) => (
+                        <label key={v} className="flex items-center gap-1.5">
+                          <input type="radio" name="destinations_layout" className="size-4 accent-[#23856B]" checked={form.destinations_layout === v} onChange={() => upd({ destinations_layout: v })} />
+                          {tl(v === 'columns' ? 'One table, a price column for each destination' : 'A separate table for each destination')}
+                        </label>
+                      ))}
+                      {form.destinations_layout === 'columns' && dests.length > 3 && <span className="w-full text-xs text-amber-700 dark:text-amber-300">{tl('More than 4 destinations get narrow as columns — a table for each is easier to read.')}</span>}
+                    </div>
+                  )}
+                </>}
                 <Field label="Date"><Input type="date" value={form.issue_date} onChange={(e) => upd({ issue_date: e.target.value })} /></Field>
                 <Field label="Valid for (days)" hint={n(form.validity_days) ? `until ${fmtDateDMY(addDays(form.issue_date, n(form.validity_days)!))}` : undefined}>
                   <Input inputMode="numeric" value={form.validity_days} onChange={(e) => {
@@ -916,7 +1029,8 @@ export function QuotationEditor() {
               {lines.length > 0 && (
                 <div className="flex flex-wrap items-baseline justify-end gap-x-2 text-sm">
                   {freightLine != null && goods != null && <span className="text-muted-foreground tabular-nums">{tl('Products')} {money(goods, form.currency)} + {tl('Freight')} {money(freightLine, form.currency)} =</span>}
-                  <span>{tl('Total:')} <b className="ms-1 tabular-nums">{grand != null ? money(grand, form.currency) : tl('enter all quantities to see the total')}</b></span>
+                  <span>{multi && form.destination.trim() ? `${form.destination.trim()} · ` : ''}{tl('Total:')} <b className="ms-1 tabular-nums">{grand != null ? money(grand, form.currency) : tl('enter all quantities to see the total')}</b></span>
+                  {multi && destCalc.map((c, i) => destTotals[i] != null && <span key={c.d.key} className="w-full text-end">{c.d.destination.trim() || tl('Destination {n}', { n: i + 2 })} · {tl('Total:')} <b className="ms-1 tabular-nums">{money(destTotals[i], form.currency)}</b></span>)}
                 </div>
               )}
             </CardContent>
@@ -961,6 +1075,19 @@ export function QuotationEditor() {
         <ProductDialog open={!!prodDlg} onOpenChange={(o) => { if (!o) setProdDlg(null) }} product={prodDlg.product} categories={base.categories}
           canEdit={canManageCatalog} onSaved={productSaved} initialName={prodDlg.name} initialType={form?.brand === 'prime_roots' ? 'jam' : undefined} />
       )}
+      {quote && form && destPick && (
+        <Dialog open onOpenChange={(o) => { if (!o) setDestPick(null) }}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{tl('Which destination did the buyer choose?')}</DialogTitle><DialogDescription>{tl('The proforma is made with that destination’s prices and shipping.')}</DialogDescription></DialogHeader>
+            <DialogBody className="grid gap-2">
+              {[{ id: '', label: [quote.incoterm, quote.destination].filter(Boolean).join(' ') || tl('Destination {n}', { n: 1 }) },
+                ...(quote.quotation_destinations ?? []).map((d) => ({ id: d.id ?? '', label: [d.incoterm, d.destination].filter(Boolean).join(' ') }))].map((o) => (
+                <Button key={o.id || 'main'} variant="outline" className="justify-start" onClick={() => nav(`/proformas/new?quotation=${destPick}${o.id ? `&dest=${o.id}` : ''}`)}>{o.label}</Button>
+              ))}
+            </DialogBody>
+          </DialogContent>
+        </Dialog>
+      )}
       {quote && form && <SendDialog open={sendOpen} onOpenChange={setSendOpen} email={form.customer_email} phone={form.customer_phone}
         doc={{ kind: 'quotation', number: quote.number, version: quote.version, lang: form.language, contactName: form.customer_name || null, company: form.customer_company,
           validUntil: quote.valid_until, sender: profile?.full_name, brandName: form.brand === 'prime_roots' ? 'Prime Roots' : 'MS El-brancy Group' }}
@@ -977,9 +1104,12 @@ export function QuotationEditor() {
 
 type FreightCalc = ReturnType<typeof quoteFreight>
 /** Shipping method and freight cost of the quotation. */
-function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRates, totalNetKg }: {
-  form: Form; upd: (p: Partial<Form>) => void; freight: FreightCalc; freightFx: { rate: number; source: string; rate_at: string } | null
+type ShipFields = Pick<Form, 'destination' | 'incoterm' | 'currency' | 'shipping_mode' | 'freight_basis' | 'freight_rate' | 'freight_currency' | 'freight_fx' | 'freight_containers' | 'shipping_rate_id' | 'freight_display'>
+function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRates, totalNetKg, idp = '', showDisplay = true, title, header, note }: {
+  form: ShipFields; upd: (p: Partial<ShipFields>) => void; freight: FreightCalc; freightFx: { rate: number; source: string; rate_at: string } | null
   freightOn: boolean; rates: SavedRate[]; canAddRates: boolean; totalNetKg: number | null
+  /** for several boxes on one page: unique element ids */ idp?: string
+  showDisplay?: boolean; title?: string; header?: React.ReactNode; note?: React.ReactNode
 }) {
   const { t } = useT()
   const mode = form.shipping_mode || null
@@ -998,8 +1128,9 @@ function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRa
   }
   return (
     <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3 sm:col-span-2 lg:col-span-3">
+      {header}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-sm font-medium"><T>Shipping</T></span>
+        <span className="text-sm font-medium">{title ?? t('Shipping')}</span>
         <div role="radiogroup" aria-label={t('Shipping')} className="inline-flex rounded-lg bg-muted p-0.5">
           {SHIP_MODES.map((m) => {
             const Icon = MODE_ICON[m]
@@ -1034,7 +1165,7 @@ function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRa
           <div className="flex flex-wrap items-end gap-2">
             <Field label="Freight cost" className="min-w-[200px] flex-1">
               <div className="flex gap-1">
-                <Input id="freight-rate" inputMode="decimal" value={form.freight_rate} placeholder="0" onChange={(e) => upd({ freight_rate: e.target.value, shipping_rate_id: '' })} />
+                <Input id={`${idp}freight-rate`} inputMode="decimal" value={form.freight_rate} placeholder="0" onChange={(e) => upd({ freight_rate: e.target.value, shipping_rate_id: '' })} />
                 <Select value={form.freight_currency} aria-label={t('Currency')} className="w-[84px] shrink-0" onChange={(e) => upd({ freight_currency: e.target.value, freight_fx: '', shipping_rate_id: '' })}>
                   {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
                 </Select>
@@ -1050,7 +1181,7 @@ function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRa
             </div>
             {form.freight_basis === 'per_container' && (
               <Field label={mode === 'land' ? 'Trucks / containers' : 'Containers'} className="w-[130px]">
-                <Input id="freight-containers" inputMode="numeric" value={form.freight_containers} onChange={(e) => upd({ freight_containers: e.target.value })} />
+                <Input id={`${idp}freight-containers`} inputMode="numeric" value={form.freight_containers} onChange={(e) => upd({ freight_containers: e.target.value })} />
               </Field>
             )}
           </div>
@@ -1066,7 +1197,7 @@ function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRa
           {mode === 'air' && form.freight_basis === 'per_kg' && (
             <p className="text-xs text-muted-foreground"><T>Worked out on the net weight. Airlines charge the gross (or volume) weight — if you know the final amount, choose “total”.</T></p>
           )}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          {showDisplay && <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <span className="text-xs font-medium text-muted-foreground"><T>On the quotation:</T></span>
             {(['line', 'in_prices'] as const).map((d) => (
               <label key={d} className="flex items-center gap-1.5">
@@ -1074,7 +1205,8 @@ function ShippingBox({ form, upd, freight, freightFx, freightOn, rates, canAddRa
                 <T>{d === 'line' ? 'Separate freight line' : 'Inside the product prices'}</T>
               </label>
             ))}
-          </div>
+          </div>}
+          {note}
           {n(form.freight_rate) != null && (
             <p className="rounded-md bg-card px-3 py-2 text-sm" role="status">
               {freight.total != null || freight.perTon != null ? (
